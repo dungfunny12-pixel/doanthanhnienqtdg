@@ -58,8 +58,11 @@ import {
   HardDrive,
   RefreshCw,
   FileCheck,
-  Shield
+  Shield,
+  Loader2
 } from 'lucide-react';
+import { SupabaseService } from '../../services/supabaseService';
+import { isSupabaseConfigured } from '../../lib/supabase';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -252,6 +255,7 @@ export const AdminPortal: React.FC = () => {
   const [selectedReportWeek, setSelectedReportWeek] = useState<number>(activeWeek);
   const [chartGradeFilter, setChartGradeFilter] = useState<'ALL' | 10 | 11 | 12>('ALL');
   const [cumulativeGradeFilter, setCumulativeGradeFilter] = useState<'ALL' | 10 | 11 | 12>('ALL');
+  const [isUploadingImage, setIsUploadingImage] = useState<string | null>(null);
 
   // Semester / Term Summary State
   const [semesterReportType, setSemesterReportType] = useState<'HK1' | 'HK2' | 'YEAR'>('HK1');
@@ -1855,56 +1859,132 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
     setEditingAnnouncement(null);
   };
 
-  // Handle Settings Image Uploads
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Settings Image Uploads with Supabase Cloud Storage
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    setIsUploadingImage('logo');
+    try {
+      if (isSupabaseConfigured()) {
+        const publicUrl = await SupabaseService.uploadImage(file, 'media');
+        if (publicUrl) {
+          setSettingsForm(prev => ({ ...prev, logoUrl: publicUrl }));
+          updateSchoolSettings({ ...settingsForm, logoUrl: publicUrl });
+          alert('✅ Đã tải Logo trường lên Supabase Storage và lưu cấu hình thành công!');
+          return;
+        }
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          setSettingsForm(prev => ({ ...prev, logoUrl: event.target!.result as string }));
+          const res = event.target.result as string;
+          setSettingsForm(prev => ({ ...prev, logoUrl: res }));
+          updateSchoolSettings({ ...settingsForm, logoUrl: res });
         }
       };
       reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      alert('Không thể tải ảnh: ' + (err instanceof Error ? err.message : 'Lỗi không xác định'));
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = '';
     }
   };
 
-  const handleYouthUnionLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleYouthUnionLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    setIsUploadingImage('youth_logo');
+    try {
+      if (isSupabaseConfigured()) {
+        const publicUrl = await SupabaseService.uploadImage(file, 'media');
+        if (publicUrl) {
+          setSettingsForm(prev => ({ ...prev, youthUnionLogoUrl: publicUrl }));
+          updateSchoolSettings({ ...settingsForm, youthUnionLogoUrl: publicUrl });
+          alert('✅ Đã tải Huy hiệu Đoàn lên Supabase Storage và lưu cấu hình thành công!');
+          return;
+        }
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          setSettingsForm(prev => ({ ...prev, youthUnionLogoUrl: event.target!.result as string }));
+          const res = event.target.result as string;
+          setSettingsForm(prev => ({ ...prev, youthUnionLogoUrl: res }));
+          updateSchoolSettings({ ...settingsForm, youthUnionLogoUrl: res });
         }
       };
       reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      alert('Không thể tải ảnh: ' + (err instanceof Error ? err.message : 'Lỗi không xác định'));
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = '';
     }
   };
 
-  const handleTopBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTopBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    setIsUploadingImage('top_banner');
+    try {
+      if (isSupabaseConfigured()) {
+        const publicUrl = await SupabaseService.uploadImage(file, 'media');
+        if (publicUrl) {
+          setSettingsForm(prev => ({ ...prev, bannerTopImage: publicUrl }));
+          updateSchoolSettings({ ...settingsForm, bannerTopImage: publicUrl });
+          alert('✅ Đã tải Banner Đầu Trang lên Supabase Storage và lưu cấu hình thành công!');
+          return;
+        }
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          setSettingsForm(prev => ({ ...prev, bannerTopImage: event.target!.result as string }));
+          const res = event.target.result as string;
+          setSettingsForm(prev => ({ ...prev, bannerTopImage: res }));
+          updateSchoolSettings({ ...settingsForm, bannerTopImage: res });
         }
       };
       reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      alert('Không thể tải ảnh: ' + (err instanceof Error ? err.message : 'Lỗi không xác định'));
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = '';
     }
   };
 
-  const handleFooterBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFooterBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    setIsUploadingImage('footer_banner');
+    try {
+      if (isSupabaseConfigured()) {
+        const publicUrl = await SupabaseService.uploadImage(file, 'media');
+        if (publicUrl) {
+          setSettingsForm(prev => ({ ...prev, footerBannerImage: publicUrl }));
+          updateSchoolSettings({ ...settingsForm, footerBannerImage: publicUrl });
+          alert('✅ Đã tải Banner Chân Trang lên Supabase Storage và lưu cấu hình thành công!');
+          return;
+        }
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          setSettingsForm(prev => ({ ...prev, footerBannerImage: event.target!.result as string }));
+          const res = event.target.result as string;
+          setSettingsForm(prev => ({ ...prev, footerBannerImage: res }));
+          updateSchoolSettings({ ...settingsForm, footerBannerImage: res });
         }
       };
       reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      alert('Không thể tải ảnh: ' + (err instanceof Error ? err.message : 'Lỗi không xác định'));
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = '';
     }
   };
 
@@ -5353,11 +5433,16 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           />
                           <button
                             type="button"
+                            disabled={isUploadingImage === 'logo'}
                             onClick={() => logoFileInputRef.current?.click()}
-                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0"
+                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-sm"
                           >
-                            <Upload className="w-3.5 h-3.5" />
-                            <span>Tải Logo Từ Máy</span>
+                            {isUploadingImage === 'logo' ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                            ) : (
+                              <Upload className="w-3.5 h-3.5" />
+                            )}
+                            <span>{isUploadingImage === 'logo' ? 'Đang tải lên Supabase...' : 'Tải Logo Từ Máy'}</span>
                           </button>
                         </div>
                         <input
@@ -5379,7 +5464,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       </label>
                       <button
                         type="button"
-                        onClick={() => setSettingsForm({ ...settingsForm, youthUnionLogoUrl: 'https://upload.wikimedia.org/wikipedia/vi/8/87/Huy_hi%E1%BB%87u_%C4%90o%C3%A0n.svg' })}
+                        onClick={() => {
+                          const defaultUnionLogo = 'https://upload.wikimedia.org/wikipedia/vi/8/87/Huy_hi%E1%BB%87u_%C4%90o%C3%A0n.svg';
+                          setSettingsForm(prev => ({ ...prev, youthUnionLogoUrl: defaultUnionLogo }));
+                          updateSchoolSettings({ ...settingsForm, youthUnionLogoUrl: defaultUnionLogo });
+                        }}
                         className="text-[11px] text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
                       >
                         ⭐ Khôi phục Huy hiệu Đoàn chuẩn
@@ -5407,11 +5496,16 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           />
                           <button
                             type="button"
+                            disabled={isUploadingImage === 'youth_logo'}
                             onClick={() => youthUnionLogoFileInputRef.current?.click()}
-                            className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 shadow-glow cursor-pointer"
+                            className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 shadow-glow cursor-pointer disabled:opacity-50"
                           >
-                            <Upload className="w-3.5 h-3.5" />
-                            <span>Tải Logo Đoàn Từ Máy</span>
+                            {isUploadingImage === 'youth_logo' ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                            ) : (
+                              <Upload className="w-3.5 h-3.5" />
+                            )}
+                            <span>{isUploadingImage === 'youth_logo' ? 'Đang tải lên Supabase...' : 'Tải Logo Đoàn Từ Máy'}</span>
                           </button>
                         </div>
                         <input
@@ -5452,11 +5546,16 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       />
                       <button
                         type="button"
+                        disabled={isUploadingImage === 'top_banner'}
                         onClick={() => topBannerFileInputRef.current?.click()}
-                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0"
+                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-sm"
                       >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>Tải Banner Đầu</span>
+                        {isUploadingImage === 'top_banner' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5" />
+                        )}
+                        <span>{isUploadingImage === 'top_banner' ? 'Đang tải lên Supabase...' : 'Tải Banner Đầu'}</span>
                       </button>
                       <input
                         ref={topBannerFileInputRef}
@@ -5495,11 +5594,16 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       />
                       <button
                         type="button"
+                        disabled={isUploadingImage === 'footer_banner'}
                         onClick={() => footerBannerFileInputRef.current?.click()}
-                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0"
+                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-sm"
                       >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>Tải Banner Cuối</span>
+                        {isUploadingImage === 'footer_banner' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5" />
+                        )}
+                        <span>{isUploadingImage === 'footer_banner' ? 'Đang tải lên Supabase...' : 'Tải Banner Cuối'}</span>
                       </button>
                       <input
                         ref={footerBannerFileInputRef}
