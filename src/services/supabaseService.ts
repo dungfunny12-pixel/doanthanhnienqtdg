@@ -341,5 +341,35 @@ export const SupabaseService = {
       console.warn('Lỗi xóa vi phạm trên Supabase:', err);
       return false;
     }
+  },
+
+  /**
+   * Tải ảnh minh chứng / media trực tiếp lên Supabase Storage
+   * Trả về đường dẫn CDN công khai (Public URL)
+   */
+  async uploadImage(file: File | Blob, bucket: 'proof_images' | 'media' = 'proof_images'): Promise<string | null> {
+    const client = getSupabaseClient();
+    if (!client || !isSupabaseConfigured()) return null;
+
+    try {
+      const ext = (file as File).name ? (file as File).name.split('.').pop() : 'jpg';
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
+
+      const { error } = await client.storage.from(bucket).upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+
+      if (error) {
+        console.error(`Lỗi tải ảnh lên bucket ${bucket}:`, error.message);
+        return null;
+      }
+
+      const { data } = client.storage.from(bucket).getPublicUrl(fileName);
+      return data.publicUrl;
+    } catch (err) {
+      console.error('Lỗi khi tải tệp ảnh lên Supabase:', err);
+      return null;
+    }
   }
 };
