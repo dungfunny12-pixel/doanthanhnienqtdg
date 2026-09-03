@@ -26,10 +26,10 @@ export const INITIAL_SCHOOL_SETTINGS: SchoolSettings = {
   email: 'doantruongquangtrungdonggiang@gmail.com',
   phone: '0988806194',
   themeColor: 'red',
-  logoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=150&auto=format&fit=crop&q=80',
+  logoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=200&auto=format&fit=crop&q=75',
   youthUnionLogoUrl: 'https://upload.wikimedia.org/wikipedia/vi/8/87/Huy_hi%E1%BB%87u_%C4%90o%C3%A0n.svg',
-  bannerTopImage: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1600&auto=format&fit=crop&q=80',
-  footerBannerImage: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=1600&auto=format&fit=crop&q=80'
+  bannerTopImage: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&auto=format&fit=crop&q=75',
+  footerBannerImage: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=1200&auto=format&fit=crop&q=75'
 };
 
 export const INITIAL_ZONES: DutyZone[] = [
@@ -1020,7 +1020,7 @@ export const INITIAL_ACTIVITY_SLIDES: ActivitySlide[] = [
     id: 'slide-1',
     title: 'Lễ Kết Nạp Đoàn Viên Mới – Lớp Đoàn Viên 95 Năm Thành Lập Đoàn',
     subtitle: 'Vinh dự đứng vào hàng ngũ Đoàn TNCS Hồ Chí Minh của 85 thanh niên ưu tú khối 10 & 11',
-    imageUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1000&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=75',
     date: '26/03/2026',
     tag: 'Kết nạp Đoàn',
     isActive: true,
@@ -1030,7 +1030,7 @@ export const INITIAL_ACTIVITY_SLIDES: ActivitySlide[] = [
     id: 'slide-2',
     title: 'Hội Thao Thanh Niên & Giải Kéo Co Truyền Thống 18 Chi Đoàn',
     subtitle: 'Sôi nổi các môn thi đấu: Bóng chuyền, Kéo co, Điền kinh và Nhảy dân vũ sân trường',
-    imageUrl: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1000&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&auto=format&fit=crop&q=75',
     date: '19/05/2026',
     tag: 'Hội thao',
     isActive: true,
@@ -1040,7 +1040,7 @@ export const INITIAL_ACTIVITY_SLIDES: ActivitySlide[] = [
     id: 'slide-3',
     title: 'Chiến Dịch Tình Nguyện "Hoa Phượng Đỏ" & Tiếp Sức Mùa Thi 2026',
     subtitle: 'Tuổi trẻ THPT Quang Trung hỗ trợ phân luồng giao thông, phát nước và cổ vũ sĩ tử',
-    imageUrl: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=1000&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=800&auto=format&fit=crop&q=75',
     date: '10/06/2026',
     tag: 'Tình nguyện',
     isActive: true,
@@ -1050,7 +1050,7 @@ export const INITIAL_ACTIVITY_SLIDES: ActivitySlide[] = [
     id: 'slide-4',
     title: 'Diễn Đàn "Xây Dựng Tình Bạn Đẹp – Nói Không Với Bạo Lực Học Đường"',
     subtitle: 'Chuyên đề giáo dục đạo đức, kỹ năng sống văn minh và văn hóa ứng xử thanh niên',
-    imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1000&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop&q=75',
     date: '15/08/2026',
     tag: 'Kỹ năng sống',
     isActive: true,

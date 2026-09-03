@@ -131,11 +131,15 @@ export const PublicPortal: React.FC = () => {
       
       {/* Top Banner Hero Image if Configured */}
       {schoolSettings.bannerTopImage && (
-        <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-800 h-48 sm:h-56 md:h-60 relative group">
+        <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-800 h-48 sm:h-56 md:h-60 relative group bg-slate-950">
           <img 
             src={schoolSettings.bannerTopImage} 
             alt="Top Banner" 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+            loading="eager"
+            // @ts-ignore
+            fetchPriority="high"
+            decoding="async"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 bg-slate-900" 
           />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-transparent flex items-center p-5 sm:p-8">
             <div className="flex items-center gap-4 sm:gap-6 max-w-3xl">
@@ -389,7 +393,9 @@ export const PublicPortal: React.FC = () => {
                     <img
                       src={slide.imageUrl}
                       alt={slide.title}
-                      className="w-full h-full object-cover cursor-pointer transition-transform duration-700 hover:scale-105"
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover cursor-pointer transition-transform duration-700 hover:scale-105 bg-slate-900"
                       onClick={() => setSelectedPhotoModal({ url: slide.imageUrl, title: slide.title, subtitle: slide.subtitle })}
                     />
                     
@@ -565,10 +571,12 @@ export const PublicPortal: React.FC = () => {
                         : 'border-slate-800'
                     }`}
                   >
-                    <div className="w-full sm:w-36 h-28 relative shrink-0 rounded-xl overflow-hidden border border-slate-700">
+                    <div className="w-full sm:w-36 h-28 relative shrink-0 rounded-xl overflow-hidden border border-slate-700 bg-slate-900">
                       <img
                         src={article.thumbnail}
                         alt={article.title}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                       <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider text-white shadow ${

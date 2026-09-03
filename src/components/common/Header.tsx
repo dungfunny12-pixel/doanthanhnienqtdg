@@ -149,6 +149,10 @@ export const Header: React.FC = () => {
               <img 
                 src={schoolSettings.logoUrl} 
                 alt="Logo" 
+                loading="eager"
+                // @ts-ignore
+                fetchPriority="high"
+                decoding="async"
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover shadow-glow border border-red-400/40 group-hover:scale-105 transition-transform shrink-0"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
