@@ -265,6 +265,36 @@ export const AdminPortal: React.FC = () => {
 
   // Full Database Backup & Restore File Input Ref
   const backupFileInputRef = useRef<HTMLInputElement>(null);
+  const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
+  const [cloudSyncResult, setCloudSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleSyncToSupabaseCloud = async () => {
+    setIsSyncingCloud(true);
+    setCloudSyncResult(null);
+    try {
+      const res = await SupabaseService.seedLocalDataToSupabase({
+        classes,
+        criteria,
+        students,
+        violations,
+        news,
+        notices,
+        schoolSettings
+      });
+      setCloudSyncResult(res);
+      if (res.success) {
+        alert('🎉 ' + res.message);
+      } else {
+        alert('⚠️ ' + res.message);
+      }
+    } catch (err: any) {
+      const errMsg = `Lỗi kết nối đồng bộ: ${err?.message || 'Không xác định'}`;
+      setCloudSyncResult({ success: false, message: errMsg });
+      alert('❌ ' + errMsg);
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
 
   // Export Semester Summary to Excel (.xlsx) with all weekly breakdowns & adjustable cells
   const handleExportSemesterExcel = () => {
@@ -6932,6 +6962,46 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   >
                     <RefreshCw className="w-4 h-4 text-amber-400" />
                     <span>Dọn Dẹp & Tối Ưu Hóa Bộ Nhớ</span>
+                  </button>
+                </div>
+
+                {/* Cloud Sync Supabase Card */}
+                <div className="glass-panel rounded-2xl p-5 border border-emerald-800/40 bg-emerald-950/10 flex flex-col justify-between space-y-4 md:col-span-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <Database className="w-5 h-5" />
+                      <h5 className="font-extrabold text-sm text-white">5. Đồng Bộ Toàn Diện Dữ Liệu Lên CSDL Đám Mây Supabase Cloud</h5>
+                    </div>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Đẩy toàn bộ 18 lớp học, danh sách đoàn viên/học sinh, tiêu chí thi đua, cài đặt nhận diện trường và vi phạm lên hệ thống cơ sở dữ liệu PostgreSQL đám mây của Supabase. Dữ liệu sẽ được bảo vệ vĩnh viễn và tự động chia sẻ cho toàn bộ giáo viên và học sinh.
+                    </p>
+                    {cloudSyncResult && (
+                      <div className={`p-3 rounded-xl text-xs font-bold ${
+                        cloudSyncResult.success 
+                          ? 'bg-emerald-950/80 border border-emerald-700 text-emerald-300' 
+                          : 'bg-rose-950/80 border border-rose-700 text-rose-300'
+                      }`}>
+                        {cloudSyncResult.message}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isSyncingCloud}
+                    onClick={handleSyncToSupabaseCloud}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-glow transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isSyncingCloud ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>Đang đồng bộ dữ liệu lên Supabase Cloud...</span>
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        <span>Đồng Bộ Ngay Toàn Bộ Dữ Liệu Lên Supabase Cloud</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
