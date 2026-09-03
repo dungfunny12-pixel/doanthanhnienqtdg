@@ -10,7 +10,8 @@ import {
   TaskNotice, 
   User, 
   SchoolSettings,
-  ActivitySlide
+  ActivitySlide,
+  WeekConfig
 } from '../types';
 
 /**
@@ -31,6 +32,7 @@ export const SupabaseService = {
     users?: User[];
     schoolSettings?: SchoolSettings;
     activitySlides?: ActivitySlide[];
+    weeksConfig?: WeekConfig[];
   } | null> {
     const client = getSupabaseClient();
     if (!client || !isSupabaseConfigured()) return null;
@@ -85,6 +87,12 @@ export const SupabaseService = {
         .select('*')
         .eq('is_deleted', false)
         .order('order_num', { ascending: true });
+
+      // 9. Weeks Configuration
+      const { data: rawWeeks } = await client
+        .from('weeks')
+        .select('*')
+        .order('week_number', { ascending: true });
 
       if (classErr) {
         console.warn('Không thể tải dữ liệu từ Supabase, sử dụng dữ liệu cục bộ:', classErr.message);
@@ -228,7 +236,10 @@ export const SupabaseService = {
           logoUrl: rawSettings.logo_url,
           youthUnionLogoUrl: rawSettings.youth_union_logo_url,
           bannerTopImage: rawSettings.banner_top_image,
-          footerBannerImage: rawSettings.footer_banner_image
+          footerBannerImage: rawSettings.footer_banner_image,
+          semester1EndWeek: Number(rawSettings.semester_1_end_week) || 18,
+          semester1Name: rawSettings.semester_1_name || 'Học Kỳ 1',
+          semester2Name: rawSettings.semester_2_name || 'Học Kỳ 2'
         };
       }
 
@@ -245,6 +256,20 @@ export const SupabaseService = {
           }))
         : undefined;
 
+      const weeksConfig: WeekConfig[] | undefined = (rawWeeks && rawWeeks.length > 0)
+        ? rawWeeks.map(w => ({
+            weekNumber: w.week_number,
+            title: w.title || `Tuần ${w.week_number}`,
+            startDate: w.start_date,
+            endDate: w.end_date,
+            isCurrent: Boolean(w.is_current),
+            isLocked: Boolean(w.is_locked),
+            note: w.note || '',
+            semester: (Number(w.semester) as 1 | 2) || (w.week_number <= (schoolSettings?.semester1EndWeek || 18) ? 1 : 2),
+            academicYearId: w.academic_year || '2026_2027'
+          }))
+        : undefined;
+
       return {
         classes,
         criteria,
@@ -253,7 +278,8 @@ export const SupabaseService = {
         news,
         notices,
         schoolSettings,
-        activitySlides
+        activitySlides,
+        weeksConfig
       };
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu từ Supabase:', err);
@@ -355,7 +381,7 @@ export const SupabaseService = {
   },
 
   /**
-   * Lưu Cài đặt Nhận diện Nhà trường lên Cloud
+   * Lưu Cài đặt Nhận diện Nhà trường & Cấu hình học kỳ lên Cloud
    */
   async saveSchoolSettings(settings: SchoolSettings): Promise<boolean> {
     const client = getSupabaseClient();
@@ -370,10 +396,13 @@ export const SupabaseService = {
         email: settings.email,
         phone: settings.phone,
         theme_color: settings.themeColor,
-        logo_url: settings.logoUrl,
-        youth_union_logo_url: settings.youthUnionLogoUrl,
-        banner_top_image: settings.bannerTopImage,
-        footer_banner_image: settings.footerBannerImage,
+        logo_url: settings.logoUrl || null,
+        youth_union_logo_url: settings.youthUnionLogoUrl || null,
+        banner_top_image: settings.bannerTopImage || null,
+        footer_banner_image: settings.footerBannerImage || null,
+        semester_1_end_week: settings.semester1EndWeek || 18,
+        semester_1_name: settings.semester1Name || 'Học Kỳ 1',
+        semester_2_name: settings.semester2Name || 'Học Kỳ 2',
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
       return true;
@@ -814,6 +843,104 @@ export const SupabaseService = {
     } catch (err) {
       console.error('Lỗi khi xử lý và tải tệp ảnh lên Supabase:', err);
       return null;
+    }
+  },
+
+  /**
+   * Lưu 1 tuần học lên Supabase
+   */
+  async saveSingleWeek(w: WeekConfig): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('weeks').upsert({
+        week_number: w.weekNumber,
+        title: w.title,
+        start_date: w.startDate,
+        end_date: w.endDate,
+        is_current: w.isCurrent,
+        is_locked: w.isLocked,
+        note: w.note || '',
+        semester: w.semester || (w.weekNumber <= 18 ? 1 : 2),
+        academic_year: w.academicYearId || '2026_2027',
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'week_number' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu tuần:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu toàn bộ 35 tuần lên Supabase Cloud
+   */
+  async saveWeeksConfig(weeks: WeekConfig[]): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client || weeks.length === 0) return false;
+    try {
+      const rows = weeks.map(w => ({
+        week_number: w.weekNumber,
+        title: w.title,
+        start_date: w.startDate,
+        end_date: w.endDate,
+        is_current: w.isCurrent,
+        is_locked: w.isLocked,
+        note: w.note || '',
+        semester: w.semester || (w.weekNumber <= 18 ? 1 : 2),
+        academic_year: w.academicYearId || '2026_2027',
+        updated_at: new Date().toISOString()
+      }));
+      const { error } = await client.from('weeks').upsert(rows, { onConflict: 'week_number' });
+      if (error) {
+        console.error('Lỗi khi lưu cấu hình tuần lên Supabase:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Lỗi ngoại lệ khi lưu cấu hình tuần:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Đồng bộ toàn diện 35 tuần & Cấu hình học kỳ lên Supabase Cloud
+   */
+  async syncAllWeeksToSupabase(weeks: WeekConfig[], settings?: SchoolSettings): Promise<{ success: boolean; message: string; count: number }> {
+    const client = getSupabaseClient();
+    if (!client || !isSupabaseConfigured()) {
+      return {
+        success: false,
+        message: 'Chưa cấu hình Supabase Cloud. Dữ liệu đang được lưu an toàn trên LocalStorage của máy bạn.',
+        count: 0
+      };
+    }
+
+    try {
+      const savedWeeks = await this.saveWeeksConfig(weeks);
+      if (settings) {
+        await this.saveSchoolSettings(settings);
+      }
+
+      if (savedWeeks) {
+        return {
+          success: true,
+          message: `Đã đồng bộ thành công ${weeks.length} tuần học và cấu hình học kỳ lên Supabase Cloud!`,
+          count: weeks.length
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Không thể ghi dữ liệu tuần lên Supabase. Vui lòng kiểm tra kết nối mạng hoặc quyền RLS.',
+          count: 0
+        };
+      }
+    } catch (e: any) {
+      return {
+        success: false,
+        message: `Lỗi đồng bộ: ${e?.message || 'Không xác định'}`,
+        count: 0
+      };
     }
   }
 };

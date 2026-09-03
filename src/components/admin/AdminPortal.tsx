@@ -60,7 +60,8 @@ import {
   RefreshCw,
   FileCheck,
   Shield,
-  Loader2
+  Loader2,
+  Cloud
 } from 'lucide-react';
 import { SupabaseService } from '../../services/supabaseService';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -82,10 +83,15 @@ import {
   AuditorMember,
   ActivitySlide,
   TaskNotice,
-  YouthEvent
+  YouthEvent,
+  ActivityReport,
+  ActivityParticipant,
+  ActivityNonParticipant
 } from '../../types';
 import { PhotoViewerModal } from '../common/PhotoViewerModal';
 import { AcademicYearRolloverModal } from './AcademicYearRolloverModal';
+import { SortableTh } from '../common/SortableTh';
+import { sortDataList } from '../../utils/sortUtils';
 
 export const AdminPortal: React.FC = () => {
   const {
@@ -172,6 +178,9 @@ export const AdminPortal: React.FC = () => {
     deleteWeek,
     toggleWeekLockDirect,
     setCurrentWeek,
+    resetToDefault35Weeks,
+    updateSemesterConfig,
+    syncWeeksToCloud,
     activityReports,
     verifyActivityReport,
     deleteActivityReport,
@@ -265,6 +274,23 @@ export const AdminPortal: React.FC = () => {
     return getSemesterScores(semesterReportType);
   }, [semesterReportType, classes, violations, weeksConfig]);
 
+  // ================= TABLE SORTING STATES & HELPERS =================
+  const [scoreSort, setScoreSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'rank', direction: 'asc' });
+  const [violationSort, setViolationSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'day', direction: 'asc' });
+  const [studentSort, setStudentSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [cumulativeSort, setCumulativeSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'cumulativeRank', direction: 'asc' });
+  const [weeklyMatrixSort, setWeeklyMatrixSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'rank', direction: 'asc' });
+  const [semesterSort, setSemesterSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'rank', direction: 'asc' });
+  const [userTableSort, setUserTableSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'username', direction: 'asc' });
+  const [academicYearSort, setAcademicYearSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'id', direction: 'desc' });
+
+  const handleToggleSort = (setter: React.Dispatch<React.SetStateAction<{ key: string; direction: 'asc' | 'desc' }>>, key: string) => {
+    setter(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
   // Full Database Backup & Restore File Input Ref
   const backupFileInputRef = useRef<HTMLInputElement>(null);
   const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
@@ -310,8 +336,9 @@ export const AdminPortal: React.FC = () => {
           : Array.from({ length: 35 }, (_, i) => i + 1);
 
       const rows: any[] = [];
-      semesterClassScores.forEach(item => {
+      semesterClassScores.forEach((item, idx) => {
         const rowObj: any = {
+          'STT': idx + 1,
           'XẾP HẠNG': `#${item.rank}`,
           'CHI ĐOÀN / LỚP': item.className,
           'KHỐI': `Khối ${item.grade}`,
@@ -377,10 +404,11 @@ export const AdminPortal: React.FC = () => {
 
       // Table data
       const tableHeaders = [
-        ['Hạng', 'Chi Đoàn', 'Khối', 'GVCN', 'Số Tuần', 'Điểm TB', 'Tổng Trừ', 'Tổng Cộng', 'Lỗi VP', 'Danh Hiệu Khen Thưởng']
+        ['STT', 'Hạng', 'Chi Đoàn', 'Khối', 'GVCN', 'Số Tuần', 'Điểm TB', 'Tổng Trừ', 'Tổng Cộng', 'Lỗi VP', 'Danh Hiệu Khen Thưởng']
       ];
 
-      const tableBody = semesterClassScores.map(item => [
+      const tableBody = semesterClassScores.map((item, idx) => [
+        (idx + 1).toString(),
         `#${item.rank}`,
         item.className,
         `Khối ${item.grade}`,
@@ -546,6 +574,23 @@ export const AdminPortal: React.FC = () => {
     return getWeeklyScores(selectedReportWeek);
   }, [selectedReportWeek, violations, classes]);
 
+  const sortedCumulativeSummary = useMemo(() => {
+    const list = multiWeekSummary.filter(cls => cumulativeGradeFilter === 'ALL' || cls.grade === cumulativeGradeFilter);
+    return sortDataList(list, cumulativeSort.key, cumulativeSort.direction);
+  }, [multiWeekSummary, cumulativeGradeFilter, cumulativeSort]);
+
+  const sortedWeeklyScores = useMemo(() => {
+    return sortDataList(selectedWeekScores, weeklyMatrixSort.key, weeklyMatrixSort.direction);
+  }, [selectedWeekScores, weeklyMatrixSort]);
+
+  const sortedSemesterScores = useMemo(() => {
+    return sortDataList(semesterClassScores, semesterSort.key, semesterSort.direction);
+  }, [semesterClassScores, semesterSort]);
+
+  const sortedAcademicYears = useMemo(() => {
+    return sortDataList(academicYears, academicYearSort.key, academicYearSort.direction);
+  }, [academicYears, academicYearSort]);
+
   const selectedWeekViolations = useMemo(() => {
     return violations.filter(v => v.weekNumber === selectedReportWeek && v.status !== 'approved_appeal');
   }, [selectedReportWeek, violations]);
@@ -584,6 +629,7 @@ export const AdminPortal: React.FC = () => {
 
       // Sheet 1: Bảng Tổng Hợp Lũy Kế Đa Tuần
       const headerRow1 = [
+        'STT',
         'HẠNG TỔNG HỢP',
         'LỚP',
         'KHỐI',
@@ -595,7 +641,8 @@ export const AdminPortal: React.FC = () => {
         'DANH HIỆU THI ĐUA'
       ];
 
-      const dataRows1 = multiWeekSummary.map(item => [
+      const dataRows1 = multiWeekSummary.map((item, idx) => [
+        idx + 1,
         `#${item.cumulativeRank}`,
         item.className,
         `Khối ${item.grade}`,
@@ -617,11 +664,12 @@ export const AdminPortal: React.FC = () => {
       XLSX.utils.book_append_sheet(wb, ws1, 'Tổng Hợp Lũy Kế');
 
       // Sheet 2: Danh Sách Tuần & Kết Quả Từng Tuần
-      const headerRow2 = ['MÃ TUẦN', 'TÊN TUẦN', 'TỪ NGÀY', 'ĐẾN NGÀY', 'TRẠNG THÁI', 'ĐIỂM TRUNG BÌNH', 'TOP 1', 'TOP 2', 'TOP 3'];
-      const dataRows2 = weeksConfig.map(w => {
+      const headerRow2 = ['STT', 'MÃ TUẦN', 'TÊN TUẦN', 'TỪ NGÀY', 'ĐẾN NGÀY', 'TRẠNG THÁI', 'ĐIỂM TRUNG BÌNH', 'TOP 1', 'TOP 2', 'TOP 3'];
+      const dataRows2 = weeksConfig.map((w, idx) => {
         const scores = getWeeklyScores(w.weekNumber);
         const avg = scores.length > 0 ? (scores.reduce((sum, s) => sum + s.finalScore, 0) / scores.length).toFixed(1) : '1440';
         return [
+          idx + 1,
           `Tuần ${w.weekNumber}`,
           w.title,
           w.startDate,
@@ -642,8 +690,9 @@ export const AdminPortal: React.FC = () => {
       XLSX.utils.book_append_sheet(wb, ws2, 'Danh Sách Tuần');
 
       // Sheet 3: Danh Sách Vi Phạm Toàn Trường
-      const headerRow3 = ['MÃ LỖI', 'TUẦN', 'THỨ', 'NGÀY', 'LỚP', 'TIÊU CHÍ VI PHẠM', 'NHÓM', 'SỐ LƯỢNG', 'ĐIỂM TRỪ', 'NGƯỜI GHI NHẬN', 'TRẠNG THÁI'];
-      const dataRows3 = violations.map(v => [
+      const headerRow3 = ['STT', 'MÃ LỖI', 'TUẦN', 'THỨ', 'NGÀY', 'LỚP', 'TIÊU CHÍ VI PHẠM', 'NHÓM', 'SỐ LƯỢNG', 'ĐIỂM TRỪ', 'NGƯỜI GHI NHẬN', 'TRẠNG THÁI'];
+      const dataRows3 = violations.map((v, idx) => [
+        idx + 1,
         v.id,
         `Tuần ${v.weekNumber}`,
         v.day,
@@ -678,8 +727,9 @@ export const AdminPortal: React.FC = () => {
       const scores = getWeeklyScores(weekNum);
       const weekConf = weeksConfig.find(w => w.weekNumber === weekNum);
 
-      const header1 = ['HẠNG', 'LỚP', 'KHỐI', 'GVCN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'ĐIỂM TRỪ', 'ĐIỂM THƯỞNG', 'ĐIỂM TỔNG', 'XẾP LOẠI'];
-      const data1 = scores.map(s => [
+      const header1 = ['STT', 'HẠNG', 'LỚP', 'KHỐI', 'GVCN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'ĐIỂM TRỪ', 'ĐIỂM THƯỞNG', 'ĐIỂM TỔNG', 'XẾP LOẠI'];
+      const data1 = scores.map((s, idx) => [
+        idx + 1,
         `#${s.rank}`,
         s.className,
         `Khối ${s.grade}`,
@@ -705,8 +755,9 @@ export const AdminPortal: React.FC = () => {
       XLSX.utils.book_append_sheet(wb, ws1, `Bảng Điểm Tuần ${weekNum}`);
 
       const weekVios = violations.filter(v => v.weekNumber === weekNum);
-      const header2 = ['THỨ', 'NGÀY', 'LỚP', 'TIÊU CHÍ', 'NHÓM', 'SỐ LƯỢNG', 'ĐIỂM TRỪ', 'HỌC SINH', 'NGƯỜI BÁO', 'TRẠNG THÁI'];
-      const data2 = weekVios.map(v => [
+      const header2 = ['STT', 'THỨ', 'NGÀY', 'LỚP', 'TIÊU CHÍ', 'NHÓM', 'SỐ LƯỢNG', 'ĐIỂM TRỪ', 'HỌC SINH', 'NGƯỜI BÁO', 'TRẠNG THÁI'];
+      const data2 = weekVios.map((v, idx) => [
+        idx + 1,
         v.day,
         v.date,
         v.className,
@@ -1211,6 +1262,8 @@ export const AdminPortal: React.FC = () => {
   const appealedViolations = violations.filter(v => v.status === 'appealed' && v.weekNumber === violationHubWeek);
   const scores = getWeeklyScores(violationHubWeek);
 
+
+
   // ================= FILTERED VIOLATIONS LIST =================
   const filteredViolations = violations.filter(v => {
     const matchWeek = v.weekNumber === violationHubWeek;
@@ -1249,6 +1302,26 @@ export const AdminPortal: React.FC = () => {
     });
   }, [students, studentGradeFilter, studentClassFilter, studentUnionFilter, studentSearch]);
 
+  // Sorted data lists for UI tables
+  const sortedScores = useMemo(() => {
+    return sortDataList(scores, scoreSort.key, scoreSort.direction, (item, key) => {
+      if (key === 'gvcnName') return classes.find(c => c.id === item.classId)?.gvcnName || '';
+      return (item as any)[key];
+    });
+  }, [scores, scoreSort, classes]);
+
+  const sortedViolations = useMemo(() => {
+    return sortDataList(filteredViolations, violationSort.key, violationSort.direction, (item, key) => {
+      if (key === 'reportedBy') return item.reportedBy?.name || '';
+      if (key === 'studentNames') return (item.studentNames || []).join(', ');
+      return (item as any)[key];
+    });
+  }, [filteredViolations, violationSort]);
+
+  const sortedStudents = useMemo(() => {
+    return sortDataList(filteredStudents, studentSort.key, studentSort.direction);
+  }, [filteredStudents, studentSort]);
+
   // Student classes available for the current grade filter
   const availableStudentClasses = useMemo(() => {
     if (studentGradeFilter === 'ALL') return classes;
@@ -1280,7 +1353,7 @@ export const AdminPortal: React.FC = () => {
     };
   }, [students, studentGradeFilter]);
 
-  // Filter and sort users by Role priority and Grade/Class in ascending order (10/1 -> 10/6, 11/1 -> 11/6, 12/1 -> 12/6)
+  // Filter and sort users
   const filteredSortedUsers = useMemo(() => {
     const list = users.filter(u => {
       if (userRoleFilter !== 'ALL' && u.role !== userRoleFilter) return false;
@@ -1297,52 +1370,11 @@ export const AdminPortal: React.FC = () => {
       return true;
     });
 
-    const getClassSortKey = (classId?: string, username?: string): number => {
-      if (classId) {
-        const match = classId.match(/(\d+)\s*[\/\-_]\s*(\d+)/);
-        if (match) {
-          const grade = parseInt(match[1], 10);
-          const num = parseInt(match[2], 10);
-          return grade * 100 + num; // 10/1 -> 1001, 10/6 -> 1006, 11/1 -> 1101, 12/6 -> 1206
-        }
-        const gradeMatch = classId.match(/(\d+)/);
-        if (gradeMatch) {
-          return parseInt(gradeMatch[1], 10) * 100;
-        }
-      }
-      if (username) {
-        const match = username.match(/(\d+)[_\-\/](\d+)/);
-        if (match) {
-          const grade = parseInt(match[1], 10);
-          const num = parseInt(match[2], 10);
-          return grade * 100 + num;
-        }
-      }
-      return 9999;
-    };
-
-    const rolePriority: Record<string, number> = {
-      admin: 1,
-      manager: 2,
-      auditor: 3,
-      youth_secretary: 4,
-      user: 5
-    };
-
-    return [...list].sort((a, b) => {
-      if (userRoleFilter === 'ALL') {
-        const rA = rolePriority[a.role] || 99;
-        const rB = rolePriority[b.role] || 99;
-        if (rA !== rB) return rA - rB;
-      }
-
-      const keyA = getClassSortKey(a.classId, a.username);
-      const keyB = getClassSortKey(b.classId, b.username);
-      if (keyA !== keyB) return keyA - keyB;
-
-      return a.username.localeCompare(b.username, 'vi', { numeric: true });
+    return sortDataList(list, userTableSort.key, userTableSort.direction, (item, key) => {
+      if (key === 'classId') return item.classId || item.assignedZone || '';
+      return (item as any)[key];
     });
-  }, [users, userRoleFilter, userSearch]);
+  }, [users, userRoleFilter, userSearch, userTableSort]);
 
   // Filter Activity Reports submitted by Youth Secretaries
   const filteredActivityReports = activityReports.filter(r => {
@@ -1356,17 +1388,65 @@ export const AdminPortal: React.FC = () => {
     return matchClass && matchType && matchStatus && matchSearch;
   });
 
-  // Export Activity Participants to Excel
+  // Track active tab for each activity report (participating vs non-participating)
+  const [activeReportTab, setActiveReportTab] = useState<Record<string, 'participating' | 'non_participating'>>({});
+  const [weeksViewMode, setWeeksViewMode] = useState<'table' | 'cards'>('table');
+  const [weekSort, setWeekSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'weekNumber', direction: 'asc' });
+
+  // Semester Structure Modal State (HK1 & HK2)
+  const [isSemesterModalOpen, setIsSemesterModalOpen] = useState(false);
+  const [semesterForm, setSemesterForm] = useState<{
+    semester1EndWeek: number;
+    semester1Name: string;
+    semester2Name: string;
+  }>({
+    semester1EndWeek: schoolSettings.semester1EndWeek || 18,
+    semester1Name: schoolSettings.semester1Name || 'Học Kỳ 1',
+    semester2Name: schoolSettings.semester2Name || 'Học Kỳ 2'
+  });
+
+  const formatDateDisplay = (dateStr: string) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
+  };
+
+  // Helper to get non-participants for an activity report
+  const getReportNonParticipants = (report: ActivityReport): ActivityNonParticipant[] => {
+    if (report.nonParticipants && report.nonParticipants.length > 0) {
+      return report.nonParticipants;
+    }
+    const classStudentsList = students.filter(s => s.classId === report.classId || s.classId.toLowerCase() === report.className.toLowerCase());
+    const participantIds = new Set(report.participants.map((p: ActivityParticipant) => p.studentId.trim()));
+    const participantNames = new Set(report.participants.map((p: ActivityParticipant) => p.name.trim().toLowerCase()));
+
+    return classStudentsList
+      .filter(s => !participantIds.has(s.studentId.trim()) && !participantNames.has(s.name.trim().toLowerCase()))
+      .map(s => ({
+        studentId: s.studentId,
+        name: s.name,
+        gender: s.gender as ('Nam' | 'Nữ'),
+        phone: s.phone || '',
+        isUnionMember: s.isUnionMember,
+        reason: 'Chưa tham gia / Vắng mặt phong trào',
+        note: ''
+      }));
+  };
+
+  // Export Activity Participants & Non-Participants to Excel
   const handleExportActivityParticipantsExcel = (customList?: typeof activityReports) => {
     try {
       const reports = customList || filteredActivityReports;
-      const rows: any[] = [];
-      let stt = 1;
+      const wb = XLSX.utils.book_new();
 
+      // Sheet 1: Học Sinh Tham Gia
+      const rowsParticipants: any[] = [];
+      let stt1 = 1;
       reports.forEach(report => {
         report.participants.forEach(p => {
-          rows.push({
-            'STT': stt++,
+          rowsParticipants.push({
+            'STT': stt1++,
             'Tên Hoạt Động / Phong Trào': report.activityTitle,
             'Loại Hoạt Động': report.activityType === 'the_thao' ? 'Thể Thao / Hội Thao' :
               report.activityType === 'tinh_nguyen' ? 'Tình Nguyện' :
@@ -1382,21 +1462,67 @@ export const AdminPortal: React.FC = () => {
             'Ghi Chú': p.note || '',
             'Bí Thư Chi Đoàn': report.secretaryName,
             'Thời Gian Báo Cáo': report.reportedAt,
-            'Trạng Thái Duyệt': report.status === 'verified' ? 'Đã duyệt' : 'Chờ xác nhận',
-            'Ý Kiến Đoàn Trường': report.adminFeedback || ''
+            'Trạng Thái Duyệt': report.status === 'verified' ? 'Đã duyệt' : 'Chờ xác nhận'
           });
         });
       });
-
-      if (rows.length === 0) {
-        alert('Chưa có học sinh nào trong danh sách báo cáo để xuất Excel!');
-        return;
+      if (rowsParticipants.length > 0) {
+        const ws1 = XLSX.utils.json_to_sheet(rowsParticipants);
+        XLSX.utils.book_append_sheet(wb, ws1, 'Học Sinh Tham Gia');
       }
 
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, 'Học Sinh Tham Gia');
-      XLSX.writeFile(wb, `Danh_Sach_Hoc_Sinh_Tham_Gia_Phong_Trao_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '_')}.xlsx`);
+      // Sheet 2: Học Sinh Không Tham Gia
+      const rowsNonParticipants: any[] = [];
+      let stt2 = 1;
+      reports.forEach(report => {
+        const nonList = getReportNonParticipants(report);
+        nonList.forEach(np => {
+          rowsNonParticipants.push({
+            'STT': stt2++,
+            'Tên Hoạt Động / Phong Trào': report.activityTitle,
+            'Lớp / Chi Đoàn': report.className,
+            'Mã Học Sinh': np.studentId,
+            'Họ và Tên': np.name,
+            'Giới Tính': np.gender,
+            'Đoàn Viên': np.isUnionMember ? 'Đoàn viên' : 'Thanh niên',
+            'Số Điện Thoại': np.phone || '',
+            'Lý Do / Trạng Thái': np.reason || 'Vắng mặt / Không tham gia phong trào',
+            'Ghi Chú': np.note || '',
+            'Bí Thư Chi Đoàn': report.secretaryName,
+            'Thời Gian Báo Cáo': report.reportedAt
+          });
+        });
+      });
+      if (rowsNonParticipants.length > 0) {
+        const ws2 = XLSX.utils.json_to_sheet(rowsNonParticipants);
+        XLSX.utils.book_append_sheet(wb, ws2, 'Không Tham Gia');
+      }
+
+      // Sheet 3: Tổng Hợp Tỷ Lệ Tham Gia
+      const summaryRows = reports.map((report, idx) => {
+        const nonList = getReportNonParticipants(report);
+        const total = report.participants.length + nonList.length;
+        const rate = total > 0 ? `${Math.round((report.participants.length / total) * 100)}%` : '100%';
+        return {
+          'STT': idx + 1,
+          'Lớp / Chi Đoàn': report.className,
+          'Tên Hoạt Động': report.activityTitle,
+          'Sĩ Số Lớp': total,
+          'Số Lượng Tham Gia': report.participants.length,
+          'Tỷ Lệ Tham Gia': rate,
+          'Số Lượng Không Tham Gia': nonList.length,
+          'Bí Thư': report.secretaryName,
+          'Trạng Thái': report.status === 'verified' ? 'Đã duyệt' : 'Chờ duyệt'
+        };
+      });
+      const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Tổng Hợp Tỷ Lệ');
+
+      const fileName = reports.length === 1
+        ? `Bao_Cao_Phong_Trao_${reports[0].className.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '_')}.xlsx`
+        : `Bao_Cao_Tong_Hop_Phong_Trao_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '_')}.xlsx`;
+
+      XLSX.writeFile(wb, fileName);
     } catch (err) {
       console.error(err);
       alert('Có lỗi khi xuất file Excel học sinh tham gia phong trào!');
@@ -1434,7 +1560,8 @@ export const AdminPortal: React.FC = () => {
     const wb = XLSX.utils.book_new();
 
     // Sheet 1: Bảng tổng hợp thi đua 18 lớp
-    const summaryData = scores.map(s => ({
+    const summaryData = scores.map((s, i) => ({
+      'STT': i + 1,
       'VỊ THỨ': s.rank,
       'LỚP': s.className,
       'KHỐI': s.grade,
@@ -1583,7 +1710,8 @@ export const AdminPortal: React.FC = () => {
     doc.setFontSize(13);
     doc.text(`BẢNG TỔNG HỢP THI ĐUA NỀ NẾP – TUẦN ${activeWeek}`, 45, 36);
 
-    const tableRows = scores.map(s => [
+    const tableRows = scores.map((s, i) => [
+      (i + 1).toString(),
       s.rank.toString(),
       s.className,
       '1440',
@@ -1599,7 +1727,7 @@ export const AdminPortal: React.FC = () => {
     ]);
 
     (doc as any).autoTable({
-      head: [['Hạng', 'Lớp', 'Chuẩn', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'Trừ', 'Tổng', 'Loại']],
+      head: [['STT', 'Hạng', 'Lớp', 'Chuẩn', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'Trừ', 'Tổng', 'Loại']],
       body: tableRows,
       startY: 42,
       styles: { fontSize: 8, cellPadding: 2 },
@@ -2713,9 +2841,30 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-950 text-slate-300 border-b border-slate-800">
-                      <th className="p-2.5 text-center font-bold">Vị Thứ</th>
-                      <th className="p-2.5 font-bold">Lớp</th>
-                      <th className="p-2.5 font-bold">GVCN</th>
+                      <th className="p-2.5 text-center font-bold w-12 text-slate-400">STT</th>
+                      <SortableTh
+                        label="Vị Thứ"
+                        columnKey="rank"
+                        currentSortKey={scoreSort.key}
+                        currentSortDir={scoreSort.direction}
+                        onSort={(k) => handleToggleSort(setScoreSort, k)}
+                        align="center"
+                        width="70px"
+                      />
+                      <SortableTh
+                        label="Lớp"
+                        columnKey="className"
+                        currentSortKey={scoreSort.key}
+                        currentSortDir={scoreSort.direction}
+                        onSort={(k) => handleToggleSort(setScoreSort, k)}
+                      />
+                      <SortableTh
+                        label="GVCN"
+                        columnKey="gvcnName"
+                        currentSortKey={scoreSort.key}
+                        currentSortDir={scoreSort.direction}
+                        onSort={(k) => handleToggleSort(setScoreSort, k)}
+                      />
                       <th className="p-2 text-center font-bold">Chuẩn</th>
                       <th className="p-2 text-center font-bold">T2</th>
                       <th className="p-2 text-center font-bold">T3</th>
@@ -2723,20 +2872,42 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       <th className="p-2 text-center font-bold">T5</th>
                       <th className="p-2 text-center font-bold">T6</th>
                       <th className="p-2 text-center font-bold">T7</th>
-                      <th className="p-2.5 text-center font-bold text-rose-400">Tổng Trừ</th>
-                      <th className="p-2.5 text-center font-bold text-emerald-400">Điểm Thưởng</th>
-                      <th className="p-2.5 text-center font-bold text-amber-400">
-                        <div className="flex items-center justify-center gap-1">
-                          <span>Tổng Điểm</span>
-                          <span className="text-[10px] text-amber-500 font-normal">(Nhập trực tiếp ✏️)</span>
-                        </div>
-                      </th>
+                      <SortableTh
+                        label="Tổng Trừ"
+                        columnKey="totalDeduction"
+                        currentSortKey={scoreSort.key}
+                        currentSortDir={scoreSort.direction}
+                        onSort={(k) => handleToggleSort(setScoreSort, k)}
+                        align="center"
+                        className="text-rose-400"
+                      />
+                      <SortableTh
+                        label="Điểm Thưởng"
+                        columnKey="totalBonus"
+                        currentSortKey={scoreSort.key}
+                        currentSortDir={scoreSort.direction}
+                        onSort={(k) => handleToggleSort(setScoreSort, k)}
+                        align="center"
+                        className="text-emerald-400"
+                      />
+                      <SortableTh
+                        label="Tổng Điểm"
+                        columnKey="finalScore"
+                        currentSortKey={scoreSort.key}
+                        currentSortDir={scoreSort.direction}
+                        onSort={(k) => handleToggleSort(setScoreSort, k)}
+                        align="center"
+                        className="text-amber-400"
+                      />
                       <th className="p-2.5 text-center font-bold">Thao Tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {scores.map(item => (
+                    {sortedScores.map((item, idx) => (
                       <tr key={item.classId} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="p-2.5 text-center font-mono font-bold text-slate-400">
+                          {idx + 1}
+                        </td>
                         <td className="p-2.5 text-center font-black">
                           {item.rank === 1 ? <span className="text-amber-400">🥇 #1</span> :
                             item.rank === 2 ? <span className="text-slate-300">🥈 #2</span> :
@@ -3066,21 +3237,82 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-950 text-slate-300 border-b border-slate-800">
-                      <th className="p-3 font-bold">Ngày</th>
-                      <th className="p-3 font-bold">Lớp</th>
-                      <th className="p-3 font-bold">Nhóm Tiêu Chí</th>
-                      <th className="p-3 font-bold">Nội Dung Tiêu Chí</th>
-                      <th className="p-3 text-center font-bold">SL</th>
-                      <th className="p-3 text-center font-bold">Điểm Trừ/Cộng</th>
-                      <th className="p-3 font-bold">Học Sinh Vi Phạm</th>
-                      <th className="p-3 font-bold">Người Chấm</th>
-                      <th className="p-3 text-center font-bold">Trạng Thái</th>
+                      <th className="p-3 font-bold text-center w-12 text-slate-400">STT</th>
+                      <SortableTh
+                        label="Ngày"
+                        columnKey="day"
+                        currentSortKey={violationSort.key}
+                        currentSortDir={violationSort.direction}
+                        onSort={(k) => handleToggleSort(setViolationSort, k)}
+                      />
+                      <SortableTh
+                        label="Lớp"
+                        columnKey="className"
+                        currentSortKey={violationSort.key}
+                        currentSortDir={violationSort.direction}
+                        onSort={(k) => handleToggleSort(setViolationSort, k)}
+                      />
+                      <SortableTh
+                        label="Nhóm Tiêu Chí"
+                        columnKey="groupName"
+                        currentSortKey={violationSort.key}
+                        currentSortDir={violationSort.direction}
+                        onSort={(k) => handleToggleSort(setViolationSort, k)}
+                      />
+                      <SortableTh
+                        label="Nội Dung Tiêu Chí"
+                        columnKey="criterionName"
+                        currentSortKey={violationSort.key}
+                        currentSortDir={violationSort.direction}
+                        onSort={(k) => handleToggleSort(setViolationSort, k)}
+                      />
+                      <SortableTh
+                        label="SL"
+                        columnKey="quantity"
+                        currentSortKey={violationSort.key}
+                        currentSortDir={violationSort.direction}
+                        onSort={(k) => handleToggleSort(setViolationSort, k)}
+                        align="center"
+                      />
+                      <SortableTh
+                        label="Điểm Trừ/Cộng"
+                        columnKey="pointsDeducted"
+                        currentSortKey={violationSort.key}
+                        currentSortDir={violationSort.direction}
+                        onSort={(k) => handleToggleSort(setViolationSort, k)}
+                        align="center"
+                      />
+                      <SortableTh
+                        label="Học Sinh Vi Phạm"
+                        columnKey="studentNames"
+                        currentSortKey={violationSort.key}
+                        currentSortDir={violationSort.direction}
+                        onSort={(k) => handleToggleSort(setViolationSort, k)}
+                      />
+                      <SortableTh
+                        label="Người Chấm"
+                        columnKey="reportedBy"
+                        currentSortKey={violationSort.key}
+                        currentSortDir={violationSort.direction}
+                        onSort={(k) => handleToggleSort(setViolationSort, k)}
+                      />
+                      <SortableTh
+                        label="Trạng Thái"
+                        columnKey="status"
+                        currentSortKey={violationSort.key}
+                        currentSortDir={violationSort.direction}
+                        onSort={(k) => handleToggleSort(setViolationSort, k)}
+                        align="center"
+                      />
                       <th className="p-3 text-right font-bold">Thao Tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {filteredViolations.map(vio => (
+                    {sortedViolations.map((vio, index) => (
                       <tr key={vio.id} className="hover:bg-slate-800/40">
+                        <td className="p-3 text-center font-mono font-bold text-slate-400">
+                          {index + 1}
+                        </td>
                         <td className="p-3 font-bold text-amber-400 whitespace-nowrap">{vio.day}</td>
                         <td className="p-3 font-bold text-white whitespace-nowrap">{vio.className}</td>
                         <td className="p-3 text-slate-400">{vio.groupName}</td>
@@ -3609,29 +3841,91 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           title="Chọn tất cả học sinh đang hiển thị"
                         />
                       </th>
-                      <th className="p-3">Mã HS</th>
-                      <th className="p-3">Họ và Tên</th>
-                      <th className="p-3">Lớp</th>
-                      <th className="p-3">Ngày Sinh</th>
-                      <th className="p-3">Giới Tính</th>
-                      <th className="p-3">Dân Tộc</th>
-                      <th className="p-3">Số Điện Thoại</th>
-                      <th className="p-3">Địa Chỉ Liên Hệ</th>
-                      <th className="p-3 text-center">Đoàn Viên</th>
-                      <th className="p-3">Chức Vụ / Hồ Sơ Sổ Đoàn</th>
+                      <th className="p-3 text-center font-bold w-12 text-slate-400">STT</th>
+                      <SortableTh
+                        label="Mã HS"
+                        columnKey="studentId"
+                        currentSortKey={studentSort.key}
+                        currentSortDir={studentSort.direction}
+                        onSort={(k) => handleToggleSort(setStudentSort, k)}
+                      />
+                      <SortableTh
+                        label="Họ và Tên"
+                        columnKey="name"
+                        currentSortKey={studentSort.key}
+                        currentSortDir={studentSort.direction}
+                        onSort={(k) => handleToggleSort(setStudentSort, k)}
+                      />
+                      <SortableTh
+                        label="Lớp"
+                        columnKey="classId"
+                        currentSortKey={studentSort.key}
+                        currentSortDir={studentSort.direction}
+                        onSort={(k) => handleToggleSort(setStudentSort, k)}
+                      />
+                      <SortableTh
+                        label="Ngày Sinh"
+                        columnKey="dob"
+                        currentSortKey={studentSort.key}
+                        currentSortDir={studentSort.direction}
+                        onSort={(k) => handleToggleSort(setStudentSort, k)}
+                      />
+                      <SortableTh
+                        label="Giới Tính"
+                        columnKey="gender"
+                        currentSortKey={studentSort.key}
+                        currentSortDir={studentSort.direction}
+                        onSort={(k) => handleToggleSort(setStudentSort, k)}
+                      />
+                      <SortableTh
+                        label="Dân Tộc"
+                        columnKey="ethnicity"
+                        currentSortKey={studentSort.key}
+                        currentSortDir={studentSort.direction}
+                        onSort={(k) => handleToggleSort(setStudentSort, k)}
+                      />
+                      <SortableTh
+                        label="Số Điện Thoại"
+                        columnKey="phone"
+                        currentSortKey={studentSort.key}
+                        currentSortDir={studentSort.direction}
+                        onSort={(k) => handleToggleSort(setStudentSort, k)}
+                      />
+                      <SortableTh
+                        label="Địa Chỉ Liên Hệ"
+                        columnKey="address"
+                        currentSortKey={studentSort.key}
+                        currentSortDir={studentSort.direction}
+                        onSort={(k) => handleToggleSort(setStudentSort, k)}
+                      />
+                      <SortableTh
+                        label="Đoàn Viên"
+                        columnKey="isUnionMember"
+                        currentSortKey={studentSort.key}
+                        currentSortDir={studentSort.direction}
+                        onSort={(k) => handleToggleSort(setStudentSort, k)}
+                        align="center"
+                      />
+                      <SortableTh
+                        label="Chức Vụ / Hồ Sơ Sổ Đoàn"
+                        columnKey="unionPosition"
+                        currentSortKey={studentSort.key}
+                        currentSortDir={studentSort.direction}
+                        onSort={(k) => handleToggleSort(setStudentSort, k)}
+                      />
                       <th className="p-3 text-right">Thao Tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {filteredStudents.length === 0 ? (
+                    {sortedStudents.length === 0 ? (
                       <tr>
-                        <td colSpan={12} className="p-8 text-center text-slate-500 space-y-2">
+                        <td colSpan={13} className="p-8 text-center text-slate-500 space-y-2">
                           <p className="text-base font-bold text-slate-400">Không tìm thấy học sinh nào phù hợp bộ lọc!</p>
                           <p className="text-xs text-slate-500">Thử thay đổi Khối, Lớp, Trạng thái Đoàn viên hoặc từ khóa tìm kiếm.</p>
                         </td>
                       </tr>
                     ) : (
-                      filteredStudents.map(st => {
+                      sortedStudents.map((st, index) => {
                         const isSelected = selectedStudentIds.includes(st.id) || selectedStudentIds.includes(st.studentId);
                         return (
                           <tr 
@@ -3645,6 +3939,9 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                 onChange={() => toggleStudentSelection(st.id || st.studentId)}
                                 className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-red-600 focus:ring-0 cursor-pointer"
                               />
+                            </td>
+                            <td className="p-3 text-center font-mono font-bold text-slate-400">
+                              {index + 1}
                             </td>
                             <td className="p-3 font-mono font-bold text-amber-400 whitespace-nowrap">
                               <span className="px-2 py-0.5 rounded-lg bg-amber-950/60 border border-amber-800/60">
@@ -4368,120 +4665,603 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
           {/* Master Sub-Tab 4: WEEKS */}
           {operationsSubTab === 'weeks' && (
             <div className="space-y-4 animate-fadeIn">
-              <div className="flex items-center justify-between pb-2">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-300">THIẾT LẬP CẤU TRÚC THỜI GIAN & TUẦN HỌC</h4>
-                  <p className="text-[11px] text-slate-400">Thêm, sửa, xóa các tuần học, chọn tuần gốc và khóa/mở khóa sổ thi đua trực tiếp</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setEditingWeek(null);
-                    const nextNum = Math.max(...weeksConfig.map(w => w.weekNumber), 20) + 1;
-                    setWeekForm({
-                      weekNumber: nextNum,
-                      title: `Tuần ${nextNum}`,
-                      startDate: '2026-09-08',
-                      endDate: '2026-09-13',
-                      note: 'Kế hoạch học tập tuần mới'
-                    });
-                    setIsWeekModalOpen(true);
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+ Tạo Tuần Học Mới</span>
-                </button>
-              </div>
+              {(() => {
+                const semester1EndWeek = schoolSettings.semester1EndWeek || 18;
+                const semester1Name = schoolSettings.semester1Name || 'Học Kỳ 1';
+                const semester2Name = schoolSettings.semester2Name || 'Học Kỳ 2';
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {weeksConfig.map(w => (
-                  <div
-                    key={w.weekNumber}
-                    className={`p-4 rounded-2xl border space-y-3 text-xs transition-all ${w.isCurrent
-                      ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500 shadow-glow'
-                      : 'bg-slate-950 border-slate-800'
-                      }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-white text-base">{w.title}</span>
-                      {w.isCurrent && (
-                        <span className="px-2 py-0.5 rounded-full bg-red-600 text-white font-extrabold text-[9px]">
-                          TUẦN HIỆN TẠI
-                        </span>
-                      )}
-                    </div>
+                const sortedWeeks = sortDataList(weeksConfig, weekSort.key, weekSort.direction);
 
-                    <p className="text-slate-300 text-[11px]">
-                      📅 {w.startDate} đến {w.endDate}
-                    </p>
-                    {w.note && (
-                      <p className="text-slate-400 text-[11px] italic bg-slate-900/60 p-1.5 rounded-lg">
-                        {w.note}
-                      </p>
-                    )}
+                const hk1Weeks = weeksConfig.filter(w => w.weekNumber <= semester1EndWeek);
+                const hk2Weeks = weeksConfig.filter(w => w.weekNumber > semester1EndWeek);
 
-                    <div className="pt-2 flex flex-wrap items-center justify-between gap-1.5 border-t border-slate-900">
-                      <button
-                        onClick={() => toggleWeekLockDirect(w.weekNumber)}
-                        className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border flex items-center gap-1 transition-colors ${w.isLocked
-                          ? 'bg-rose-950 text-rose-300 border-rose-700 hover:bg-rose-900'
-                          : 'bg-emerald-950 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
-                          }`}
-                      >
-                        {w.isLocked ? <Lock className="w-3 h-3 text-rose-400" /> : <Unlock className="w-3 h-3 text-emerald-400" />}
-                        <span>{w.isLocked ? 'Đã Khóa Sổ (Mở)' : 'Đang Mở (Khóa)'}</span>
-                      </button>
+                const hk1StartDate = hk1Weeks[0]?.startDate ? formatDateDisplay(hk1Weeks[0].startDate) : '07/09/2026';
+                const hk1EndDate = hk1Weeks[hk1Weeks.length - 1]?.endDate ? formatDateDisplay(hk1Weeks[hk1Weeks.length - 1].endDate) : '09/01/2027';
 
-                      <div className="flex items-center gap-1">
+                const hk2StartDate = hk2Weeks[0]?.startDate ? formatDateDisplay(hk2Weeks[0].startDate) : '11/01/2027';
+                const hk2EndDate = hk2Weeks[hk2Weeks.length - 1]?.endDate ? formatDateDisplay(hk2Weeks[hk2Weeks.length - 1].endDate) : '08/05/2027';
+
+                return (
+                  <>
+                    {/* Header & Actions Toolbar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                      <div>
+                        <h4 className="text-sm font-black text-white flex items-center gap-2">
+                          <span>📅 CẤU HÌNH 35 TUẦN HỌC & HỌC KỲ NĂM HỌC 2026 – 2027</span>
+                          <span className="px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800 text-[11px] font-bold">
+                            {weeksConfig.length} Tuần
+                          </span>
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Phân bổ thời gian, cấu trúc {semester1Name} & {semester2Name}, chốt dữ liệu và đồng bộ Supabase Cloud
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* View Switcher: Table vs Cards */}
+                        <div className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs font-bold">
+                          <button
+                            type="button"
+                            onClick={() => setWeeksViewMode('table')}
+                            className={`px-3 py-1 rounded-lg transition-all ${
+                              weeksViewMode === 'table' ? 'bg-blue-600 text-white shadow-glow' : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            <span>📋 Bảng Danh Sách</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setWeeksViewMode('cards')}
+                            className={`px-3 py-1 rounded-lg transition-all ${
+                              weeksViewMode === 'cards' ? 'bg-blue-600 text-white shadow-glow' : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            <span>🗂️ Dạng Thẻ</span>
+                          </button>
+                        </div>
+
+                        {/* Open Semester Structure Modal */}
                         <button
+                          type="button"
                           onClick={() => {
-                            setEditingWeek(w);
+                            setSemesterForm({
+                              semester1EndWeek: schoolSettings.semester1EndWeek || 18,
+                              semester1Name: schoolSettings.semester1Name || 'Học Kỳ 1',
+                              semester2Name: schoolSettings.semester2Name || 'Học Kỳ 2'
+                            });
+                            setIsSemesterModalOpen(true);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-700/80 text-purple-300 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                          title="Tùy chỉnh số tuần và thời gian Học Kỳ 1 vs Học Kỳ 2"
+                        >
+                          <Sliders className="w-3.5 h-3.5 text-purple-400" />
+                          <span>⚙️ Cấu Trúc Học Kỳ</span>
+                        </button>
+
+                        {/* Cloud Sync Button */}
+                        <button
+                          type="button"
+                          disabled={isSyncingCloud}
+                          onClick={async () => {
+                            setIsSyncingCloud(true);
+                            try {
+                              const res = await syncWeeksToCloud();
+                              if (res.success) {
+                                alert(`✅ ${res.message}`);
+                              } else {
+                                alert(`⚠️ ${res.message}`);
+                              }
+                            } catch (err: any) {
+                              alert(`❌ Lỗi đồng bộ: ${err?.message || 'Không thể kết nối'}`);
+                            } finally {
+                              setIsSyncingCloud(false);
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                          title="Đồng bộ 35 tuần và cấu hình học kỳ lên Supabase Cloud trực tiếp để chạy online"
+                        >
+                          <Cloud className={`w-3.5 h-3.5 text-emerald-400 ${isSyncingCloud ? 'animate-spin' : ''}`} />
+                          <span>{isSyncingCloud ? 'Đang đồng bộ...' : '☁️ Đồng Bộ Cloud'}</span>
+                        </button>
+
+                        {/* Reset / Force Sync 35 Weeks */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm('Khôi phục danh mục 35 tuần chuẩn năm học 2026 – 2027 (07/09/2026 đến 08/05/2027)?')) {
+                              resetToDefault35Weeks();
+                              alert('✅ Đã nạp thành công 35 tuần học năm học 2026 – 2027 vào hệ thống!');
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-600 text-amber-300 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                          title="Nạp lại đầy đủ 35 tuần theo đúng lịch biểu năm học 2026 - 2027"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Nạp 35 Tuần Chuẩn</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingWeek(null);
+                            const nextNum = Math.max(...weeksConfig.map(w => w.weekNumber), 35) + 1;
                             setWeekForm({
-                              weekNumber: w.weekNumber,
-                              title: w.title,
-                              startDate: w.startDate,
-                              endDate: w.endDate,
-                              note: w.note || ''
+                              weekNumber: nextNum,
+                              title: `Tuần ${nextNum}`,
+                              startDate: '2027-05-10',
+                              endDate: '2027-05-15',
+                              note: 'Kế hoạch tuần bổ sung'
                             });
                             setIsWeekModalOpen(true);
                           }}
-                          title="Sửa thông tin tuần"
-                          className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400"
+                          className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all active:scale-95"
                         >
-                          <Edit3 className="w-3.5 h-3.5" />
+                          <Plus className="w-4 h-4" />
+                          <span>+ Thêm Tuần</span>
                         </button>
-
-                        {!w.isCurrent && (
-                          <button
-                            onClick={() => setCurrentWeek(w.weekNumber)}
-                            title="Đặt làm tuần gốc hiển thị"
-                            className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] font-bold"
-                          >
-                            Đặt gốc
-                          </button>
-                        )}
-
-                        {!w.isCurrent && (
-                          <button
-                            onClick={() => {
-                              if (confirm(`Bạn có chắc muốn xóa ${w.title}?`)) {
-                                const res = deleteWeek(w.weekNumber);
-                                alert(res.message);
-                              }
-                            }}
-                            title="Xóa tuần học"
-                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-950 text-rose-400"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+
+                    {/* Interactive Semester Summary Cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+                        <span className="text-[11px] font-bold text-slate-400">Tổng Số Tuần Học</span>
+                        <div>
+                          <p className="text-xl font-black text-white mt-1">{weeksConfig.length} <span className="text-xs font-normal text-slate-500">tuần</span></p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Năm học 2026 – 2027</p>
+                        </div>
+                      </div>
+
+                      {/* HK1 Dynamic Card (Clickable to customize) */}
+                      <div 
+                        onClick={() => {
+                          setSemesterForm({
+                            semester1EndWeek: schoolSettings.semester1EndWeek || 18,
+                            semester1Name: schoolSettings.semester1Name || 'Học Kỳ 1',
+                            semester2Name: schoolSettings.semester2Name || 'Học Kỳ 2'
+                          });
+                          setIsSemesterModalOpen(true);
+                        }}
+                        className="p-3.5 rounded-2xl bg-gradient-to-br from-amber-950/40 to-slate-950 border border-amber-800/60 hover:border-amber-500 transition-all cursor-pointer group shadow-sm hover:shadow-glow"
+                        title="Bấm để tùy chỉnh cấu trúc & số tuần Học Kỳ 1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
+                            <span>🎓 {semester1Name} ({hk1Weeks.length} Tuần)</span>
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-900/60 text-amber-300 font-bold opacity-70 group-hover:opacity-100 transition-opacity">
+                            ⚙️ Tùy chỉnh
+                          </span>
+                        </div>
+                        <p className="text-xs font-bold text-amber-300 mt-1.5 font-mono">{hk1StartDate} ➔ {hk1EndDate}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Tuần 1 đến Tuần {semester1EndWeek}</p>
+                      </div>
+
+                      {/* HK2 Dynamic Card (Clickable to customize) */}
+                      <div 
+                        onClick={() => {
+                          setSemesterForm({
+                            semester1EndWeek: schoolSettings.semester1EndWeek || 18,
+                            semester1Name: schoolSettings.semester1Name || 'Học Kỳ 1',
+                            semester2Name: schoolSettings.semester2Name || 'Học Kỳ 2'
+                          });
+                          setIsSemesterModalOpen(true);
+                        }}
+                        className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-slate-950 border border-emerald-800/60 hover:border-emerald-500 transition-all cursor-pointer group shadow-sm hover:shadow-glow"
+                        title="Bấm để tùy chỉnh cấu trúc & số tuần Học Kỳ 2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                            <span>🎓 {semester2Name} ({hk2Weeks.length} Tuần)</span>
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/60 text-emerald-300 font-bold opacity-70 group-hover:opacity-100 transition-opacity">
+                            ⚙️ Tùy chỉnh
+                          </span>
+                        </div>
+                        <p className="text-xs font-bold text-emerald-300 mt-1.5 font-mono">{hk2StartDate} ➔ {hk2EndDate}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Tuần {semester1EndWeek + 1} đến Tuần {weeksConfig.length}</p>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+                        <span className="text-[11px] font-bold text-slate-400">Tuần Hiện Tại</span>
+                        <div>
+                          <p className="text-xl font-black text-purple-400 mt-1">Tuần {activeWeek}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {activeWeek <= semester1EndWeek ? semester1Name : semester2Name}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* View 1: Detailed 35 Weeks Table */}
+                    {weeksViewMode === 'table' ? (
+                      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="bg-slate-900/90 text-slate-400 border-b border-slate-800 font-bold">
+                              <th className="p-3 text-center w-12 text-slate-400">STT</th>
+                              <SortableTh
+                                sortKey="weekNumber"
+                                currentSortKey={weekSort.key}
+                                currentSortDir={weekSort.direction}
+                                onSort={(k) => setWeekSort(prev => ({ key: k, direction: prev.key === k && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                                className="p-3 font-bold"
+                              >
+                                Tên Tuần Học
+                              </SortableTh>
+                              <SortableTh
+                                sortKey="startDate"
+                                currentSortKey={weekSort.key}
+                                currentSortDir={weekSort.direction}
+                                onSort={(k) => setWeekSort(prev => ({ key: k, direction: prev.key === k && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                                className="p-3 font-bold"
+                              >
+                                Từ Ngày (Thứ 2)
+                              </SortableTh>
+                              <SortableTh
+                                sortKey="endDate"
+                                currentSortKey={weekSort.key}
+                                currentSortDir={weekSort.direction}
+                                onSort={(k) => setWeekSort(prev => ({ key: k, direction: prev.key === k && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                                className="p-3 font-bold"
+                              >
+                                Đến Ngày (Thứ 7)
+                              </SortableTh>
+                              <th className="p-3 font-bold text-center">Học Kỳ</th>
+                              <th className="p-3 font-bold">Kế Hoạch / Ghi Chú Trọng Tâm</th>
+                              <th className="p-3 font-bold text-center">Khóa Sổ Thi Đua</th>
+                              <th className="p-3 font-bold text-right">Thao Tác</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/60">
+                            {sortedWeeks.map((w, idx) => {
+                              const isHk1 = w.weekNumber <= semester1EndWeek;
+                              return (
+                                <tr
+                                  key={w.weekNumber}
+                                  className={`transition-colors ${
+                                    w.isCurrent
+                                      ? 'bg-red-950/30 font-semibold'
+                                      : 'hover:bg-slate-900/50'
+                                  }`}
+                                >
+                                  <td className="p-3 text-center text-slate-400 font-mono font-bold">
+                                    {idx + 1}
+                                  </td>
+                                  <td className="p-3 font-bold text-white whitespace-nowrap">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-extrabold text-white text-sm">{w.title}</span>
+                                      {w.isCurrent && (
+                                        <span className="px-2 py-0.5 rounded-full bg-red-600 text-white font-extrabold text-[9px] shadow-sm animate-pulse">
+                                          GỐC
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="p-3 text-amber-300 font-mono font-semibold whitespace-nowrap">
+                                    {formatDateDisplay(w.startDate)}
+                                  </td>
+                                  <td className="p-3 text-amber-300 font-mono font-semibold whitespace-nowrap">
+                                    {formatDateDisplay(w.endDate)}
+                                  </td>
+                                  <td className="p-3 text-center whitespace-nowrap">
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                      isHk1
+                                        ? 'bg-amber-950/80 text-amber-300 border-amber-800'
+                                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                                    }`}>
+                                      {isHk1 ? semester1Name : semester2Name}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-slate-300 max-w-xs">
+                                    <span className="text-xs">{w.note || '—'}</span>
+                                  </td>
+                                  <td className="p-3 text-center whitespace-nowrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleWeekLockDirect(w.weekNumber)}
+                                      className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border flex items-center gap-1 mx-auto transition-colors ${
+                                        w.isLocked
+                                          ? 'bg-rose-950 text-rose-300 border-rose-700 hover:bg-rose-900'
+                                          : 'bg-emerald-950 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
+                                      }`}
+                                      title={w.isLocked ? "Bấm để mở khóa sổ thi đua" : "Bấm để khóa sổ thi đua tuần này"}
+                                    >
+                                      {w.isLocked ? <Lock className="w-3 h-3 text-rose-400" /> : <Unlock className="w-3 h-3 text-emerald-400" />}
+                                      <span>{w.isLocked ? 'Đã Khóa' : 'Đang Mở'}</span>
+                                    </button>
+                                  </td>
+                                  <td className="p-3 text-right whitespace-nowrap">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      {!w.isCurrent && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setCurrentWeek(w.weekNumber)}
+                                          title="Đặt làm tuần gốc hiển thị mặc định"
+                                          className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-white text-[10px] font-bold border border-slate-800"
+                                        >
+                                          Đặt gốc
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingWeek(w);
+                                          setWeekForm({
+                                            weekNumber: w.weekNumber,
+                                            title: w.title,
+                                            startDate: w.startDate,
+                                            endDate: w.endDate,
+                                            note: w.note || ''
+                                          });
+                                          setIsWeekModalOpen(true);
+                                        }}
+                                        title="Sửa thông tin tuần học"
+                                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-800"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                      </button>
+                                      {!w.isCurrent && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (confirm(`Bạn có chắc muốn xóa ${w.title}?`)) {
+                                              const res = deleteWeek(w.weekNumber);
+                                              alert(res.message);
+                                            }
+                                          }}
+                                          title="Xóa tuần học này"
+                                          className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-950 text-rose-400 border border-slate-800"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      /* View 2: Visual Cards Grid */
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {weeksConfig.map(w => {
+                          const isHk1 = w.weekNumber <= semester1EndWeek;
+                          return (
+                            <div
+                              key={w.weekNumber}
+                              className={`p-4 rounded-2xl border space-y-3 text-xs transition-all ${
+                                w.isCurrent
+                                  ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500 shadow-glow'
+                                  : 'bg-slate-950 border-slate-800'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-extrabold text-white text-base">{w.title}</span>
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                                    isHk1
+                                      ? 'bg-amber-950 text-amber-300 border-amber-800'
+                                      : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                  }`}>
+                                    {isHk1 ? semester1Name : semester2Name}
+                                  </span>
+                                </div>
+                                {w.isCurrent && (
+                                  <span className="px-2 py-0.5 rounded-full bg-red-600 text-white font-extrabold text-[9px]">
+                                    TUẦN HIỆN TẠI
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="text-slate-300 text-[11px]">
+                                📅 {formatDateDisplay(w.startDate)} đến {formatDateDisplay(w.endDate)}
+                              </p>
+                              {w.note && (
+                                <p className="text-slate-400 text-[11px] italic bg-slate-900/60 p-1.5 rounded-lg">
+                                  {w.note}
+                                </p>
+                              )}
+
+                              <div className="pt-2 flex flex-wrap items-center justify-between gap-1.5 border-t border-slate-900">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleWeekLockDirect(w.weekNumber)}
+                                  className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border flex items-center gap-1 transition-colors ${
+                                    w.isLocked
+                                      ? 'bg-rose-950 text-rose-300 border-rose-700 hover:bg-rose-900'
+                                      : 'bg-emerald-950 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
+                                  }`}
+                                >
+                                  {w.isLocked ? <Lock className="w-3 h-3 text-rose-400" /> : <Unlock className="w-3 h-3 text-emerald-400" />}
+                                  <span>{w.isLocked ? 'Đã Khóa' : 'Đang Mở'}</span>
+                                </button>
+
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingWeek(w);
+                                      setWeekForm({
+                                        weekNumber: w.weekNumber,
+                                        title: w.title,
+                                        startDate: w.startDate,
+                                        endDate: w.endDate,
+                                        note: w.note || ''
+                                      });
+                                      setIsWeekModalOpen(true);
+                                    }}
+                                    title="Sửa thông tin tuần"
+                                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {!w.isCurrent && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setCurrentWeek(w.weekNumber)}
+                                      title="Đặt làm tuần gốc hiển thị"
+                                      className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] font-bold"
+                                    >
+                                      Đặt gốc
+                                    </button>
+                                  )}
+
+                                  {!w.isCurrent && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (confirm(`Bạn có chắc muốn xóa ${w.title}?`)) {
+                                          const res = deleteWeek(w.weekNumber);
+                                          alert(res.message);
+                                        }
+                                      }}
+                                      title="Xóa tuần học"
+                                      className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-950 text-rose-400"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ================= MODAL: TÙY CHỈNH PHÂN BỔ HỌC KỲ (HK1 & HK2) ================= */}
+      {isSemesterModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="glass-panel w-full max-w-lg rounded-3xl p-6 border border-purple-700/60 shadow-2xl space-y-5 bg-slate-900">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-purple-600/20 text-purple-400">
+                  <Sliders className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-black text-white">TÙY CHỈNH CẤU TRÚC HỌC KỲ</h3>
+                  <p className="text-xs text-slate-400">Phân chia số tuần & thời gian Học kỳ 1 / Học kỳ 2 theo kế hoạch nhà trường</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSemesterModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Semester 1 Name */}
+              <div className="space-y-1">
+                <label className="text-slate-300 font-bold">Tên hiển thị Học Kỳ 1</label>
+                <input
+                  type="text"
+                  value={semesterForm.semester1Name}
+                  onChange={(e) => setSemesterForm(prev => ({ ...prev, semester1Name: e.target.value }))}
+                  placeholder="Học Kỳ 1"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              {/* Semester 2 Name */}
+              <div className="space-y-1">
+                <label className="text-slate-300 font-bold">Tên hiển thị Học Kỳ 2</label>
+                <input
+                  type="text"
+                  value={semesterForm.semester2Name}
+                  onChange={(e) => setSemesterForm(prev => ({ ...prev, semester2Name: e.target.value }))}
+                  placeholder="Học Kỳ 2"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              {/* Semester 1 Cutoff Week */}
+              <div className="space-y-1">
+                <label className="text-slate-300 font-bold flex items-center justify-between">
+                  <span>Tuần kết thúc {semesterForm.semester1Name}</span>
+                  <span className="text-purple-400 font-extrabold text-sm">Tuần {semesterForm.semester1EndWeek}</span>
+                </label>
+                <select
+                  value={semesterForm.semester1EndWeek}
+                  onChange={(e) => setSemesterForm(prev => ({ ...prev, semester1EndWeek: Number(e.target.value) }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-bold focus:outline-none focus:border-purple-500 cursor-pointer"
+                >
+                  {Array.from({ length: Math.max(weeksConfig.length - 1, 34) }, (_, i) => i + 1).map(num => (
+                    <option key={num} value={num} className="bg-slate-900 text-white">
+                      Tuần {num} ({num} tuần HK1 / {weeksConfig.length - num} tuần HK2)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Live Preview Calculation */}
+              {(() => {
+                const s1Weeks = weeksConfig.filter(w => w.weekNumber <= semesterForm.semester1EndWeek);
+                const s2Weeks = weeksConfig.filter(w => w.weekNumber > semesterForm.semester1EndWeek);
+
+                const s1Start = s1Weeks[0]?.startDate ? formatDateDisplay(s1Weeks[0].startDate) : '—';
+                const s1End = s1Weeks[s1Weeks.length - 1]?.endDate ? formatDateDisplay(s1Weeks[s1Weeks.length - 1].endDate) : '—';
+
+                const s2Start = s2Weeks[0]?.startDate ? formatDateDisplay(s2Weeks[0].startDate) : '—';
+                const s2End = s2Weeks[s2Weeks.length - 1]?.endDate ? formatDateDisplay(s2Weeks[s2Weeks.length - 1].endDate) : '—';
+
+                return (
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Xem trước phân bổ thời gian:</p>
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/30 border border-amber-800/40">
+                      <div>
+                        <span className="font-extrabold text-amber-300">{semesterForm.semester1Name}</span>
+                        <p className="text-[10px] text-slate-400">Tuần 1 đến Tuần {semesterForm.semester1EndWeek} ({s1Weeks.length} Tuần)</p>
+                      </div>
+                      <span className="font-mono text-amber-400 font-bold text-[11px]">{s1Start} ➔ {s1End}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-950/30 border border-emerald-800/40">
+                      <div>
+                        <span className="font-extrabold text-emerald-300">{semesterForm.semester2Name}</span>
+                        <p className="text-[10px] text-slate-400">Tuần {semesterForm.semester1EndWeek + 1} đến Tuần {weeksConfig.length} ({s2Weeks.length} Tuần)</p>
+                      </div>
+                      <span className="font-mono text-emerald-400 font-bold text-[11px]">{s2Start} ➔ {s2End}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsSemesterModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  updateSemesterConfig(semesterForm);
+                  setIsSemesterModalOpen(false);
+                  alert(`✅ Đã cập nhật thành công cấu trúc học kỳ!\n- ${semesterForm.semester1Name}: Tuần 1 -> Tuần ${semesterForm.semester1EndWeek}\n- ${semesterForm.semester2Name}: Tuần ${semesterForm.semester1EndWeek + 1} -> Tuần ${weeksConfig.length}`);
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-glow transition-all active:scale-95"
+              >
+                💾 Lưu & Đồng Bộ Cấu Hình
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -5175,135 +5955,236 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
               {/* Reports List */}
               <div className="space-y-4">
-                {filteredActivityReports.map(report => (
-                  <div
-                    key={report.id}
-                    className="p-5 rounded-3xl bg-slate-950 border border-slate-800/90 shadow-md hover:border-slate-700 transition-all space-y-4"
-                  >
-                    {/* Top Row of Card */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800/70">
-                      <div className="space-y-1">
-                        <div className="flex items-center flex-wrap gap-2">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${report.activityType === 'the_thao' ? 'bg-amber-950 text-amber-300 border-amber-800' :
-                            report.activityType === 'tinh_nguyen' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
-                              report.activityType === 'van_nghe' ? 'bg-purple-950 text-purple-300 border-purple-800' :
-                                'bg-blue-950 text-blue-300 border-blue-800'
-                            }`}>
-                            {report.activityType === 'the_thao' ? '🏅 Hội Thao' :
-                              report.activityType === 'tinh_nguyen' ? '🌱 Tình Nguyện' :
-                                report.activityType === 'van_nghe' ? '🎭 Văn Nghệ' :
-                                  report.activityType === 'lao_dong' ? '🛠️ Lao Động' : '🚩 Phong Trào'}
-                          </span>
-                          <h5 className="text-base font-black text-white">{report.activityTitle}</h5>
-                          <span className="px-2.5 py-0.5 rounded-full bg-slate-900 text-amber-400 font-extrabold text-xs border border-slate-700">
-                            Chi đoàn {report.className}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
-                          <span>👤 Bí thư báo cáo: <strong className="text-slate-300">{report.secretaryName}</strong></span>
-                          <span>🕒 Thời gian: <strong className="text-slate-300">{report.reportedAt}</strong></span>
-                          <span>👥 Số lượng: <strong className="text-purple-400">{report.participantCount || report.participants.length} học sinh</strong></span>
-                        </p>
-                      </div>
+                {filteredActivityReports.map(report => {
+                  const currentTab = activeReportTab[report.id] || 'participating';
+                  const nonParticipants = getReportNonParticipants(report);
+                  const totalInClass = report.participants.length + nonParticipants.length;
+                  const participantRate = totalInClass > 0 ? Math.round((report.participants.length / totalInClass) * 100) : 100;
+                  
+                  const sortedParticipants = sortDataList(report.participants, 'name', 'asc');
+                  const sortedNonParticipants = sortDataList(nonParticipants, 'name', 'asc');
 
-                      {/* Status badge & Action buttons */}
-                      <div className="flex items-center flex-wrap gap-2 shrink-0">
-                        {report.status === 'verified' ? (
-                          <span className="px-3 py-1 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Đã Xác Nhận</span>
-                          </span>
-                        ) : (
+                  return (
+                    <div
+                      key={report.id}
+                      className="p-5 rounded-3xl bg-slate-950 border border-slate-800/90 shadow-md hover:border-slate-700 transition-all space-y-4"
+                    >
+                      {/* Top Row of Card */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800/70">
+                        <div className="space-y-1">
+                          <div className="flex items-center flex-wrap gap-2">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${report.activityType === 'the_thao' ? 'bg-amber-950 text-amber-300 border-amber-800' :
+                              report.activityType === 'tinh_nguyen' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
+                                report.activityType === 'van_nghe' ? 'bg-purple-950 text-purple-300 border-purple-800' :
+                                  'bg-blue-950 text-blue-300 border-blue-800'
+                              }`}>
+                              {report.activityType === 'the_thao' ? '🏅 Hội Thao' :
+                                report.activityType === 'tinh_nguyen' ? '🌱 Tình Nguyện' :
+                                  report.activityType === 'van_nghe' ? '🎭 Văn Nghệ' :
+                                    report.activityType === 'lao_dong' ? '🛠️ Lao Động' : '🚩 Phong Trào'}
+                            </span>
+                            <h5 className="text-base font-black text-white">{report.activityTitle}</h5>
+                            <span className="px-2.5 py-0.5 rounded-full bg-slate-900 text-amber-400 font-extrabold text-xs border border-slate-700">
+                              Chi đoàn {report.className}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+                            <span>👤 Bí thư báo cáo: <strong className="text-slate-300">{report.secretaryName}</strong></span>
+                            <span>🕒 Thời gian: <strong className="text-slate-300">{report.reportedAt}</strong></span>
+                            <span>👥 Sĩ số lớp: <strong className="text-slate-300">{totalInClass} học sinh</strong></span>
+                            <span>✅ Tham gia: <strong className="text-purple-400 font-bold">{report.participants.length} ({participantRate}%)</strong></span>
+                            <span>❌ Không tham gia: <strong className="text-rose-400 font-bold">{nonParticipants.length} ({100 - participantRate}%)</strong></span>
+                          </p>
+                        </div>
+
+                        {/* Status badge & Action buttons */}
+                        <div className="flex items-center flex-wrap gap-2 shrink-0">
+                          {report.status === 'verified' ? (
+                            <span className="px-3 py-1 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-bold flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Đã Xác Nhận</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => verifyActivityReport(report.id, 'Đoàn trường đã ghi nhận và biểu dương tập thể Chi đoàn!')}
+                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow-glow transition-all"
+                              title="Xác nhận duyệt danh sách và biểu dương chi đoàn"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Duyệt & Biểu Dương</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
-                            onClick={() => verifyActivityReport(report.id, 'Đoàn trường đã ghi nhận và biểu dương tập thể Chi đoàn!')}
-                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow-glow transition-all"
-                            title="Xác nhận duyệt danh sách và biểu dương chi đoàn"
+                            onClick={() => handleExportActivityParticipantsExcel([report])}
+                            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-slate-700 hover:border-emerald-600 text-xs font-bold flex items-center gap-1 transition-all"
+                            title="Tải riêng file Excel danh sách đầy đủ của Chi đoàn này"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Duyệt & Biểu Dương</span>
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                            <span>Xuất Excel</span>
                           </button>
-                        )}
 
-                        <button
-                          type="button"
-                          onClick={() => handleExportActivityParticipantsExcel([report])}
-                          className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-slate-700 hover:border-emerald-600 text-xs font-bold flex items-center gap-1 transition-all"
-                          title="Tải riêng file Excel danh sách của Chi đoàn này"
-                        >
-                          <FileSpreadsheet className="w-3.5 h-3.5" />
-                          <span>Xuất Excel</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm(`Bạn có chắc muốn xóa báo cáo phong trào "${report.activityTitle}" của Chi đoàn ${report.className}?`)) {
-                              deleteActivityReport(report.id);
-                            }
-                          }}
-                          className="p-1.5 rounded-xl bg-slate-900 hover:bg-rose-950 text-rose-400 border border-slate-800 hover:border-rose-800 transition-colors"
-                          title="Xóa báo cáo"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Bạn có chắc muốn xóa báo cáo phong trào "${report.activityTitle}" của Chi đoàn ${report.className}?`)) {
+                                deleteActivityReport(report.id);
+                              }
+                            }}
+                            className="p-1.5 rounded-xl bg-slate-900 hover:bg-rose-950 text-rose-400 border border-slate-800 hover:border-rose-800 transition-colors"
+                            title="Xóa báo cáo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Table of Participating Students */}
-                    <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60">
-                      <table className="w-full text-left text-xs">
-                        <thead>
-                          <tr className="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-bold">
-                            <th className="p-2.5 text-center w-12">STT</th>
-                            <th className="p-2.5">Mã Học Sinh</th>
-                            <th className="p-2.5">Họ và Tên</th>
-                            <th className="p-2.5 text-center">Giới Tính</th>
-                            <th className="p-2.5">Số Điện Thoại</th>
-                            <th className="p-2.5">Vai Trò / Nhiệm Vụ</th>
-                            <th className="p-2.5">Thành Tích / Giải Thưởng</th>
-                            <th className="p-2.5">Ghi Chú</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/60">
-                          {report.participants.map((p, pIdx) => (
-                            <tr key={p.studentId || pIdx} className="hover:bg-slate-800/40 transition-colors">
-                              <td className="p-2.5 text-center text-slate-500 font-mono">{pIdx + 1}</td>
-                              <td className="p-2.5 font-mono text-amber-400 font-bold">{p.studentId}</td>
-                              <td className="p-2.5 font-bold text-white whitespace-nowrap">{p.name}</td>
-                              <td className="p-2.5 text-center">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.gender === 'Nữ' ? 'bg-pink-950 text-pink-300' : 'bg-blue-950 text-blue-300'
-                                  }`}>
-                                  {p.gender}
-                                </span>
-                              </td>
-                              <td className="p-2.5 text-slate-300 font-mono">{p.phone || '—'}</td>
-                              <td className="p-2.5 text-slate-200 font-semibold">{p.role || 'Thành viên'}</td>
-                              <td className="p-2.5">
-                                {p.achievement ? (
-                                  <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-700 font-bold text-[11px]">
-                                    🏆 {p.achievement}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-500 text-xs">Tham gia đầy đủ</span>
-                                )}
-                              </td>
-                              <td className="p-2.5 text-slate-400 italic">{p.note || '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                      {/* Segmented View Switcher: Tham Gia vs Không Tham Gia */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                        <div className="flex items-center gap-1.5 p-1 bg-slate-900 rounded-xl border border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setActiveReportTab(prev => ({ ...prev, [report.id]: 'participating' }))}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                              currentTab === 'participating'
+                                ? 'bg-purple-600 text-white shadow-glow'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                            }`}
+                          >
+                            <span>✅ Học Sinh Tham Gia ({report.participants.length})</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveReportTab(prev => ({ ...prev, [report.id]: 'non_participating' }))}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                              currentTab === 'non_participating'
+                                ? 'bg-rose-600 text-white shadow-glow'
+                                : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800'
+                            }`}
+                          >
+                            <span>❌ Học Sinh / Đoàn Viên Không Tham Gia ({nonParticipants.length})</span>
+                          </button>
+                        </div>
 
-                    {/* Admin feedback notes */}
-                    {report.adminFeedback && (
-                      <div className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-900/50 text-purple-200 text-xs flex items-center gap-2">
-                        <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                        <span><strong>Đoàn trường phản hồi:</strong> {report.adminFeedback}</span>
+                        <span className="text-[11px] text-slate-500 font-medium italic">
+                          {currentTab === 'participating'
+                            ? `Hiển thị danh sách ${report.participants.length} học sinh tham gia phong trào`
+                            : `Hiển thị danh sách ${nonParticipants.length} học sinh trong chi đoàn không tham gia đợt này`}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {/* Table of Students */}
+                      {currentTab === 'participating' ? (
+                        <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60">
+                          <table className="w-full text-left text-xs">
+                            <thead>
+                              <tr className="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-bold">
+                                <th className="p-2.5 text-center w-12 text-slate-400">STT</th>
+                                <th className="p-2.5">Mã Học Sinh</th>
+                                <th className="p-2.5">Họ và Tên (A-Z)</th>
+                                <th className="p-2.5 text-center">Giới Tính</th>
+                                <th className="p-2.5">Số Điện Thoại</th>
+                                <th className="p-2.5">Vai Trò / Nhiệm Vụ</th>
+                                <th className="p-2.5">Thành Tích / Giải Thưởng</th>
+                                <th className="p-2.5">Ghi Chú</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/60">
+                              {sortedParticipants.map((p, pIdx) => (
+                                <tr key={p.studentId || pIdx} className="hover:bg-slate-800/40 transition-colors">
+                                  <td className="p-2.5 text-center text-slate-400 font-mono font-bold">{pIdx + 1}</td>
+                                  <td className="p-2.5 font-mono text-amber-400 font-bold">{p.studentId}</td>
+                                  <td className="p-2.5 font-bold text-white whitespace-nowrap">{p.name}</td>
+                                  <td className="p-2.5 text-center">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.gender === 'Nữ' ? 'bg-pink-950 text-pink-300' : 'bg-blue-950 text-blue-300'
+                                      }`}>
+                                      {p.gender}
+                                    </span>
+                                  </td>
+                                  <td className="p-2.5 text-slate-300 font-mono">{p.phone || '—'}</td>
+                                  <td className="p-2.5 text-slate-200 font-semibold">{p.role || 'Thành viên'}</td>
+                                  <td className="p-2.5">
+                                    {p.achievement ? (
+                                      <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-700 font-bold text-[11px]">
+                                        🏆 {p.achievement}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-500 text-xs">Tham gia đầy đủ</span>
+                                    )}
+                                  </td>
+                                  <td className="p-2.5 text-slate-400 italic">{p.note || '—'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto rounded-2xl border border-rose-950/60 bg-slate-900/60">
+                          <table className="w-full text-left text-xs">
+                            <thead>
+                              <tr className="bg-rose-950/40 text-rose-300 border-b border-rose-900/50 font-bold">
+                                <th className="p-2.5 text-center w-12 text-slate-400">STT</th>
+                                <th className="p-2.5">Mã Học Sinh</th>
+                                <th className="p-2.5">Họ và Tên (A-Z)</th>
+                                <th className="p-2.5 text-center">Giới Tính</th>
+                                <th className="p-2.5 text-center">Đoàn Viên</th>
+                                <th className="p-2.5">Số Điện Thoại</th>
+                                <th className="p-2.5">Trạng Thái / Lý Do Không Tham Gia</th>
+                                <th className="p-2.5">Ghi Chú</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/60">
+                              {sortedNonParticipants.length === 0 ? (
+                                <tr>
+                                  <td colSpan={8} className="p-6 text-center text-emerald-400 font-bold">
+                                    🎉 100% học sinh trong chi đoàn đều tham gia hoạt động phong trào này!
+                                  </td>
+                                </tr>
+                              ) : (
+                                sortedNonParticipants.map((np, npIdx) => (
+                                  <tr key={np.studentId || npIdx} className="hover:bg-rose-950/20 transition-colors">
+                                    <td className="p-2.5 text-center text-slate-400 font-mono font-bold">{npIdx + 1}</td>
+                                    <td className="p-2.5 font-mono text-slate-400 font-bold">{np.studentId}</td>
+                                    <td className="p-2.5 font-bold text-white whitespace-nowrap">{np.name}</td>
+                                    <td className="p-2.5 text-center">
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${np.gender === 'Nữ' ? 'bg-pink-950 text-pink-300' : 'bg-blue-950 text-blue-300'
+                                        }`}>
+                                        {np.gender}
+                                      </span>
+                                    </td>
+                                    <td className="p-2.5 text-center">
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${np.isUnionMember ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-slate-800 text-slate-400'
+                                        }`}>
+                                        {np.isUnionMember ? 'Đoàn viên' : 'Thanh niên'}
+                                      </span>
+                                    </td>
+                                    <td className="p-2.5 text-slate-400 font-mono">{np.phone || '—'}</td>
+                                    <td className="p-2.5">
+                                      <span className="px-2 py-0.5 rounded-lg bg-rose-950 text-rose-300 border border-rose-800/60 text-[11px] font-semibold">
+                                        {np.reason || 'Vắng mặt / Không tham gia'}
+                                      </span>
+                                    </td>
+                                    <td className="p-2.5 text-slate-400 italic">{np.note || '—'}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {/* Admin feedback notes */}
+                      {report.adminFeedback && (
+                        <div className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-900/50 text-purple-200 text-xs flex items-center gap-2">
+                          <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                          <span><strong>Đoàn trường phản hồi:</strong> {report.adminFeedback}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
                 {filteredActivityReports.length === 0 && (
                   <div className="p-12 text-center bg-slate-950 rounded-3xl border border-slate-800 text-slate-400 text-xs space-y-2">
@@ -5785,11 +6666,35 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-950 text-slate-300 border-b border-slate-800">
-                      <th className="p-3 font-bold text-center w-12">STT</th>
-                      <th className="p-3 font-bold">Mã / Tài Khoản</th>
-                      <th className="p-3 font-bold">Họ và Tên</th>
-                      <th className="p-3 font-bold">Vai Trò / Phân Quyền</th>
-                      <th className="p-3 font-bold">Phụ Trách (Lớp / Khu Vực)</th>
+                      <th className="p-3 font-bold text-center w-12 text-slate-400">STT</th>
+                      <SortableTh
+                        label="Mã / Tài Khoản"
+                        columnKey="username"
+                        currentSortKey={userTableSort.key}
+                        currentSortDir={userTableSort.direction}
+                        onSort={(k) => handleToggleSort(setUserTableSort, k)}
+                      />
+                      <SortableTh
+                        label="Họ và Tên"
+                        columnKey="name"
+                        currentSortKey={userTableSort.key}
+                        currentSortDir={userTableSort.direction}
+                        onSort={(k) => handleToggleSort(setUserTableSort, k)}
+                      />
+                      <SortableTh
+                        label="Vai Trò / Phân Quyền"
+                        columnKey="role"
+                        currentSortKey={userTableSort.key}
+                        currentSortDir={userTableSort.direction}
+                        onSort={(k) => handleToggleSort(setUserTableSort, k)}
+                      />
+                      <SortableTh
+                        label="Phụ Trách (Lớp / Khu Vực)"
+                        columnKey="classId"
+                        currentSortKey={userTableSort.key}
+                        currentSortDir={userTableSort.direction}
+                        onSort={(k) => handleToggleSort(setUserTableSort, k)}
+                      />
                       <th className="p-3 font-bold">Liên Hệ</th>
                       <th className="p-3 text-center font-bold">Trạng Thái</th>
                       <th className="p-3 text-right font-bold">Thao Tác</th>
@@ -6762,26 +7667,78 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-900 text-slate-300 border-b border-slate-800">
-                          <th className="p-3 font-bold text-center w-14">Hạng</th>
-                          <th className="p-3 font-bold">Lớp</th>
-                          <th className="p-3 font-bold">Khối</th>
-                          <th className="p-3 font-bold">Giáo Viên Chủ Nhiệm</th>
+                          <th className="p-3 font-bold text-center w-12 text-slate-400">STT</th>
+                          <SortableTh
+                            label="Hạng"
+                            columnKey="cumulativeRank"
+                            currentSortKey={cumulativeSort.key}
+                            currentSortDir={cumulativeSort.direction}
+                            onSort={(k) => handleToggleSort(setCumulativeSort, k)}
+                            align="center"
+                            width="60px"
+                          />
+                          <SortableTh
+                            label="Lớp"
+                            columnKey="className"
+                            currentSortKey={cumulativeSort.key}
+                            currentSortDir={cumulativeSort.direction}
+                            onSort={(k) => handleToggleSort(setCumulativeSort, k)}
+                          />
+                          <SortableTh
+                            label="Khối"
+                            columnKey="grade"
+                            currentSortKey={cumulativeSort.key}
+                            currentSortDir={cumulativeSort.direction}
+                            onSort={(k) => handleToggleSort(setCumulativeSort, k)}
+                          />
+                          <SortableTh
+                            label="Giáo Viên Chủ Nhiệm"
+                            columnKey="homeroomTeacher"
+                            currentSortKey={cumulativeSort.key}
+                            currentSortDir={cumulativeSort.direction}
+                            onSort={(k) => handleToggleSort(setCumulativeSort, k)}
+                          />
                           {weeksConfig.map(w => (
                             <th key={w.weekNumber} className="p-3 font-bold text-center font-mono">
                               T{w.weekNumber}
                             </th>
                           ))}
-                          <th className="p-3 font-bold text-center text-amber-400 bg-amber-950/20">Tổng Điểm</th>
-                          <th className="p-3 font-bold text-center text-emerald-400">Điểm TB</th>
-                          <th className="p-3 font-bold text-center text-rose-400">Lỗi VP</th>
+                          <SortableTh
+                            label="Tổng Điểm"
+                            columnKey="totalCumulativeScore"
+                            currentSortKey={cumulativeSort.key}
+                            currentSortDir={cumulativeSort.direction}
+                            onSort={(k) => handleToggleSort(setCumulativeSort, k)}
+                            align="center"
+                            className="text-amber-400 bg-amber-950/20"
+                          />
+                          <SortableTh
+                            label="Điểm TB"
+                            columnKey="avgScore"
+                            currentSortKey={cumulativeSort.key}
+                            currentSortDir={cumulativeSort.direction}
+                            onSort={(k) => handleToggleSort(setCumulativeSort, k)}
+                            align="center"
+                            className="text-emerald-400"
+                          />
+                          <SortableTh
+                            label="Lỗi VP"
+                            columnKey="totalViolations"
+                            currentSortKey={cumulativeSort.key}
+                            currentSortDir={cumulativeSort.direction}
+                            onSort={(k) => handleToggleSort(setCumulativeSort, k)}
+                            align="center"
+                            className="text-rose-400"
+                          />
                           <th className="p-3 font-bold text-center">Danh Hiệu</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60">
-                        {multiWeekSummary
-                          .filter(cls => cumulativeGradeFilter === 'ALL' || cls.grade === cumulativeGradeFilter)
-                          .map((item) => (
-                            <tr key={item.classId} className="hover:bg-slate-900/60 transition-colors">
+                        {sortedCumulativeSummary.map((item, idx) => (
+                          <tr key={item.classId} className="hover:bg-slate-900/60 transition-colors">
+                            <td className="p-3 text-center font-mono font-bold text-slate-400">
+                              {idx + 1}
+                            </td>
                               <td className="p-3 text-center font-black">
                                 {item.cumulativeRank === 1 ? (
                                   <span className="px-2 py-1 rounded-lg bg-amber-500 text-slate-950 font-black text-xs shadow-glow">
@@ -7138,23 +8095,71 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-900 text-slate-300 border-b border-slate-800">
-                          <th className="p-3 font-bold text-center w-14">Hạng</th>
-                          <th className="p-3 font-bold">Lớp</th>
-                          <th className="p-3 font-bold">Khối</th>
+                          <th className="p-3 font-bold text-center w-12 text-slate-400">STT</th>
+                          <SortableTh
+                            label="Hạng"
+                            columnKey="rank"
+                            currentSortKey={weeklyMatrixSort.key}
+                            currentSortDir={weeklyMatrixSort.direction}
+                            onSort={(k) => handleToggleSort(setWeeklyMatrixSort, k)}
+                            align="center"
+                            width="60px"
+                          />
+                          <SortableTh
+                            label="Lớp"
+                            columnKey="className"
+                            currentSortKey={weeklyMatrixSort.key}
+                            currentSortDir={weeklyMatrixSort.direction}
+                            onSort={(k) => handleToggleSort(setWeeklyMatrixSort, k)}
+                          />
+                          <SortableTh
+                            label="Khối"
+                            columnKey="grade"
+                            currentSortKey={weeklyMatrixSort.key}
+                            currentSortDir={weeklyMatrixSort.direction}
+                            onSort={(k) => handleToggleSort(setWeeklyMatrixSort, k)}
+                          />
                           <th className="p-3 font-bold text-center">T2</th>
                           <th className="p-3 font-bold text-center">T3</th>
                           <th className="p-3 font-bold text-center">T4</th>
                           <th className="p-3 font-bold text-center">T5</th>
                           <th className="p-3 font-bold text-center">T6</th>
                           <th className="p-3 font-bold text-center">T7</th>
-                          <th className="p-3 font-bold text-center text-rose-400">Điểm Trừ</th>
-                          <th className="p-3 font-bold text-center text-emerald-400">Điểm Thưởng</th>
-                          <th className="p-3 font-bold text-center text-amber-400 font-black">Điểm Tổng</th>
+                          <SortableTh
+                            label="Điểm Trừ"
+                            columnKey="totalDeduction"
+                            currentSortKey={weeklyMatrixSort.key}
+                            currentSortDir={weeklyMatrixSort.direction}
+                            onSort={(k) => handleToggleSort(setWeeklyMatrixSort, k)}
+                            align="center"
+                            className="text-rose-400"
+                          />
+                          <SortableTh
+                            label="Điểm Thưởng"
+                            columnKey="totalBonus"
+                            currentSortKey={weeklyMatrixSort.key}
+                            currentSortDir={weeklyMatrixSort.direction}
+                            onSort={(k) => handleToggleSort(setWeeklyMatrixSort, k)}
+                            align="center"
+                            className="text-emerald-400"
+                          />
+                          <SortableTh
+                            label="Điểm Tổng"
+                            columnKey="finalScore"
+                            currentSortKey={weeklyMatrixSort.key}
+                            currentSortDir={weeklyMatrixSort.direction}
+                            onSort={(k) => handleToggleSort(setWeeklyMatrixSort, k)}
+                            align="center"
+                            className="text-amber-400 font-black"
+                          />
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60">
-                        {selectedWeekScores.map((s) => (
+                        {sortedWeeklyScores.map((s, idx) => (
                           <tr key={s.classId} className="hover:bg-slate-900/60 transition-colors">
+                            <td className="p-3 text-center font-mono font-bold text-slate-400">
+                              {idx + 1}
+                            </td>
                             <td className="p-3 text-center font-black">
                               {s.rank === 1 ? '🥇 #1' : s.rank === 2 ? '🥈 #2' : s.rank === 3 ? '🥉 #3' : `#${s.rank}`}
                             </td>
@@ -7291,21 +8296,83 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-900 text-slate-300 border-b border-slate-800">
-                          <th className="p-3 font-bold text-center w-14">Hạng</th>
-                          <th className="p-3 font-bold">Chi Đoàn / Lớp</th>
-                          <th className="p-3 font-bold">Khối</th>
+                          <th className="p-3 font-bold text-center w-12 text-slate-400">STT</th>
+                          <SortableTh
+                            label="Hạng"
+                            columnKey="rank"
+                            currentSortKey={semesterSort.key}
+                            currentSortDir={semesterSort.direction}
+                            onSort={(k) => handleToggleSort(setSemesterSort, k)}
+                            align="center"
+                            width="60px"
+                          />
+                          <SortableTh
+                            label="Chi Đoàn / Lớp"
+                            columnKey="className"
+                            currentSortKey={semesterSort.key}
+                            currentSortDir={semesterSort.direction}
+                            onSort={(k) => handleToggleSort(setSemesterSort, k)}
+                          />
+                          <SortableTh
+                            label="Khối"
+                            columnKey="grade"
+                            currentSortKey={semesterSort.key}
+                            currentSortDir={semesterSort.direction}
+                            onSort={(k) => handleToggleSort(setSemesterSort, k)}
+                          />
                           <th className="p-3 font-bold">Giáo Viên Chủ Nhiệm</th>
-                          <th className="p-3 font-bold text-center">Số Tuần</th>
-                          <th className="p-3 font-bold text-center text-rose-400">Tổng Trừ</th>
-                          <th className="p-3 font-bold text-center text-emerald-400">Tổng Thưởng</th>
-                          <th className="p-3 font-bold text-center">Lỗi VP</th>
-                          <th className="p-3 font-bold text-center text-amber-400 bg-amber-950/20 font-black">Điểm TB Học Kỳ</th>
+                          <SortableTh
+                            label="Số Tuần"
+                            columnKey="totalWeeksEvaluated"
+                            currentSortKey={semesterSort.key}
+                            currentSortDir={semesterSort.direction}
+                            onSort={(k) => handleToggleSort(setSemesterSort, k)}
+                            align="center"
+                          />
+                          <SortableTh
+                            label="Tổng Trừ"
+                            columnKey="totalDeductions"
+                            currentSortKey={semesterSort.key}
+                            currentSortDir={semesterSort.direction}
+                            onSort={(k) => handleToggleSort(setSemesterSort, k)}
+                            align="center"
+                            className="text-rose-400"
+                          />
+                          <SortableTh
+                            label="Tổng Thưởng"
+                            columnKey="totalBonuses"
+                            currentSortKey={semesterSort.key}
+                            currentSortDir={semesterSort.direction}
+                            onSort={(k) => handleToggleSort(setSemesterSort, k)}
+                            align="center"
+                            className="text-emerald-400"
+                          />
+                          <SortableTh
+                            label="Lỗi VP"
+                            columnKey="totalViolations"
+                            currentSortKey={semesterSort.key}
+                            currentSortDir={semesterSort.direction}
+                            onSort={(k) => handleToggleSort(setSemesterSort, k)}
+                            align="center"
+                          />
+                          <SortableTh
+                            label="Điểm TB Học Kỳ"
+                            columnKey="finalSemesterScore"
+                            currentSortKey={semesterSort.key}
+                            currentSortDir={semesterSort.direction}
+                            onSort={(k) => handleToggleSort(setSemesterSort, k)}
+                            align="center"
+                            className="text-amber-400 bg-amber-950/20 font-black"
+                          />
                           <th className="p-3 font-bold text-center">Danh Hiệu Thi Đua</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60">
-                        {semesterClassScores.map((item) => (
+                        {sortedSemesterScores.map((item, idx) => (
                           <tr key={item.classId} className="hover:bg-slate-900/60 transition-colors">
+                            <td className="p-3 text-center font-mono font-bold text-slate-400">
+                              {idx + 1}
+                            </td>
                             <td className="p-3 text-center font-black">
                               {item.rank === 1 ? (
                                 <span className="px-2 py-1 rounded-lg bg-amber-500 text-slate-950 font-black text-xs shadow-glow">
@@ -7613,16 +8680,39 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-slate-900 text-slate-300 border-b border-slate-800">
-                        <th className="p-3 font-bold">Mã Định Danh</th>
-                        <th className="p-3 font-bold">Tên Năm Học</th>
-                        <th className="p-3 font-bold text-center">Thời Gian Áp Dụng</th>
+                        <th className="p-3 font-bold text-center w-12 text-slate-400">STT</th>
+                        <SortableTh
+                          label="Mã Định Danh"
+                          columnKey="id"
+                          currentSortKey={academicYearSort.key}
+                          currentSortDir={academicYearSort.direction}
+                          onSort={(k) => handleToggleSort(setAcademicYearSort, k)}
+                        />
+                        <SortableTh
+                          label="Tên Năm Học"
+                          columnKey="name"
+                          currentSortKey={academicYearSort.key}
+                          currentSortDir={academicYearSort.direction}
+                          onSort={(k) => handleToggleSort(setAcademicYearSort, k)}
+                        />
+                        <SortableTh
+                          label="Thời Gian Áp Dụng"
+                          columnKey="startDate"
+                          currentSortKey={academicYearSort.key}
+                          currentSortDir={academicYearSort.direction}
+                          onSort={(k) => handleToggleSort(setAcademicYearSort, k)}
+                          align="center"
+                        />
                         <th className="p-3 font-bold text-center">Trạng Thái</th>
                         <th className="p-3 font-bold text-right">Thao Tác</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60">
-                      {academicYears.map((y) => (
+                      {sortedAcademicYears.map((y, index) => (
                         <tr key={y.id} className="hover:bg-slate-900/60 transition-colors">
+                          <td className="p-3 text-center font-mono font-bold text-slate-400">
+                            {index + 1}
+                          </td>
                           <td className="p-3 font-mono font-bold text-slate-300">{y.id}</td>
                           <td className="p-3 font-extrabold text-white text-sm">
                             {y.name}

@@ -764,6 +764,67 @@ CREATE POLICY "Allow web client all on task_notices" ON public.task_notices FOR 
 CREATE POLICY "Allow web client all on users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow web client all on school_settings" ON public.school_settings FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow web client all on activity_slides" ON public.activity_slides FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow web client all on weeks" ON public.weeks FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow web client all on duty_schedule" ON public.duty_schedule FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on weeks" ON public.weeks FOR ALL USING (true) WITH CHECK (true);
 
+-- ====================================================================
+-- III. CÁC VIEW BÁO CÁO CÓ CỘT SỐ THỨ TỰ (STT) & SẮP XẾP A-Z
+-- ====================================================================
+
+-- 1. View Bảng điểm Thi đua Tuần có STT
+CREATE OR REPLACE VIEW public.view_weekly_leaderboard_stt AS
+SELECT 
+    ROW_NUMBER() OVER (PARTITION BY week_number ORDER BY final_score DESC, total_deduction ASC, class_id ASC) AS stt,
+    wfs.week_number,
+    wfs.class_id,
+    c.class_name,
+    c.grade,
+    wfs.final_score,
+    wfs.total_deduction,
+    wfs.rank_position,
+    wfs.is_locked,
+    wfs.created_at
+FROM public.weekly_final_scores wfs
+JOIN public.classes c ON c.class_id = wfs.class_id
+WHERE c.is_deleted = false;
+
+-- 2. View Danh sách Học sinh & Đoàn viên lớp theo thứ tự A-Z có STT
+CREATE OR REPLACE VIEW public.view_class_students_stt AS
+SELECT 
+    ROW_NUMBER() OVER (PARTITION BY s.class_id ORDER BY s.full_name COLLATE "vi-VN-x-icu" ASC, s.student_code ASC) AS stt,
+    s.student_id,
+    s.student_code,
+    s.full_name,
+    s.class_id,
+    c.class_name,
+    s.gender,
+    s.is_union_member,
+    s.union_joined_date,
+    s.phone_number,
+    s.union_fee_status,
+    s.union_booklet_status
+FROM public.students s
+JOIN public.classes c ON c.class_id = s.class_id
+WHERE s.is_deleted = false AND c.is_deleted = false;
+
+-- 3. View Tổng hợp Vi phạm Nề nếp có STT
+CREATE OR REPLACE VIEW public.view_violations_stt AS
+SELECT 
+    ROW_NUMBER() OVER (PARTITION BY v.week_number ORDER BY v.day_of_week ASC, v.created_at ASC) AS stt,
+    v.violation_id,
+    v.week_number,
+    v.day_of_week,
+    v.class_id,
+    c.class_name,
+    v.criterion_id,
+    cr.title AS criterion_title,
+    cr.group_name,
+    v.quantity,
+    v.points_deducted,
+    v.status,
+    v.student_name,
+    v.created_at
+FROM public.violations v
+JOIN public.classes c ON c.class_id = v.class_id
+JOIN public.criteria cr ON cr.criterion_id = v.criterion_id
+WHERE v.is_deleted = false;

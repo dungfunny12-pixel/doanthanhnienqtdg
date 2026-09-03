@@ -236,6 +236,16 @@ export interface ActivityParticipant {
   note?: string;
 }
 
+export interface ActivityNonParticipant {
+  studentId: string;
+  name: string;
+  gender: 'Nam' | 'Nữ';
+  phone?: string;
+  isUnionMember?: boolean;
+  reason?: string; // e.g. "Vắng có phép", "Vắng không phép", "Bị ốm", "Trùng lịch bồi dưỡng HSG", "Bận việc gia đình", "Không tham gia"
+  note?: string;
+}
+
 export interface ActivityReport {
   id: string;
   activityId?: string; // id của NewsPost hoặc YouthEvent hoặc Custom Activity
@@ -247,6 +257,7 @@ export interface ActivityReport {
   reportedAt: string;
   participantCount: number;
   participants: ActivityParticipant[];
+  nonParticipants?: ActivityNonParticipant[];
   status: 'submitted' | 'verified';
   adminFeedback?: string;
   proofImages?: string[];
@@ -273,6 +284,7 @@ export interface WeekConfig {
   isCurrent: boolean;
   isLocked: boolean;
   note?: string;
+  semester?: 1 | 2;
   academicYearId?: string;
 }
 
@@ -288,6 +300,9 @@ export interface SchoolSettings {
   youthUnionLogoUrl?: string; // Ảnh logo / huy hiệu Đoàn Thanh Niên
   bannerTopImage?: string; // Ảnh banner đầu trang
   footerBannerImage?: string; // Ảnh banner chân trang
+  semester1EndWeek?: number; // Mặc định: 18 (Tuần kết thúc HK1)
+  semester1Name?: string; // Mặc định: "Học Kỳ 1"
+  semester2Name?: string; // Mặc định: "Học Kỳ 2"
 }
 
 export interface ActivitySlide {

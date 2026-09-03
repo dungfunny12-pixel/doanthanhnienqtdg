@@ -92,6 +92,9 @@ interface AppContextType {
   deleteWeek: (weekNum: number) => { success: boolean; message: string };
   toggleWeekLockDirect: (weekNum: number) => void;
   setCurrentWeek: (weekNum: number) => void;
+  resetToDefault35Weeks: () => void;
+  updateSemesterConfig: (config: { semester1EndWeek: number; semester1Name?: string; semester2Name?: string }) => void;
+  syncWeeksToCloud: () => Promise<{ success: boolean; message: string; count: number }>;
 
   // Master Data - Classes
   addClass: (newClass: Omit<ClassInfo, 'standardScore'>) => void;
@@ -252,16 +255,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => loadStored('currentUser', null));
-  const [activeWeek, setActiveWeekState] = useState<number>(() => loadStored('activeWeek', 24));
+  const [activeWeek, setActiveWeekState] = useState<number>(() => {
+    const stored = loadStored<number>('activeWeek', 1);
+    return stored && stored >= 1 && stored <= 35 ? stored : 1;
+  });
   const [isWeekLocked, setIsWeekLocked] = useState<boolean>(() => loadStored('isWeekLocked', false));
   const [schoolSettings, setSchoolSettings] = useState<SchoolSettings>(() => loadStored('schoolSettings', INITIAL_SCHOOL_SETTINGS));
   const [activitySlides, setActivitySlides] = useState<ActivitySlide[]>(() => loadStored('activitySlides', INITIAL_ACTIVITY_SLIDES));
-  const [academicYears, setAcademicYears] = useState<AcademicYear[]>(() => loadStored('academicYears', INITIAL_ACADEMIC_YEARS));
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>(() => {
+    const stored = loadStored<AcademicYear[]>('academicYears', INITIAL_ACADEMIC_YEARS);
+    if (!Array.isArray(stored) || !stored.some(y => y.id === '2026_2027')) {
+      return INITIAL_ACADEMIC_YEARS;
+    }
+    return stored;
+  });
   const currentAcademicYear = academicYears.find(y => y.isCurrent) || academicYears[0] || INITIAL_ACADEMIC_YEARS[0];
-  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<string>(() => loadStored('selectedAcademicYearId', currentAcademicYear?.id || '2025_2026'));
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<string>(() => loadStored('selectedAcademicYearId', currentAcademicYear?.id || '2026_2027'));
   const isHistoricalYear = Boolean(currentAcademicYear && selectedAcademicYearId !== currentAcademicYear.id);
 
-  const [weeksConfig, setWeeksConfig] = useState<WeekConfig[]>(() => loadStored('weeksConfig', INITIAL_WEEKS));
+  const [weeksConfig, setWeeksConfig] = useState<WeekConfig[]>(() => {
+    const stored = loadStored<WeekConfig[]>('weeksConfig', INITIAL_WEEKS);
+    if (!Array.isArray(stored) || stored.length < 35 || stored[0]?.startDate !== '2026-09-07') {
+      return INITIAL_WEEKS;
+    }
+    return stored;
+  });
   const [classes, setClasses] = useState<ClassInfo[]>(() => loadStored('classes', INITIAL_CLASSES));
   const [students, setStudents] = useState<Student[]>(() => sanitizeStudentList(loadStored('students', INITIAL_STUDENTS)));
   const [criteria, setCriteria] = useState<Criterion[]>(() => loadStored('criteria', INITIAL_CRITERIA));
@@ -341,6 +359,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (cloudData.notices && cloudData.notices.length > 0) setNotices(cloudData.notices);
           if (cloudData.schoolSettings) setSchoolSettings(cloudData.schoolSettings);
           if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(cloudData.activitySlides);
+          if (cloudData.weeksConfig && cloudData.weeksConfig.length > 0) setWeeksConfig(cloudData.weeksConfig);
           console.log('✅ Đã đồng bộ dữ liệu mới nhất từ Supabase Cloud!');
         }
       }).catch(err => {
@@ -470,6 +489,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })));
     setActiveWeek(weekNum);
     addLog('Thiết lập tuần hiện tại', `Chọn Tuần ${weekNum} làm gốc hiển thị mặc định`);
+  };
+
+  const resetToDefault35Weeks = () => {
+    setWeeksConfig(INITIAL_WEEKS);
+    setActiveWeek(1);
+    setIsWeekLocked(false);
+    try {
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_weeksConfig`, JSON.stringify(INITIAL_WEEKS));
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_activeWeek`, JSON.stringify(1));
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_isWeekLocked`, JSON.stringify(false));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
+    addLog('Nạp 35 tuần chuẩn', 'Khôi phục danh mục 35 tuần học năm học 2026 - 2027 (07/09/2026 - 08/05/2027)');
+  };
+
+  const updateSemesterConfig = (config: { semester1EndWeek: number; semester1Name?: string; semester2Name?: string }) => {
+    const updatedSettings: SchoolSettings = {
+      ...schoolSettings,
+      semester1EndWeek: config.semester1EndWeek,
+      semester1Name: config.semester1Name || schoolSettings.semester1Name || 'Học Kỳ 1',
+      semester2Name: config.semester2Name || schoolSettings.semester2Name || 'Học Kỳ 2'
+    };
+    setSchoolSettings(updatedSettings);
+
+    const updatedWeeks = weeksConfig.map(w => ({
+      ...w,
+      semester: (w.weekNumber <= config.semester1EndWeek ? 1 : 2) as 1 | 2
+    }));
+    setWeeksConfig(updatedWeeks);
+
+    try {
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_schoolSettings`, JSON.stringify(updatedSettings));
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_weeksConfig`, JSON.stringify(updatedWeeks));
+    } catch {}
+
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveSchoolSettings(updatedSettings);
+      SupabaseService.saveWeeksConfig(updatedWeeks);
+    }
+    addLog('Cấu hình học kỳ', `Tùy chỉnh phân bổ: ${updatedSettings.semester1Name} (Tuần 1 - ${config.semester1EndWeek}), ${updatedSettings.semester2Name} (Tuần ${config.semester1EndWeek + 1} - ${weeksConfig.length})`);
+  };
+
+  const syncWeeksToCloud = async (): Promise<{ success: boolean; message: string; count: number }> => {
+    return await SupabaseService.syncAllWeeksToSupabase(weeksConfig, schoolSettings);
   };
 
   // Master Data - Classes
@@ -2012,6 +2076,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteWeek,
         toggleWeekLockDirect,
         setCurrentWeek,
+        resetToDefault35Weeks,
+        updateSemesterConfig,
+        syncWeeksToCloud,
         addClass,
         updateClass,
         deleteClass,

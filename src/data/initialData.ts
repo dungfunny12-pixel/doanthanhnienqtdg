@@ -16,7 +16,7 @@ import {
   ActivitySlide,
   AppNotification,
   AcademicYear
-} from '../types';
+} from '../types/index.ts';
 
 export const INITIAL_SCHOOL_SETTINGS: SchoolSettings = {
   schoolName: 'Trường THPT Quang Trung - Đông Giang',
@@ -29,7 +29,10 @@ export const INITIAL_SCHOOL_SETTINGS: SchoolSettings = {
   logoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=200&auto=format&fit=crop&q=75',
   youthUnionLogoUrl: 'https://upload.wikimedia.org/wikipedia/vi/8/87/Huy_hi%E1%BB%87u_%C4%90o%C3%A0n.svg',
   bannerTopImage: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&auto=format&fit=crop&q=75',
-  footerBannerImage: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=1200&auto=format&fit=crop&q=75'
+  footerBannerImage: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=1200&auto=format&fit=crop&q=75',
+  semester1EndWeek: 18,
+  semester1Name: 'Học Kỳ 1',
+  semester2Name: 'Học Kỳ 2'
 };
 
 export const INITIAL_ZONES: DutyZone[] = [
@@ -51,10 +54,41 @@ export const INITIAL_AUDITORS: AuditorMember[] = [
 ];
 
 export const INITIAL_WEEKS: WeekConfig[] = [
-  { weekNumber: 22, title: 'Tuần 22', startDate: '2026-08-11', endDate: '2026-08-16', isCurrent: false, isLocked: true, note: 'Đã hoàn thành chốt điểm' },
-  { weekNumber: 23, title: 'Tuần 23', startDate: '2026-08-18', endDate: '2026-08-23', isCurrent: false, isLocked: true, note: 'Đã hoàn thành chốt điểm' },
-  { weekNumber: 24, title: 'Tuần 24', startDate: '2026-08-25', endDate: '2026-08-30', isCurrent: true, isLocked: false, note: 'Tuần học hiện tại - Đang chấm nề nếp' },
-  { weekNumber: 25, title: 'Tuần 25', startDate: '2026-09-01', endDate: '2026-09-06', isCurrent: false, isLocked: false, note: 'Tuần học kế tiếp' }
+  { weekNumber: 1, title: 'Tuần 1', startDate: '2026-09-07', endDate: '2026-09-12', isCurrent: true, isLocked: false, note: 'Khai giảng & Bắt đầu HK1', semester: 1 },
+  { weekNumber: 2, title: 'Tuần 2', startDate: '2026-09-14', endDate: '2026-09-19', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 3, title: 'Tuần 3', startDate: '2026-09-21', endDate: '2026-09-26', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 4, title: 'Tuần 4', startDate: '2026-09-28', endDate: '2026-10-03', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 5, title: 'Tuần 5', startDate: '2026-10-05', endDate: '2026-10-10', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 6, title: 'Tuần 6', startDate: '2026-10-12', endDate: '2026-10-17', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 7, title: 'Tuần 7', startDate: '2026-10-19', endDate: '2026-10-24', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 8, title: 'Tuần 8', startDate: '2026-10-26', endDate: '2026-10-31', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 9, title: 'Tuần 9', startDate: '2026-11-02', endDate: '2026-11-07', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 10, title: 'Tuần 10', startDate: '2026-11-09', endDate: '2026-11-14', isCurrent: false, isLocked: false, note: 'Thi đua chào mừng Ngày Nhà giáo VN 20/11', semester: 1 },
+  { weekNumber: 11, title: 'Tuần 11', startDate: '2026-11-16', endDate: '2026-11-21', isCurrent: false, isLocked: false, note: 'Tuần lễ cao điểm 20/11', semester: 1 },
+  { weekNumber: 12, title: 'Tuần 12', startDate: '2026-11-23', endDate: '2026-11-28', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 13, title: 'Tuần 13', startDate: '2026-11-30', endDate: '2026-12-05', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 14, title: 'Tuần 14', startDate: '2026-12-07', endDate: '2026-12-12', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 1 },
+  { weekNumber: 15, title: 'Tuần 15', startDate: '2026-12-14', endDate: '2026-12-19', isCurrent: false, isLocked: false, note: 'Ôn tập & kiểm tra định kỳ HK1', semester: 1 },
+  { weekNumber: 16, title: 'Tuần 16', startDate: '2026-12-21', endDate: '2026-12-26', isCurrent: false, isLocked: false, note: 'Thi đua chào mừng Ngày QĐND VN 22/12', semester: 1 },
+  { weekNumber: 17, title: 'Tuần 17', startDate: '2026-12-28', endDate: '2027-01-02', isCurrent: false, isLocked: false, note: 'Tuần học cuối năm dương lịch', semester: 1 },
+  { weekNumber: 18, title: 'Tuần 18', startDate: '2027-01-04', endDate: '2027-01-09', isCurrent: false, isLocked: false, note: 'Tổng kết thi đua Học kỳ 1', semester: 1 },
+  { weekNumber: 19, title: 'Tuần 19', startDate: '2027-01-11', endDate: '2027-01-16', isCurrent: false, isLocked: false, note: 'Bắt đầu Học kỳ 2', semester: 2 },
+  { weekNumber: 20, title: 'Tuần 20', startDate: '2027-01-18', endDate: '2027-01-23', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 2 },
+  { weekNumber: 21, title: 'Tuần 21', startDate: '2027-01-25', endDate: '2027-01-30', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 2 },
+  { weekNumber: 22, title: 'Tuần 22', startDate: '2027-02-01', endDate: '2027-02-06', isCurrent: false, isLocked: false, note: 'Thi đua chào mừng Ngày thành lập Đảng 3/2', semester: 2 },
+  { weekNumber: 23, title: 'Tuần 23', startDate: '2027-02-08', endDate: '2027-02-13', isCurrent: false, isLocked: false, note: 'Tuần học trước Tết Nguyên Đán', semester: 2 },
+  { weekNumber: 24, title: 'Tuần 24', startDate: '2027-02-15', endDate: '2027-02-20', isCurrent: false, isLocked: false, note: 'Tuần học thi đua sau Tết', semester: 2 },
+  { weekNumber: 25, title: 'Tuần 25', startDate: '2027-02-22', endDate: '2027-02-27', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 2 },
+  { weekNumber: 26, title: 'Tuần 26', startDate: '2027-03-01', endDate: '2027-03-06', isCurrent: false, isLocked: false, note: 'Khởi động Tháng Thanh Niên', semester: 2 },
+  { weekNumber: 27, title: 'Tuần 27', startDate: '2027-03-08', endDate: '2027-03-13', isCurrent: false, isLocked: false, note: 'Thi đua chào mừng Ngày Quốc tế Phụ nữ 8/3', semester: 2 },
+  { weekNumber: 28, title: 'Tuần 28', startDate: '2027-03-15', endDate: '2027-03-20', isCurrent: false, isLocked: false, note: 'Cao điểm phong trào Tháng Thanh Niên', semester: 2 },
+  { weekNumber: 29, title: 'Tuần 29', startDate: '2027-03-22', endDate: '2027-03-27', isCurrent: false, isLocked: false, note: 'Kỷ niệm Ngày thành lập Đoàn TNCS HCM 26/3', semester: 2 },
+  { weekNumber: 30, title: 'Tuần 30', startDate: '2027-03-29', endDate: '2027-04-03', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 2 },
+  { weekNumber: 31, title: 'Tuần 31', startDate: '2027-04-05', endDate: '2027-04-10', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 2 },
+  { weekNumber: 32, title: 'Tuần 32', startDate: '2027-04-12', endDate: '2027-04-17', isCurrent: false, isLocked: false, note: 'Ôn tập kiểm tra cuối năm', semester: 2 },
+  { weekNumber: 33, title: 'Tuần 33', startDate: '2027-04-19', endDate: '2027-04-24', isCurrent: false, isLocked: false, note: 'Tuần học thi đua nề nếp', semester: 2 },
+  { weekNumber: 34, title: 'Tuần 34', startDate: '2027-04-26', endDate: '2027-05-01', isCurrent: false, isLocked: false, note: 'Chào mừng 30/4 & 1/5', semester: 2 },
+  { weekNumber: 35, title: 'Tuần 35', startDate: '2027-05-03', endDate: '2027-05-08', isCurrent: false, isLocked: false, note: 'Tổng kết năm học & Chốt thi đua toàn trường', semester: 2 }
 ];
 
 export const INITIAL_CLASSES: ClassInfo[] = [
@@ -526,8 +560,8 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     classId: '10/1',
     className: 'Lớp 10/1',
     day: 'T2',
-    date: '2026-08-25',
-    weekNumber: 24,
+    date: '2026-09-07',
+    weekNumber: 1,
     criterionId: '1.1',
     criterionName: 'Vào lớp sinh hoạt trễ 5p đầu giờ',
     groupName: 'Chuyên cần',
@@ -537,7 +571,7 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     note: 'Đến trường lúc 07:05 (sau hiệu lệnh trống 5 phút)',
     proofImages: ['https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=600&auto=format&fit=crop&q=80'],
     reportedBy: { id: 'codo_nam', name: 'Nguyễn Văn Nam', role: 'Đội Cờ Đỏ' },
-    reportedAt: '2026-08-25 07:10',
+    reportedAt: '2026-09-07 07:10',
     status: 'accepted',
     locked: false
   },
@@ -547,8 +581,8 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     classId: '10/1',
     className: 'Lớp 10/1',
     day: 'T3',
-    date: '2026-08-26',
-    weekNumber: 24,
+    date: '2026-09-08',
+    weekNumber: 1,
     criterionId: '2.2',
     criterionName: 'Trực nhật trễ, không đổ rác, vệ sinh kém',
     groupName: 'Vệ sinh',
@@ -558,13 +592,13 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     note: 'Thùng rác cuối lớp chưa đổ ra xe gom rác hành lang',
     proofImages: ['https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=600&auto=format&fit=crop&q=80'],
     reportedBy: { id: 'codo_nam', name: 'Nguyễn Văn Nam', role: 'Đội Cờ Đỏ' },
-    reportedAt: '2026-08-26 07:15',
+    reportedAt: '2026-09-08 07:15',
     status: 'appealed',
     appeal: {
       reason: 'Kính gửi BCH Đoàn trường: Lớp 10/1 đã trực nhật sạch sẽ lúc 6h45. Thùng rác trong ảnh là do lớp học thêm buổi chiều hôm trước để lại, học sinh Tổ 2 đã mang đi đổ ngay lúc 7h00 trước khi Cờ đỏ vào chấm. Kèm theo cam kết của Ban cán sự lớp.',
       proofImages: ['https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&auto=format&fit=crop&q=80'],
       appealedBy: 'Thầy Nguyễn Văn Thành (GVCN 10/1)',
-      appealedAt: '2026-08-26 09:30'
+      appealedAt: '2026-09-08 09:30'
     },
     locked: false
   },
@@ -574,8 +608,8 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     classId: '10/2',
     className: 'Lớp 10/2',
     day: 'T2',
-    date: '2026-08-25',
-    weekNumber: 24,
+    date: '2026-09-07',
+    weekNumber: 1,
     criterionId: '1.2',
     criterionName: 'Vắng có phép (có xác nhận của GVCN)',
     groupName: 'Chuyên cần',
@@ -585,7 +619,7 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     note: 'Đội tuyển HSG tập trung tại phòng Hội đồng có giấy báo',
     proofImages: [],
     reportedBy: { id: 'codo_nam', name: 'Nguyễn Văn Nam', role: 'Đội Cờ Đỏ' },
-    reportedAt: '2026-08-25 07:20',
+    reportedAt: '2026-09-07 07:20',
     status: 'accepted',
     locked: false
   },
@@ -594,8 +628,8 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     classId: '10/2',
     className: 'Lớp 10/2',
     day: 'T2',
-    date: '2026-08-25',
-    weekNumber: 24,
+    date: '2026-09-07',
+    weekNumber: 1,
     criterionId: '1.3',
     criterionName: 'Vắng không phép',
     groupName: 'Chuyên cần',
@@ -605,7 +639,7 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     note: 'Vắng tiết 1 chào cờ không lý do',
     proofImages: ['https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&auto=format&fit=crop&q=80'],
     reportedBy: { id: 'codo_nam', name: 'Nguyễn Văn Nam', role: 'Đội Cờ Đỏ' },
-    reportedAt: '2026-08-25 07:30',
+    reportedAt: '2026-09-07 07:30',
     status: 'accepted',
     locked: false
   },
@@ -615,8 +649,8 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     classId: '11/5',
     className: 'Lớp 11/5',
     day: 'T4',
-    date: '2026-08-27',
-    weekNumber: 24,
+    date: '2026-09-09',
+    weekNumber: 1,
     criterionId: '4.1',
     criterionName: 'Không đúng đồng phục, sai giày dép, thiếu phù hiệu',
     groupName: 'Tác phong',
@@ -626,7 +660,7 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     note: 'Đi dép lê không quai hậu, không đeo thẻ học sinh',
     proofImages: ['https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80'],
     reportedBy: { id: 'codo_nam', name: 'Nguyễn Văn Nam', role: 'Đội Cờ Đỏ' },
-    reportedAt: '2026-08-27 07:12',
+    reportedAt: '2026-09-09 07:12',
     status: 'pending',
     locked: false
   },
@@ -636,8 +670,8 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     classId: '12/4',
     className: 'Lớp 12/4',
     day: 'T3',
-    date: '2026-08-26',
-    weekNumber: 24,
+    date: '2026-09-08',
+    weekNumber: 1,
     criterionId: '3.5',
     criterionName: 'Không tắt điện, quạt sau giờ học',
     groupName: 'Nề nếp tự quản',
@@ -647,7 +681,7 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     note: 'Tan học tiết 5 để 4 quạt trần quay liên tục',
     proofImages: ['https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&auto=format&fit=crop&q=80'],
     reportedBy: { id: 'codo_nam', name: 'Nguyễn Văn Nam', role: 'Đội Cờ Đỏ' },
-    reportedAt: '2026-08-26 11:45',
+    reportedAt: '2026-09-08 11:45',
     status: 'accepted',
     locked: false
   },
@@ -657,8 +691,8 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     classId: '10/4',
     className: 'Lớp 10/4',
     day: 'T5',
-    date: '2026-08-28',
-    weekNumber: 24,
+    date: '2026-09-10',
+    weekNumber: 1,
     criterionId: '3.7',
     criterionName: 'Sử dụng điện thoại không được phép',
     groupName: 'Nề nếp tự quản',
@@ -668,7 +702,7 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     note: 'Chơi game trong giờ truy bài 15 phút',
     proofImages: ['https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&auto=format&fit=crop&q=80'],
     reportedBy: { id: 'codo_nam', name: 'Nguyễn Văn Nam', role: 'Đội Cờ Đỏ' },
-    reportedAt: '2026-08-28 07:05',
+    reportedAt: '2026-09-10 07:05',
     status: 'accepted',
     locked: false
   },
@@ -678,8 +712,8 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     classId: '11/2',
     className: 'Lớp 11/2',
     day: 'T2',
-    date: '2026-08-25',
-    weekNumber: 24,
+    date: '2026-09-07',
+    weekNumber: 1,
     criterionId: '2.1',
     criterionName: 'Không trực nhật',
     groupName: 'Vệ sinh',
@@ -689,7 +723,7 @@ export const INITIAL_VIOLATIONS: Violation[] = [
     note: 'Không lau bảng, bục giảng nhiều phấn vụn',
     proofImages: ['https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=600&auto=format&fit=crop&q=80'],
     reportedBy: { id: 'codo_nam', name: 'Nguyễn Văn Nam', role: 'Đội Cờ Đỏ' },
-    reportedAt: '2026-08-25 07:15',
+    reportedAt: '2026-09-07 07:15',
     status: 'accepted',
     locked: false
   }
@@ -773,7 +807,7 @@ const generateWeekDuties = (weekNum: number): DutyAssignment[] => [
   { id: `duty-w${weekNum}-16`, weekNumber: weekNum, day: 'T7', zone: 'Cổng trường & Nhà xe', auditorId: 'codo_dung', auditorName: 'Lê Hoàng Dũng', auditorClass: '11/4', shiftTime: '06:30 - 07:15 & 11:15 - 12:00' }
 ];
 
-export const INITIAL_DUTIES: DutyAssignment[] = Array.from({ length: 30 }, (_, i) => generateWeekDuties(i + 1)).flat();
+export const INITIAL_DUTIES: DutyAssignment[] = Array.from({ length: 35 }, (_, i) => generateWeekDuties(i + 1)).flat();
 
 export const INITIAL_EVENTS: YouthEvent[] = [
   {
@@ -1164,14 +1198,24 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
 
 export const INITIAL_ACADEMIC_YEARS: AcademicYear[] = [
   {
-    id: '2025_2026',
-    name: 'Năm học 2025 - 2026',
-    startDate: '2025-09-05',
-    endDate: '2026-05-31',
+    id: '2026_2027',
+    name: 'Năm học 2026 - 2027',
+    startDate: '2026-09-07',
+    endDate: '2027-05-31',
     isCurrent: true,
     isFrozen: false,
-    createdAt: '2025-08-15 08:00',
+    createdAt: '2026-08-15 08:00',
     notes: 'Năm học hiện hành của toàn trường THPT Quang Trung'
+  },
+  {
+    id: '2025_2026',
+    name: 'Năm học 2025 - 2026 (Lịch sử)',
+    startDate: '2025-09-05',
+    endDate: '2026-05-31',
+    isCurrent: false,
+    isFrozen: true,
+    createdAt: '2025-08-15 08:00',
+    notes: 'Dữ liệu lưu trữ năm học trước (Chỉ xem)'
   },
   {
     id: '2024_2025',

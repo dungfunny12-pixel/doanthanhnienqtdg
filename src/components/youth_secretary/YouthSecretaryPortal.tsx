@@ -39,8 +39,10 @@ import {
   Eye
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { ClassWeeklyScore, ActivityParticipant, Violation } from '../../types';
+import { ClassWeeklyScore, ActivityParticipant, ActivityNonParticipant, ActivityReport, Violation } from '../../types';
 import { PhotoViewerModal } from '../common/PhotoViewerModal';
+import { SortableTh } from '../common/SortableTh';
+import { sortDataList } from '../../utils/sortUtils';
 
 export const YouthSecretaryPortal: React.FC = () => {
   const { 
@@ -133,6 +135,29 @@ export const YouthSecretaryPortal: React.FC = () => {
 
   // Class activity reports
   const classActivityReports = activityReports.filter(r => r.classId === classId);
+  const [activeReportTab, setActiveReportTab] = useState<Record<string, 'participating' | 'non_participating'>>({});
+  const [memberTableSort, setMemberTableSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+
+  // Helper to get non-participants for an activity report in YouthSecretaryPortal
+  const getReportNonParticipants = (report: ActivityReport): ActivityNonParticipant[] => {
+    if (report.nonParticipants && report.nonParticipants.length > 0) {
+      return report.nonParticipants;
+    }
+    const participantIds = new Set(report.participants.map((p: ActivityParticipant) => p.studentId.trim()));
+    const participantNames = new Set(report.participants.map((p: ActivityParticipant) => p.name.trim().toLowerCase()));
+
+    return classStudents
+      .filter(s => !participantIds.has(s.studentId.trim()) && !participantNames.has(s.name.trim().toLowerCase()))
+      .map(s => ({
+        studentId: s.studentId,
+        name: s.name,
+        gender: s.gender as ('Nam' | 'Nữ'),
+        phone: s.phone || '',
+        isUnionMember: s.isUnionMember,
+        reason: 'Chưa tham gia / Vắng mặt phong trào',
+        note: ''
+      }));
+  };
 
   // ================= ACTIVITY REPORTING MODAL STATE =================
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
@@ -215,6 +240,21 @@ export const YouthSecretaryPortal: React.FC = () => {
       return;
     }
 
+    const nonSelectedEntries: ActivityNonParticipant[] = Object.entries(reportForm.participants)
+      .filter(([_, val]) => !val.selected)
+      .map(([stId, val]) => {
+        const st = classStudents.find(s => s.id === stId);
+        return {
+          studentId: st?.studentId || stId,
+          name: st?.name || 'Học sinh',
+          gender: (st?.gender || 'Nam') as ('Nam' | 'Nữ'),
+          phone: st?.phone || '',
+          isUnionMember: st?.isUnionMember,
+          reason: val.note.trim() || 'Vắng mặt / Không tham gia đợt này',
+          note: ''
+        };
+      });
+
     submitActivityReport({
       activityId: reportForm.activityId,
       activityTitle: finalTitle,
@@ -223,7 +263,8 @@ export const YouthSecretaryPortal: React.FC = () => {
       className: classInfo?.name || `Lớp ${classId}`,
       secretaryName: currentUser?.name || 'Bí thư Chi đoàn',
       participantCount: selectedEntries.length,
-      participants: selectedEntries
+      participants: selectedEntries,
+      nonParticipants: nonSelectedEntries
     });
 
     alert(`Đã gửi báo cáo danh sách ${selectedEntries.length} học sinh tham gia "${finalTitle}" về Đoàn trường thành công!`);
@@ -250,13 +291,15 @@ export const YouthSecretaryPortal: React.FC = () => {
   // Export Class Activity Report to Excel
   const handleExportClassActivityExcel = () => {
     try {
-      const rows: any[] = [];
-      let stt = 1;
+      const wb = XLSX.utils.book_new();
 
+      // Sheet 1: Học Sinh Tham Gia
+      const rowsParticipants: any[] = [];
+      let stt1 = 1;
       classActivityReports.forEach(report => {
         report.participants.forEach(p => {
-          rows.push({
-            'STT': stt++,
+          rowsParticipants.push({
+            'STT': stt1++,
             'Tên Hoạt Động / Phong Trào': report.activityTitle,
             'Loại Hoạt Động': report.activityType === 'the_thao' ? 'Thể Thao / Hội Thao' :
                               report.activityType === 'tinh_nguyen' ? 'Tình Nguyện' :
@@ -276,15 +319,42 @@ export const YouthSecretaryPortal: React.FC = () => {
           });
         });
       });
+      if (rowsParticipants.length > 0) {
+        const ws1 = XLSX.utils.json_to_sheet(rowsParticipants);
+        XLSX.utils.book_append_sheet(wb, ws1, 'Học Sinh Tham Gia');
+      }
 
-      if (rows.length === 0) {
+      // Sheet 2: Học Sinh Không Tham Gia
+      const rowsNonParticipants: any[] = [];
+      let stt2 = 1;
+      classActivityReports.forEach(report => {
+        const nonList = getReportNonParticipants(report);
+        nonList.forEach(np => {
+          rowsNonParticipants.push({
+            'STT': stt2++,
+            'Tên Hoạt Động / Phong Trào': report.activityTitle,
+            'Lớp / Chi Đoàn': report.className,
+            'Mã Học Sinh': np.studentId,
+            'Họ và Tên': np.name,
+            'Giới Tính': np.gender,
+            'Đoàn Viên': np.isUnionMember ? 'Đoàn viên' : 'Thanh niên',
+            'Số Điện Thoại': np.phone || '',
+            'Lý Do / Trạng Thái': np.reason || 'Vắng mặt / Không tham gia',
+            'Ghi Chú': np.note || '',
+            'Thời Gian Báo Cáo': report.reportedAt
+          });
+        });
+      });
+      if (rowsNonParticipants.length > 0) {
+        const ws2 = XLSX.utils.json_to_sheet(rowsNonParticipants);
+        XLSX.utils.book_append_sheet(wb, ws2, 'Không Tham Gia');
+      }
+
+      if (rowsParticipants.length === 0 && rowsNonParticipants.length === 0) {
         alert('Chi đoàn chưa có báo cáo hoạt động phong trào nào để xuất Excel!');
         return;
       }
 
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, 'Học Sinh Tham Gia');
       XLSX.writeFile(wb, `Danh_Sach_Tham_Gia_Phong_Trao_${(classInfo?.name || classId).replace(/\//g, '_')}.xlsx`);
     } catch (err) {
       console.error(err);
@@ -742,115 +812,218 @@ export const YouthSecretaryPortal: React.FC = () => {
 
           {/* Reports List */}
           <div className="space-y-4">
-            {classActivityReports.map(report => (
-              <div
-                key={report.id}
-                className="p-5 rounded-3xl bg-slate-950 border border-slate-800 shadow-md space-y-4"
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
-                  <div className="space-y-1">
-                    <div className="flex items-center flex-wrap gap-2">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
-                        report.activityType === 'the_thao' ? 'bg-amber-950 text-amber-300 border-amber-800' :
-                        report.activityType === 'tinh_nguyen' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
-                        report.activityType === 'van_nghe' ? 'bg-purple-950 text-purple-300 border-purple-800' :
-                        'bg-blue-950 text-blue-300 border-blue-800'
-                      }`}>
-                        {report.activityType === 'the_thao' ? '🏅 Hội Thao' :
-                         report.activityType === 'tinh_nguyen' ? '🌱 Tình Nguyện' :
-                         report.activityType === 'van_nghe' ? '🎭 Văn Nghệ' :
-                         report.activityType === 'lao_dong' ? '🛠️ Lao Động' : '🚩 Phong Trào'}
-                      </span>
-                      <h4 className="text-base font-black text-white">{report.activityTitle}</h4>
+            {classActivityReports.map(report => {
+              const currentTab = activeReportTab[report.id] || 'participating';
+              const nonParticipants = getReportNonParticipants(report);
+              const totalInClass = report.participants.length + nonParticipants.length;
+              const participantRate = totalInClass > 0 ? Math.round((report.participants.length / totalInClass) * 100) : 100;
+
+              const sortedParticipants = sortDataList(report.participants, 'name', 'asc');
+              const sortedNonParticipants = sortDataList(nonParticipants, 'name', 'asc');
+
+              return (
+                <div
+                  key={report.id}
+                  className="p-5 rounded-3xl bg-slate-950 border border-slate-800 shadow-md space-y-4"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+                    <div className="space-y-1">
+                      <div className="flex items-center flex-wrap gap-2">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                          report.activityType === 'the_thao' ? 'bg-amber-950 text-amber-300 border-amber-800' :
+                          report.activityType === 'tinh_nguyen' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
+                          report.activityType === 'van_nghe' ? 'bg-purple-950 text-purple-300 border-purple-800' :
+                          'bg-blue-950 text-blue-300 border-blue-800'
+                        }`}>
+                          {report.activityType === 'the_thao' ? '🏅 Hội Thao' :
+                           report.activityType === 'tinh_nguyen' ? '🌱 Tình Nguyện' :
+                           report.activityType === 'van_nghe' ? '🎭 Văn Nghệ' :
+                           report.activityType === 'lao_dong' ? '🛠️ Lao Động' : '🚩 Phong Trào'}
+                        </span>
+                        <h4 className="text-base font-black text-white">{report.activityTitle}</h4>
+                      </div>
+                      <p className="text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-0.5">
+                        <span>🕒 Thời gian gửi: <strong className="text-slate-300">{report.reportedAt}</strong></span>
+                        <span>👥 Sĩ số: <strong className="text-slate-300">{totalInClass} học sinh</strong></span>
+                        <span>✅ Tham gia: <strong className="text-purple-400 font-bold">{report.participants.length} ({participantRate}%)</strong></span>
+                        <span>❌ Không tham gia: <strong className="text-rose-400 font-bold">{nonParticipants.length} ({100 - participantRate}%)</strong></span>
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-0.5">
-                      <span>🕒 Thời gian gửi: <strong className="text-slate-300">{report.reportedAt}</strong></span>
-                      <span>👥 Số lượng: <strong className="text-purple-400">{report.participantCount || report.participants.length} học sinh</strong></span>
-                    </p>
+
+                    <div className="flex items-center gap-2">
+                      {report.status === 'verified' ? (
+                        <span className="px-3 py-1 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-bold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Đoàn Trường Đã Duyệt</span>
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-xl bg-amber-950/80 text-amber-300 border border-amber-800 text-xs font-bold flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Chờ Đoàn Trường Xác Nhận</span>
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Bạn có chắc muốn xóa báo cáo phong trào "${report.activityTitle}"?`)) {
+                            deleteActivityReport(report.id);
+                          }
+                        }}
+                        className="p-1.5 rounded-xl bg-slate-900 hover:bg-rose-950 text-rose-400 border border-slate-800 hover:border-rose-800 transition-colors"
+                        title="Xóa báo cáo này"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {report.status === 'verified' ? (
-                      <span className="px-3 py-1 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-bold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Đoàn Trường Đã Duyệt</span>
-                      </span>
-                    ) : (
-                      <span className="px-3 py-1 rounded-xl bg-amber-950/80 text-amber-300 border border-amber-800 text-xs font-bold flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Chờ Đoàn Trường Xác Nhận</span>
-                      </span>
-                    )}
+                  {/* Segmented Switcher: Tham Gia vs Không Tham Gia */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                    <div className="flex items-center gap-1.5 p-1 bg-slate-900 rounded-xl border border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setActiveReportTab(prev => ({ ...prev, [report.id]: 'participating' }))}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          currentTab === 'participating'
+                            ? 'bg-purple-600 text-white shadow-glow'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        <span>✅ Học Sinh Tham Gia ({report.participants.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveReportTab(prev => ({ ...prev, [report.id]: 'non_participating' }))}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          currentTab === 'non_participating'
+                            ? 'bg-rose-600 text-white shadow-glow'
+                            : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800'
+                        }`}
+                      >
+                        <span>❌ Không Tham Gia ({nonParticipants.length})</span>
+                      </button>
+                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(`Bạn có chắc muốn xóa báo cáo phong trào "${report.activityTitle}"?`)) {
-                          deleteActivityReport(report.id);
-                        }
-                      }}
-                      className="p-1.5 rounded-xl bg-slate-900 hover:bg-rose-950 text-rose-400 border border-slate-800 hover:border-rose-800 transition-colors"
-                      title="Xóa báo cáo này"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <span className="text-[11px] text-slate-500 font-medium italic">
+                      {currentTab === 'participating'
+                        ? `Danh sách ${report.participants.length} học sinh tham gia phong trào`
+                        : `Danh sách ${nonParticipants.length} học sinh trong lớp vắng mặt / không tham gia`}
+                    </span>
                   </div>
+
+                  {/* Table View */}
+                  {currentTab === 'participating' ? (
+                    <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-bold">
+                            <th className="p-2.5 text-center w-12 text-slate-400">STT</th>
+                            <th className="p-2.5">Mã Học Sinh</th>
+                            <th className="p-2.5">Họ và Tên (A-Z)</th>
+                            <th className="p-2.5 text-center">Giới Tính</th>
+                            <th className="p-2.5">Số Điện Thoại</th>
+                            <th className="p-2.5">Vai Trò / Nhiệm Vụ</th>
+                            <th className="p-2.5">Thành Tích / Khen Thưởng</th>
+                            <th className="p-2.5">Ghi Chú</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60">
+                          {sortedParticipants.map((p, pIdx) => (
+                            <tr key={p.studentId || pIdx} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="p-2.5 text-center text-slate-400 font-mono font-bold">{pIdx + 1}</td>
+                              <td className="p-2.5 font-mono text-amber-400 font-bold">{p.studentId}</td>
+                              <td className="p-2.5 font-bold text-white whitespace-nowrap">{p.name}</td>
+                              <td className="p-2.5 text-center">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  p.gender === 'Nữ' ? 'bg-pink-950 text-pink-300' : 'bg-blue-950 text-blue-300'
+                                }`}>
+                                  {p.gender}
+                                </span>
+                              </td>
+                              <td className="p-2.5 text-slate-300 font-mono">{p.phone || '—'}</td>
+                              <td className="p-2.5 text-slate-200 font-semibold">{p.role || 'Thành viên'}</td>
+                              <td className="p-2.5">
+                                {p.achievement ? (
+                                  <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-700 font-bold text-[11px]">
+                                    🏆 {p.achievement}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-500 text-xs">Tham gia đầy đủ</span>
+                                )}
+                              </td>
+                              <td className="p-2.5 text-slate-400 italic">{p.note || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-2xl border border-rose-950/60 bg-slate-900/60">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="bg-rose-950/40 text-rose-300 border-b border-rose-900/50 font-bold">
+                            <th className="p-2.5 text-center w-12 text-slate-400">STT</th>
+                            <th className="p-2.5">Mã Học Sinh</th>
+                            <th className="p-2.5">Họ và Tên (A-Z)</th>
+                            <th className="p-2.5 text-center">Giới Tính</th>
+                            <th className="p-2.5 text-center">Đoàn Viên</th>
+                            <th className="p-2.5">Số Điện Thoại</th>
+                            <th className="p-2.5">Trạng Thái / Lý Do Vắng</th>
+                            <th className="p-2.5">Ghi Chú</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60">
+                          {sortedNonParticipants.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="p-6 text-center text-emerald-400 font-bold">
+                                🎉 100% học sinh trong chi đoàn đều tham gia hoạt động này!
+                              </td>
+                            </tr>
+                          ) : (
+                            sortedNonParticipants.map((np, npIdx) => (
+                              <tr key={np.studentId || npIdx} className="hover:bg-rose-950/20 transition-colors">
+                                <td className="p-2.5 text-center text-slate-400 font-mono font-bold">{npIdx + 1}</td>
+                                <td className="p-2.5 font-mono text-slate-400 font-bold">{np.studentId}</td>
+                                <td className="p-2.5 font-bold text-white whitespace-nowrap">{np.name}</td>
+                                <td className="p-2.5 text-center">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    np.gender === 'Nữ' ? 'bg-pink-950 text-pink-300' : 'bg-blue-950 text-blue-300'
+                                  }`}>
+                                    {np.gender}
+                                  </span>
+                                </td>
+                                <td className="p-2.5 text-center">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    np.isUnionMember ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-slate-800 text-slate-400'
+                                  }`}>
+                                    {np.isUnionMember ? 'Đoàn viên' : 'Thanh niên'}
+                                  </span>
+                                </td>
+                                <td className="p-2.5 text-slate-400 font-mono">{np.phone || '—'}</td>
+                                <td className="p-2.5">
+                                  <span className="px-2 py-0.5 rounded-lg bg-rose-950 text-rose-300 border border-rose-800/60 text-[11px] font-semibold">
+                                    {np.reason || 'Vắng mặt / Không tham gia'}
+                                  </span>
+                                </td>
+                                <td className="p-2.5 text-slate-400 italic">{np.note || '—'}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {report.adminFeedback && (
+                    <div className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-900/50 text-purple-200 text-xs flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <span><strong>Phản hồi từ Đoàn trường:</strong> {report.adminFeedback}</span>
+                    </div>
+                  )}
                 </div>
-
-                {/* Table of participating students */}
-                <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-bold">
-                        <th className="p-2.5 text-center w-12">STT</th>
-                        <th className="p-2.5">Mã Học Sinh</th>
-                        <th className="p-2.5">Họ và Tên</th>
-                        <th className="p-2.5 text-center">Giới Tính</th>
-                        <th className="p-2.5">Số Điện Thoại</th>
-                        <th className="p-2.5">Vai Trò / Nhiệm Vụ</th>
-                        <th className="p-2.5">Thành Tích / Khen Thưởng</th>
-                        <th className="p-2.5">Ghi Chú</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {report.participants.map((p, pIdx) => (
-                        <tr key={p.studentId || pIdx} className="hover:bg-slate-800/40 transition-colors">
-                          <td className="p-2.5 text-center text-slate-500 font-mono">{pIdx + 1}</td>
-                          <td className="p-2.5 font-mono text-amber-400 font-bold">{p.studentId}</td>
-                          <td className="p-2.5 font-bold text-white whitespace-nowrap">{p.name}</td>
-                          <td className="p-2.5 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              p.gender === 'Nữ' ? 'bg-pink-950 text-pink-300' : 'bg-blue-950 text-blue-300'
-                            }`}>
-                              {p.gender}
-                            </span>
-                          </td>
-                          <td className="p-2.5 text-slate-300 font-mono">{p.phone || '—'}</td>
-                          <td className="p-2.5 text-slate-200 font-semibold">{p.role || 'Thành viên'}</td>
-                          <td className="p-2.5">
-                            {p.achievement ? (
-                              <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-700 font-bold text-[11px]">
-                                🏆 {p.achievement}
-                              </span>
-                            ) : (
-                              <span className="text-slate-500 text-xs">Tham gia đầy đủ</span>
-                            )}
-                          </td>
-                          <td className="p-2.5 text-slate-400 italic">{p.note || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {report.adminFeedback && (
-                  <div className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-900/50 text-purple-200 text-xs flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                    <span><strong>Phản hồi từ Đoàn trường:</strong> {report.adminFeedback}</span>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
 
             {classActivityReports.length === 0 && (
               <div className="p-12 text-center bg-slate-950 rounded-3xl border border-slate-800 text-slate-400 text-xs space-y-3">
@@ -1118,33 +1291,61 @@ export const YouthSecretaryPortal: React.FC = () => {
 
                 {/* Table of students */}
                 <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-900/90 text-slate-400 border-b border-slate-800 font-bold">
-                        <th className="p-2.5 text-center w-10">STT</th>
-                        <th className="p-2.5">Mã HS</th>
-                        <th className="p-2.5">Họ và Tên</th>
-                        <th className="p-2.5 text-center">Đối Tượng</th>
-                        {MONTHS.map(m => (
-                          <th key={m} className="p-2 text-center text-[11px] text-amber-400 font-black min-w-[54px]">{m.replace('Tháng ', 'T')}</th>
-                        ))}
-                        <th className="p-2.5 text-center">Tiến Độ</th>
-                        <th className="p-2.5 text-right">Thao Tác</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {filteredStudents.map((st, idx) => {
-                        const isUnion = st.isUnionMember;
-                        const paidMonthsCount = isUnion 
-                          ? MONTHS.filter(m => (st.monthlyUnionFees?.[m] || (st.unionFeeStatus === 'paid' ? 'paid' : 'unpaid')) === 'paid').length 
-                          : 0;
-                        const percent = isUnion ? Math.round((paidMonthsCount / 9) * 100) : 0;
+                  {(() => {
+                    const sortedClassStudents = sortDataList(filteredStudents, memberTableSort.key, memberTableSort.direction);
 
-                        return (
-                          <tr key={st.id} className="hover:bg-slate-900/40 transition-colors">
-                            <td className="p-2.5 text-center text-slate-500 font-mono">{idx + 1}</td>
-                            <td className="p-2.5 font-mono text-amber-400 font-bold">{st.studentId}</td>
-                            <td className="p-2.5 font-bold text-white whitespace-nowrap">{st.name}</td>
+                    return (
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-900/90 text-slate-400 border-b border-slate-800 font-bold">
+                            <th className="p-2.5 text-center w-10">STT</th>
+                            <SortableTh
+                              sortKey="studentId"
+                              currentSortKey={memberTableSort.key}
+                              currentSortDir={memberTableSort.direction}
+                              onSort={(k) => setMemberTableSort(prev => ({ key: k, direction: prev.key === k && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                              className="p-2.5"
+                            >
+                              Mã HS
+                            </SortableTh>
+                            <SortableTh
+                              sortKey="name"
+                              currentSortKey={memberTableSort.key}
+                              currentSortDir={memberTableSort.direction}
+                              onSort={(k) => setMemberTableSort(prev => ({ key: k, direction: prev.key === k && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                              className="p-2.5"
+                            >
+                              Họ và Tên
+                            </SortableTh>
+                            <SortableTh
+                              sortKey="isUnionMember"
+                              currentSortKey={memberTableSort.key}
+                              currentSortDir={memberTableSort.direction}
+                              onSort={(k) => setMemberTableSort(prev => ({ key: k, direction: prev.key === k && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                              className="p-2.5 text-center"
+                            >
+                              Đối Tượng
+                            </SortableTh>
+                            {MONTHS.map(m => (
+                              <th key={m} className="p-2 text-center text-[11px] text-amber-400 font-black min-w-[54px]">{m.replace('Tháng ', 'T')}</th>
+                            ))}
+                            <th className="p-2.5 text-center">Tiến Độ</th>
+                            <th className="p-2.5 text-right">Thao Tác</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60">
+                          {sortedClassStudents.map((st, idx) => {
+                            const isUnion = st.isUnionMember;
+                            const paidMonthsCount = isUnion 
+                              ? MONTHS.filter(m => (st.monthlyUnionFees?.[m] || (st.unionFeeStatus === 'paid' ? 'paid' : 'unpaid')) === 'paid').length 
+                              : 0;
+                            const percent = isUnion ? Math.round((paidMonthsCount / 9) * 100) : 0;
+
+                            return (
+                              <tr key={st.id} className="hover:bg-slate-900/40 transition-colors">
+                                <td className="p-2.5 text-center text-slate-400 font-mono font-bold">{idx + 1}</td>
+                                <td className="p-2.5 font-mono text-amber-400 font-bold">{st.studentId}</td>
+                                <td className="p-2.5 font-bold text-white whitespace-nowrap">{st.name}</td>
                             <td className="p-2.5 text-center">
                               {isUnion ? (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800">
@@ -1220,12 +1421,14 @@ export const YouthSecretaryPortal: React.FC = () => {
                       })}
                     </tbody>
                   </table>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
+                );
+              })()}
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  )}
 
       {/* ================= TAB 4: TASK NOTICES ================= */}
       {bithuTab === 'notices' && (

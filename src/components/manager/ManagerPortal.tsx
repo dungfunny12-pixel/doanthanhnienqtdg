@@ -33,11 +33,12 @@ import {
   CheckSquare,
   Square,
   Filter,
-  Download
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Violation, ClassWeeklyScore } from '../../types';
 import { PhotoViewerModal } from '../common/PhotoViewerModal';
+import { SortableTh } from '../common/SortableTh';
+import { sortDataList } from '../../utils/sortUtils';
 
 export const ManagerPortal: React.FC = () => {
   const { 
@@ -72,6 +73,14 @@ export const ManagerPortal: React.FC = () => {
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [studentFilter, setStudentFilter] = useState<'all' | 'union' | 'non_union' | 'paid_all' | 'unpaid'>('all');
   const [studentSearch, setStudentSearch] = useState<string>('');
+  const [studentSort, setStudentSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+
+  const handleToggleStudentSort = (key: string) => {
+    setStudentSort(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
 
   // Month selector for Union Fee tracking (All 9 school months: 9, 10, 11, 12, 1, 2, 3, 4, 5)
   const MONTHS = ['Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12', 'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5'];
@@ -926,167 +935,195 @@ export const ManagerPortal: React.FC = () => {
 
             {/* DIRECT 9-MONTH MATRIX TABLE (READ-ONLY) */}
             <div className="overflow-x-auto rounded-2xl border border-slate-800">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-950 text-slate-400 border-b border-slate-800 text-[11px]">
-                    {/* Select All Checkbox Column */}
-                    <th className="p-3 w-10 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isAllSelected}
-                        onChange={handleToggleSelectAll}
-                        className="w-4 h-4 rounded text-blue-600 bg-slate-900 border-slate-700 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
-                        title="Chọn tất cả / Bỏ chọn tất cả"
-                      />
-                    </th>
-                    <th className="p-3 font-bold">Họ và Tên Đoàn Viên / Học Sinh</th>
-                    <th className="p-3 font-bold text-center">Tư Cách</th>
-                    {MONTHS.map((m, idx) => (
-                      <th key={m} className="p-2 text-center whitespace-nowrap font-bold">
-                        <div className="flex flex-col items-center">
-                          <span className="text-slate-300 font-bold">T{m.replace('Tháng ', '')}</span>
-                          <span className="text-[9px] text-slate-500">{idx < 5 ? 'HK1' : 'HK2'}</span>
-                        </div>
-                      </th>
-                    ))}
-                    <th className="p-2 text-center font-bold">Tiến Độ</th>
-                    <th className="p-3 text-right font-bold">Tình Trạng</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {filteredStudents.map(st => {
-                    const isSelected = selectedStudentIds.includes(st.id);
-                    const isUnion = st.isUnionMember;
-                    const paidMonthsCount = isUnion 
-                      ? MONTHS.filter(m => (st.monthlyUnionFees?.[m] || (st.unionFeeStatus === 'paid' ? 'paid' : 'unpaid')) === 'paid').length 
-                      : 0;
-                    const percent = isUnion ? Math.round((paidMonthsCount / 9) * 100) : 0;
+              {(() => {
+                const sortedStudents = sortDataList(filteredStudents, studentSort.key, studentSort.direction);
 
-                    return (
-                      <tr 
-                        key={st.id} 
-                        className={`transition-colors ${
-                          isSelected 
-                            ? 'bg-blue-950/30 hover:bg-blue-950/40' 
-                            : 'hover:bg-slate-800/40'
-                        }`}
-                      >
-                        {/* Checkbox before student name */}
-                        <td className="p-3 w-10 text-center">
+                return (
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-950 text-slate-400 border-b border-slate-800 text-[11px]">
+                        {/* Select All Checkbox Column */}
+                        <th className="p-3 w-10 text-center">
                           <input
                             type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleToggleSelectStudent(st.id)}
+                            checked={isAllSelected}
+                            onChange={handleToggleSelectAll}
                             className="w-4 h-4 rounded text-blue-600 bg-slate-900 border-slate-700 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
-                            title={`Chọn ${st.name}`}
+                            title="Chọn tất cả / Bỏ chọn tất cả"
                           />
-                        </td>
-
-                        {/* Student Name */}
-                        <td className="p-3 font-bold text-white whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <span className="p-1 rounded-lg bg-slate-800 text-slate-300 text-xs">👤</span>
-                            <div>
-                              <span className="text-sm font-bold text-white">{st.name}</span>
-                              <span className="text-[10px] text-slate-500 font-mono block">{st.studentId}</span>
+                        </th>
+                        <th className="p-3 font-bold text-center w-12 text-slate-400">STT</th>
+                        <SortableTh
+                          sortKey="name"
+                          currentSortKey={studentSort.key}
+                          currentSortDir={studentSort.direction}
+                          onSort={handleToggleStudentSort}
+                          className="p-3 font-bold"
+                        >
+                          Họ và Tên Đoàn Viên / Học Sinh
+                        </SortableTh>
+                        <SortableTh
+                          sortKey="isUnionMember"
+                          currentSortKey={studentSort.key}
+                          currentSortDir={studentSort.direction}
+                          onSort={handleToggleStudentSort}
+                          className="p-3 font-bold text-center"
+                        >
+                          Tư Cách
+                        </SortableTh>
+                        {MONTHS.map((m, idx) => (
+                          <th key={m} className="p-2 text-center whitespace-nowrap font-bold">
+                            <div className="flex flex-col items-center">
+                              <span className="text-slate-300 font-bold">T{m.replace('Tháng ', '')}</span>
+                              <span className="text-[9px] text-slate-500">{idx < 5 ? 'HK1' : 'HK2'}</span>
                             </div>
-                          </div>
-                        </td>
+                          </th>
+                        ))}
+                        <th className="p-2 text-center font-bold">Tiến Độ</th>
+                        <th className="p-3 text-right font-bold">Tình Trạng</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {sortedStudents.map((st, idx) => {
+                        const isSelected = selectedStudentIds.includes(st.id);
+                        const isUnion = st.isUnionMember;
+                        const paidMonthsCount = isUnion 
+                          ? MONTHS.filter(m => (st.monthlyUnionFees?.[m] || (st.unionFeeStatus === 'paid' ? 'paid' : 'unpaid')) === 'paid').length 
+                          : 0;
+                        const percent = isUnion ? Math.round((paidMonthsCount / 9) * 100) : 0;
 
-                        {/* Union Status */}
-                        <td className="p-3 text-center whitespace-nowrap">
-                          {isUnion ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800">
-                              Đoàn viên
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-900 text-slate-400 border border-slate-800">
-                              Học sinh
-                            </span>
-                          )}
-                        </td>
+                        return (
+                          <tr 
+                            key={st.id} 
+                            className={`transition-colors ${
+                              isSelected 
+                                ? 'bg-blue-950/30 hover:bg-blue-950/40' 
+                                : 'hover:bg-slate-800/40'
+                            }`}
+                          >
+                            {/* Checkbox before student name */}
+                            <td className="p-3 w-10 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleSelectStudent(st.id)}
+                                className="w-4 h-4 rounded text-blue-600 bg-slate-900 border-slate-700 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                                title={`Chọn ${st.name}`}
+                              />
+                            </td>
 
-                        {/* 9 Month Status Cells */}
-                        {MONTHS.map(m => {
-                          if (!isUnion) {
-                            return (
-                              <td key={m} className="p-1.5 text-center">
-                                <span 
-                                  className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-900/50 border border-slate-800/80 text-slate-600 text-xs font-mono select-none"
-                                  title="Chưa kết nạp Đoàn - Không thu đoàn phí"
-                                >
-                                  —
-                                </span>
-                              </td>
-                            );
-                          }
+                            {/* STT Column */}
+                            <td className="p-3 text-center text-slate-400 font-mono font-bold">
+                              {idx + 1}
+                            </td>
 
-                          const isPaid = (st.monthlyUnionFees?.[m] || (st.unionFeeStatus === 'paid' ? 'paid' : 'unpaid')) === 'paid';
-                          return (
-                            <td key={m} className="p-1.5 text-center">
-                              <div
-                                className={`w-8 h-8 rounded-xl text-xs font-black flex items-center justify-center mx-auto border transition-all select-none ${
-                                  isPaid
-                                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/80 shadow-sm'
-                                    : 'bg-rose-950/30 text-rose-400/80 border-rose-900/40'
-                                }`}
-                                title={`${m}: ${isPaid ? 'Đã hoàn thành nộp Đoàn phí' : 'Chưa nộp Đoàn phí'}`}
-                              >
-                                {isPaid ? '✓' : '✕'}
+                            {/* Student Name */}
+                            <td className="p-3 font-bold text-white whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <span className="p-1 rounded-lg bg-slate-800 text-slate-300 text-xs">👤</span>
+                                <div>
+                                  <span className="text-sm font-bold text-white">{st.name}</span>
+                                  <span className="text-[10px] text-slate-500 font-mono block">{st.studentId}</span>
+                                </div>
                               </div>
                             </td>
-                          );
-                        })}
 
-                        {/* Progress */}
-                        <td className="p-2 text-center whitespace-nowrap">
-                          {isUnion ? (
-                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                              percent === 100 ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
-                              percent >= 50 ? 'bg-amber-950 text-amber-300 border border-amber-800' :
-                              'bg-rose-950/50 text-rose-300 border border-rose-800'
-                            }`}>
-                              {paidMonthsCount}/9 ({percent}%)
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-slate-900 text-slate-500 border border-slate-800 select-none">
-                              Không thu
-                            </span>
-                          )}
-                        </td>
+                            {/* Union Status */}
+                            <td className="p-3 text-center whitespace-nowrap">
+                              {isUnion ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800">
+                                  Đoàn viên
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-900 text-slate-400 border border-slate-800">
+                                  Học sinh
+                                </span>
+                              )}
+                            </td>
 
-                        {/* Status Summary */}
-                        <td className="p-3 text-right whitespace-nowrap">
-                          {isUnion ? (
-                            percent === 100 ? (
-                              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 inline-flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                                <span>Đã nộp đủ 9T</span>
-                              </span>
-                            ) : (
-                              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-950 text-amber-300 border border-amber-800 inline-flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-amber-400" />
-                                <span>Nợ {9 - paidMonthsCount} tháng</span>
-                              </span>
-                            )
-                          ) : (
-                            <span className="text-slate-500 text-xs italic">
-                              Chưa vào Đoàn
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {filteredStudents.length === 0 && (
-                    <tr>
-                      <td colSpan={14} className="p-8 text-center text-slate-500">
-                        Không tìm thấy học sinh nào phù hợp với bộ lọc hiện tại.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                            {/* 9 Month Status Cells */}
+                            {MONTHS.map(m => {
+                              if (!isUnion) {
+                                return (
+                                  <td key={m} className="p-1.5 text-center">
+                                    <span 
+                                      className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-900/50 border border-slate-800/80 text-slate-600 text-xs font-mono select-none"
+                                      title="Chưa kết nạp Đoàn - Không thu đoàn phí"
+                                    >
+                                      —
+                                    </span>
+                                  </td>
+                                );
+                              }
+
+                              const isPaid = (st.monthlyUnionFees?.[m] || (st.unionFeeStatus === 'paid' ? 'paid' : 'unpaid')) === 'paid';
+                              return (
+                                <td key={m} className="p-1.5 text-center">
+                                  <div
+                                    className={`w-8 h-8 rounded-xl text-xs font-black flex items-center justify-center mx-auto border transition-all select-none ${
+                                      isPaid
+                                        ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/80 shadow-sm'
+                                        : 'bg-rose-950/30 text-rose-400/80 border-rose-900/40'
+                                    }`}
+                                    title={`${m}: ${isPaid ? 'Đã hoàn thành nộp Đoàn phí' : 'Chưa nộp Đoàn phí'}`}
+                                  >
+                                    {isPaid ? '✓' : '✕'}
+                                  </div>
+                                </td>
+                              );
+                            })}
+
+                            {/* Progress */}
+                            <td className="p-2 text-center whitespace-nowrap">
+                              {isUnion ? (
+                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                                  percent === 100 ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
+                                  percent >= 50 ? 'bg-amber-950 text-amber-300 border border-amber-800' :
+                                  'bg-rose-950/50 text-rose-300 border border-rose-800'
+                                }`}>
+                                  {paidMonthsCount}/9 ({percent}%)
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-slate-900 text-slate-500 border border-slate-800 select-none">
+                                  Không thu
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Status Summary */}
+                            <td className="p-3 text-right whitespace-nowrap">
+                              {isUnion ? (
+                                percent === 100 ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 inline-flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                    <span>Đã nộp đủ 9T</span>
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-950 text-amber-300 border border-amber-800 inline-flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-amber-400" />
+                                    <span>Nợ {9 - paidMonthsCount} tháng</span>
+                                  </span>
+                                )
+                              ) : (
+                                <span className="text-slate-500 text-xs italic">
+                                  Chưa vào Đoàn
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredStudents.length === 0 && (
+                        <tr>
+                          <td colSpan={15} className="p-8 text-center text-slate-500">
+                            Không tìm thấy học sinh nào phù hợp với bộ lọc hiện tại.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                );
+              })()}
             </div>
 
           </div>

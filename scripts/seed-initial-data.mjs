@@ -24,10 +24,41 @@ async function seed() {
     // 1. Seed Weeks
     console.log('1. Đang nạp danh mục Tuần học...');
     const weeks = [
-      { num: 22, title: 'Tuần 22', start: '2026-08-11', end: '2026-08-16', is_curr: false, is_lock: true },
-      { num: 23, title: 'Tuần 23', start: '2026-08-18', end: '2026-08-23', is_curr: false, is_lock: true },
-      { num: 24, title: 'Tuần 24', start: '2026-08-25', end: '2026-08-30', is_curr: true, is_lock: false },
-      { num: 25, title: 'Tuần 25', start: '2026-09-01', end: '2026-09-06', is_curr: false, is_lock: false }
+      { num: 1, title: 'Tuần 1', start: '2026-09-07', end: '2026-09-12', is_curr: true, is_lock: false },
+      { num: 2, title: 'Tuần 2', start: '2026-09-14', end: '2026-09-19', is_curr: false, is_lock: false },
+      { num: 3, title: 'Tuần 3', start: '2026-09-21', end: '2026-09-26', is_curr: false, is_lock: false },
+      { num: 4, title: 'Tuần 4', start: '2026-09-28', end: '2026-10-03', is_curr: false, is_lock: false },
+      { num: 5, title: 'Tuần 5', start: '2026-10-05', end: '2026-10-10', is_curr: false, is_lock: false },
+      { num: 6, title: 'Tuần 6', start: '2026-10-12', end: '2026-10-17', is_curr: false, is_lock: false },
+      { num: 7, title: 'Tuần 7', start: '2026-10-19', end: '2026-10-24', is_curr: false, is_lock: false },
+      { num: 8, title: 'Tuần 8', start: '2026-10-26', end: '2026-10-31', is_curr: false, is_lock: false },
+      { num: 9, title: 'Tuần 9', start: '2026-11-02', end: '2026-11-07', is_curr: false, is_lock: false },
+      { num: 10, title: 'Tuần 10', start: '2026-11-09', end: '2026-11-14', is_curr: false, is_lock: false },
+      { num: 11, title: 'Tuần 11', start: '2026-11-16', end: '2026-11-21', is_curr: false, is_lock: false },
+      { num: 12, title: 'Tuần 12', start: '2026-11-23', end: '2026-11-28', is_curr: false, is_lock: false },
+      { num: 13, title: 'Tuần 13', start: '2026-11-30', end: '2026-12-05', is_curr: false, is_lock: false },
+      { num: 14, title: 'Tuần 14', start: '2026-12-07', end: '2026-12-12', is_curr: false, is_lock: false },
+      { num: 15, title: 'Tuần 15', start: '2026-12-14', end: '2026-12-19', is_curr: false, is_lock: false },
+      { num: 16, title: 'Tuần 16', start: '2026-12-21', end: '2026-12-26', is_curr: false, is_lock: false },
+      { num: 17, title: 'Tuần 17', start: '2026-12-28', end: '2027-01-02', is_curr: false, is_lock: false },
+      { num: 18, title: 'Tuần 18', start: '2027-01-04', end: '2027-01-09', is_curr: false, is_lock: false },
+      { num: 19, title: 'Tuần 19', start: '2027-01-11', end: '2027-01-16', is_curr: false, is_lock: false },
+      { num: 20, title: 'Tuần 20', start: '2027-01-18', end: '2027-01-23', is_curr: false, is_lock: false },
+      { num: 21, title: 'Tuần 21', start: '2027-01-25', end: '2027-01-30', is_curr: false, is_lock: false },
+      { num: 22, title: 'Tuần 22', start: '2027-02-01', end: '2027-02-06', is_curr: false, is_lock: false },
+      { num: 23, title: 'Tuần 23', start: '2027-02-08', end: '2027-02-13', is_curr: false, is_lock: false },
+      { num: 24, title: 'Tuần 24', start: '2027-02-15', end: '2027-02-20', is_curr: false, is_lock: false },
+      { num: 25, title: 'Tuần 25', start: '2027-02-22', end: '2027-02-27', is_curr: false, is_lock: false },
+      { num: 26, title: 'Tuần 26', start: '2027-03-01', end: '2027-03-06', is_curr: false, is_lock: false },
+      { num: 27, title: 'Tuần 27', start: '2027-03-08', end: '2027-03-13', is_curr: false, is_lock: false },
+      { num: 28, title: 'Tuần 28', start: '2027-03-15', end: '2027-03-20', is_curr: false, is_lock: false },
+      { num: 29, title: 'Tuần 29', start: '2027-03-22', end: '2027-03-27', is_curr: false, is_lock: false },
+      { num: 30, title: 'Tuần 30', start: '2027-03-29', end: '2027-04-03', is_curr: false, is_lock: false },
+      { num: 31, title: 'Tuần 31', start: '2027-04-05', end: '2027-04-10', is_curr: false, is_lock: false },
+      { num: 32, title: 'Tuần 32', start: '2027-04-12', end: '2027-04-17', is_curr: false, is_lock: false },
+      { num: 33, title: 'Tuần 33', start: '2027-04-19', end: '2027-04-24', is_curr: false, is_lock: false },
+      { num: 34, title: 'Tuần 34', start: '2027-04-26', end: '2027-05-01', is_curr: false, is_lock: false },
+      { num: 35, title: 'Tuần 35', start: '2027-05-03', end: '2027-05-08', is_curr: false, is_lock: false }
     ];
     for (const w of weeks) {
       await client.query(`
