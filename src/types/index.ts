@@ -283,6 +283,7 @@ export interface WeekConfig {
   endDate: string; // "2026-08-30"
   isCurrent: boolean;
   isLocked: boolean;
+  isHidden?: boolean;
   note?: string;
   semester?: 1 | 2;
   academicYearId?: string;

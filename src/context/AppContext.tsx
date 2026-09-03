@@ -92,6 +92,7 @@ interface AppContextType {
   deleteWeek: (weekNum: number) => { success: boolean; message: string };
   toggleWeekLockDirect: (weekNum: number) => void;
   setCurrentWeek: (weekNum: number) => void;
+  toggleWeekVisibility: (weekNum: number) => void;
   resetToDefault35Weeks: () => void;
   updateSemesterConfig: (config: { semester1EndWeek: number; semester1Name?: string; semester2Name?: string }) => void;
   syncWeeksToCloud: () => Promise<{ success: boolean; message: string; count: number }>;
@@ -489,6 +490,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })));
     setActiveWeek(weekNum);
     addLog('Thiết lập tuần hiện tại', `Chọn Tuần ${weekNum} làm gốc hiển thị mặc định`);
+  };
+
+  const toggleWeekVisibility = (weekNum: number) => {
+    let nextHiddenState = false;
+    const updated = weeksConfig.map(w => {
+      if (w.weekNumber === weekNum) {
+        nextHiddenState = !w.isHidden;
+        return { ...w, isHidden: nextHiddenState };
+      }
+      return w;
+    });
+    setWeeksConfig(updated);
+    try {
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_weeksConfig`, JSON.stringify(updated));
+    } catch {}
+
+    if (isSupabaseConfigured()) {
+      const targetWeek = updated.find(w => w.weekNumber === weekNum);
+      if (targetWeek) {
+        SupabaseService.saveSingleWeek(targetWeek);
+      }
+    }
+    addLog('Ẩn/Hiện tuần học', `${nextHiddenState ? 'Ẩn' : 'Hiển thị'} Tuần ${weekNum} trên hệ thống`);
   };
 
   const resetToDefault35Weeks = () => {
@@ -2076,6 +2100,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteWeek,
         toggleWeekLockDirect,
         setCurrentWeek,
+        toggleWeekVisibility,
         resetToDefault35Weeks,
         updateSemesterConfig,
         syncWeeksToCloud,

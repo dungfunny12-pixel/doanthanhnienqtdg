@@ -245,11 +245,13 @@ export const Header: React.FC = () => {
                 onChange={(e) => setActiveWeek(Number(e.target.value))}
                 className="bg-transparent text-amber-400 font-bold outline-none cursor-pointer text-[11px]"
               >
-                {weeksConfig.map(w => (
-                  <option key={w.weekNumber} value={w.weekNumber} className="bg-slate-900 text-white">
-                    {w.title} {w.isCurrent ? '(Hiện tại)' : w.isLocked ? '🔒' : ''}
-                  </option>
-                ))}
+                {weeksConfig
+                  .filter(w => !w.isHidden || w.isCurrent || currentUser?.role === 'admin')
+                  .map(w => (
+                    <option key={w.weekNumber} value={w.weekNumber} className="bg-slate-900 text-white">
+                      {w.title} {w.isCurrent ? '(Hiện tại)' : w.isLocked ? '🔒' : ''} {w.isHidden ? '(Đã ẩn)' : ''}
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -486,11 +488,13 @@ export const Header: React.FC = () => {
                 onChange={(e) => setActiveWeek(Number(e.target.value))}
                 className="w-full bg-slate-950 text-amber-400 font-bold rounded-lg p-1.5 text-xs outline-none border border-slate-800"
               >
-                {weeksConfig.map(w => (
-                  <option key={w.weekNumber} value={w.weekNumber}>
-                    {w.title} {w.isCurrent ? '(Hiện tại)' : w.isLocked ? '🔒' : ''}
-                  </option>
-                ))}
+                {weeksConfig
+                  .filter(w => !w.isHidden || w.isCurrent || currentUser?.role === 'admin')
+                  .map(w => (
+                    <option key={w.weekNumber} value={w.weekNumber}>
+                      {w.title} {w.isCurrent ? '(Hiện tại)' : w.isLocked ? '🔒' : ''} {w.isHidden ? '(Đã ẩn)' : ''}
+                    </option>
+                  ))}
               </select>
             </div>
 

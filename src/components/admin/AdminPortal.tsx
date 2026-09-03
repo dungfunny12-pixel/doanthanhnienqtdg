@@ -178,6 +178,7 @@ export const AdminPortal: React.FC = () => {
     deleteWeek,
     toggleWeekLockDirect,
     setCurrentWeek,
+    toggleWeekVisibility,
     resetToDefault35Weeks,
     updateSemesterConfig,
     syncWeeksToCloud,
@@ -4922,7 +4923,9 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                   className={`transition-colors ${
                                     w.isCurrent
                                       ? 'bg-red-950/30 font-semibold'
-                                      : 'hover:bg-slate-900/50'
+                                      : w.isHidden
+                                        ? 'bg-slate-950/40 opacity-75 hover:opacity-100 hover:bg-slate-900/40'
+                                        : 'hover:bg-slate-900/50'
                                   }`}
                                 >
                                   <td className="p-3 text-center text-slate-400 font-mono font-bold">
@@ -4930,10 +4933,17 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                   </td>
                                   <td className="p-3 font-bold text-white whitespace-nowrap">
                                     <div className="flex items-center gap-2">
-                                      <span className="font-extrabold text-white text-sm">{w.title}</span>
+                                      <span className={`font-extrabold text-sm ${w.isHidden ? 'text-slate-400 line-through decoration-slate-600' : 'text-white'}`}>
+                                        {w.title}
+                                      </span>
                                       {w.isCurrent && (
                                         <span className="px-2 py-0.5 rounded-full bg-red-600 text-white font-extrabold text-[9px] shadow-sm animate-pulse">
                                           GỐC
+                                        </span>
+                                      )}
+                                      {w.isHidden && (
+                                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-bold text-[9px] border border-slate-700">
+                                          ĐÃ ẨN
                                         </span>
                                       )}
                                     </div>
@@ -4973,16 +4983,21 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                   </td>
                                   <td className="p-3 text-right whitespace-nowrap">
                                     <div className="flex items-center justify-end gap-1.5">
-                                      {!w.isCurrent && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setCurrentWeek(w.weekNumber)}
-                                          title="Đặt làm tuần gốc hiển thị mặc định"
-                                          className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-white text-[10px] font-bold border border-slate-800"
-                                        >
-                                          Đặt gốc
-                                        </button>
-                                      )}
+                                      {/* Thay đổi nút Đặt gốc thành Ẩn / Hiển thị */}
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleWeekVisibility(w.weekNumber)}
+                                        title={w.isHidden ? "Bấm để hiển thị lại tuần này trên hệ thống" : "Bấm để ẩn tuần này khỏi hệ thống"}
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1 transition-all ${
+                                          w.isHidden
+                                            ? 'bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800 hover:text-white'
+                                            : 'bg-slate-900 text-emerald-400 border-emerald-800/60 hover:bg-slate-800 hover:text-emerald-300'
+                                        }`}
+                                      >
+                                        {w.isHidden ? <EyeOff className="w-3.5 h-3.5 text-slate-400" /> : <Eye className="w-3.5 h-3.5 text-emerald-400" />}
+                                        <span>{w.isHidden ? 'Đã Ẩn' : 'Hiển Thị'}</span>
+                                      </button>
+
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -5035,12 +5050,16 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                               className={`p-4 rounded-2xl border space-y-3 text-xs transition-all ${
                                 w.isCurrent
                                   ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500 shadow-glow'
-                                  : 'bg-slate-950 border-slate-800'
+                                  : w.isHidden
+                                    ? 'bg-slate-950/60 border-slate-800 opacity-75 hover:opacity-100'
+                                    : 'bg-slate-950 border-slate-800'
                               }`}
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="font-extrabold text-white text-base">{w.title}</span>
+                                  <span className={`font-extrabold text-base ${w.isHidden ? 'text-slate-400 line-through decoration-slate-600' : 'text-white'}`}>
+                                    {w.title}
+                                  </span>
                                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
                                     isHk1
                                       ? 'bg-amber-950 text-amber-300 border-amber-800'
@@ -5048,6 +5067,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                   }`}>
                                     {isHk1 ? semester1Name : semester2Name}
                                   </span>
+                                  {w.isHidden && (
+                                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-bold text-[9px] border border-slate-700">
+                                      ĐÃ ẨN
+                                    </span>
+                                  )}
                                 </div>
                                 {w.isCurrent && (
                                   <span className="px-2 py-0.5 rounded-full bg-red-600 text-white font-extrabold text-[9px]">
@@ -5080,6 +5104,21 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                 </button>
 
                                 <div className="flex items-center gap-1">
+                                  {/* Thay đổi nút Đặt gốc thành Ẩn / Hiển thị */}
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleWeekVisibility(w.weekNumber)}
+                                    title={w.isHidden ? "Bấm để hiển thị lại tuần này" : "Bấm để ẩn tuần này"}
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1 transition-all ${
+                                      w.isHidden
+                                        ? 'bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800 hover:text-white'
+                                        : 'bg-slate-900 text-emerald-400 border-emerald-800/60 hover:bg-slate-800 hover:text-emerald-300'
+                                    }`}
+                                  >
+                                    {w.isHidden ? <EyeOff className="w-3.5 h-3.5 text-slate-400" /> : <Eye className="w-3.5 h-3.5 text-emerald-400" />}
+                                    <span>{w.isHidden ? 'Đã Ẩn' : 'Hiển Thị'}</span>
+                                  </button>
+
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -5098,17 +5137,6 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                   >
                                     <Edit3 className="w-3.5 h-3.5" />
                                   </button>
-
-                                  {!w.isCurrent && (
-                                    <button
-                                      type="button"
-                                      onClick={() => setCurrentWeek(w.weekNumber)}
-                                      title="Đặt làm tuần gốc hiển thị"
-                                      className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] font-bold"
-                                    >
-                                      Đặt gốc
-                                    </button>
-                                  )}
 
                                   {!w.isCurrent && (
                                     <button

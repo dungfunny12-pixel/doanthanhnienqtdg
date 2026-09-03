@@ -264,6 +264,7 @@ export const SupabaseService = {
             endDate: w.end_date,
             isCurrent: Boolean(w.is_current),
             isLocked: Boolean(w.is_locked),
+            isHidden: Boolean(w.is_hidden),
             note: w.note || '',
             semester: (Number(w.semester) as 1 | 2) || (w.week_number <= (schoolSettings?.semester1EndWeek || 18) ? 1 : 2),
             academicYearId: w.academic_year || '2026_2027'
@@ -860,6 +861,7 @@ export const SupabaseService = {
         end_date: w.endDate,
         is_current: w.isCurrent,
         is_locked: w.isLocked,
+        is_hidden: w.isHidden || false,
         note: w.note || '',
         semester: w.semester || (w.weekNumber <= 18 ? 1 : 2),
         academic_year: w.academicYearId || '2026_2027',
@@ -886,6 +888,7 @@ export const SupabaseService = {
         end_date: w.endDate,
         is_current: w.isCurrent,
         is_locked: w.isLocked,
+        is_hidden: w.isHidden || false,
         note: w.note || '',
         semester: w.semester || (w.weekNumber <= 18 ? 1 : 2),
         academic_year: w.academicYearId || '2026_2027',
