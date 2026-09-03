@@ -46,6 +46,8 @@ import {
   INITIAL_NOTIFICATIONS,
   INITIAL_ACADEMIC_YEARS
 } from '../data/initialData';
+import { SupabaseService } from '../services/supabaseService';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface AppContextType {
   currentUser: User | null;
@@ -300,6 +302,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsWeekLocked(Boolean(targetWeek.isLocked));
     }
   }, [activeWeek, weeksConfig]);
+
+  // Auto-sync with Supabase Cloud on startup
+  useEffect(() => {
+    if (isSupabaseConfigured()) {
+      SupabaseService.loadAllDataFromSupabase().then(cloudData => {
+        if (cloudData) {
+          if (cloudData.classes && cloudData.classes.length > 0) setClasses(cloudData.classes);
+          if (cloudData.criteria && cloudData.criteria.length > 0) setCriteria(cloudData.criteria);
+          if (cloudData.students && cloudData.students.length > 0) setStudents(cloudData.students);
+          if (cloudData.violations) setViolations(cloudData.violations);
+          if (cloudData.news && cloudData.news.length > 0) setNews(cloudData.news);
+          if (cloudData.notices && cloudData.notices.length > 0) setNotices(cloudData.notices);
+          console.log('✅ Đã đồng bộ dữ liệu mới nhất từ Supabase Cloud!');
+        }
+      }).catch(err => {
+        console.warn('Không thể nạp dữ liệu từ Cloud, tiếp tục với LocalStorage:', err);
+      });
+    }
+  }, []);
 
   const addLog = (action: string, details: string) => {
     const newLog: AuditLog = {
@@ -716,11 +737,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       linkView: 'admin'
     });
 
+    // Cloud Database Persistence
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveViolation(newVio).catch(err => {
+        console.warn('Lỗi ghi vi phạm lên Supabase:', err);
+      });
+    }
+
     return newVio;
   };
 
   const updateViolationStatus = (id: string, status: ViolationStatus) => {
-    setViolations(prev => prev.map(v => v.id === id ? { ...v, status } : v));
+    setViolations(prev => prev.map(v => {
+      if (v.id === id) {
+        const updated = { ...v, status };
+        if (isSupabaseConfigured()) SupabaseService.saveViolation(updated);
+        return updated;
+      }
+      return v;
+    }));
     const target = violations.find(v => v.id === id);
     if (target) {
       addLog('Cập nhật trạng thái lỗi', `Chuyển trạng thái lỗi [${target.criterionName}] của ${target.className} sang "${status}"`);
@@ -730,7 +765,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const submitAppeal = (violationId: string, reason: string, proofImages: string[]): boolean => {
     setViolations(prev => prev.map(v => {
       if (v.id === violationId) {
-        return {
+        const updated: Violation = {
           ...v,
           status: 'appealed',
           appeal: {
@@ -740,6 +775,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             appealedAt: new Date().toLocaleString('vi-VN')
           }
         };
+        if (isSupabaseConfigured()) SupabaseService.saveViolation(updated);
+        return updated;
       }
       return v;
     }));
@@ -761,7 +798,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const resolveAppeal = (violationId: string, decision: 'approved_appeal' | 'rejected_appeal', adminResponse: string): boolean => {
     setViolations(prev => prev.map(v => {
       if (v.id === violationId) {
-        return {
+        const updated: Violation = {
           ...v,
           status: decision,
           appeal: v.appeal ? {
@@ -771,6 +808,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             resolvedBy: currentUser?.name || 'Bí thư Đoàn trường'
           } : undefined
         };
+        if (isSupabaseConfigured()) SupabaseService.saveViolation(updated);
+        return updated;
       }
       return v;
     }));
@@ -798,12 +837,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateViolation = (id: string, updates: Partial<Violation>) => {
-    setViolations(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
+    setViolations(prev => prev.map(v => {
+      if (v.id === id) {
+        const updated = { ...v, ...updates };
+        if (isSupabaseConfigured()) SupabaseService.saveViolation(updated);
+        return updated;
+      }
+      return v;
+    }));
     addLog('Chỉnh sửa vi phạm', `Admin cập nhật thông tin vi phạm ID: ${id}`);
   };
 
   const deleteViolation = (id: string) => {
     setViolations(prev => prev.filter(v => v.id !== id));
+    if (isSupabaseConfigured()) {
+      SupabaseService.deleteViolation(id).catch(err => {
+        console.warn('Lỗi xóa vi phạm trên Supabase:', err);
+      });
+    }
     addLog('Xóa vi phạm', `Admin xóa bản ghi vi phạm ID: ${id}`);
   };
 
