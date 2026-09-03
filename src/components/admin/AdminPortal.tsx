@@ -1280,6 +1280,70 @@ export const AdminPortal: React.FC = () => {
     };
   }, [students, studentGradeFilter]);
 
+  // Filter and sort users by Role priority and Grade/Class in ascending order (10/1 -> 10/6, 11/1 -> 11/6, 12/1 -> 12/6)
+  const filteredSortedUsers = useMemo(() => {
+    const list = users.filter(u => {
+      if (userRoleFilter !== 'ALL' && u.role !== userRoleFilter) return false;
+      if (userSearch.trim()) {
+        const q = userSearch.toLowerCase().trim();
+        return (
+          u.username.toLowerCase().includes(q) ||
+          u.name.toLowerCase().includes(q) ||
+          (u.classId && u.classId.toLowerCase().includes(q)) ||
+          (u.assignedZone && u.assignedZone.toLowerCase().includes(q)) ||
+          (u.roleTitle && u.roleTitle.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+
+    const getClassSortKey = (classId?: string, username?: string): number => {
+      if (classId) {
+        const match = classId.match(/(\d+)\s*[\/\-_]\s*(\d+)/);
+        if (match) {
+          const grade = parseInt(match[1], 10);
+          const num = parseInt(match[2], 10);
+          return grade * 100 + num; // 10/1 -> 1001, 10/6 -> 1006, 11/1 -> 1101, 12/6 -> 1206
+        }
+        const gradeMatch = classId.match(/(\d+)/);
+        if (gradeMatch) {
+          return parseInt(gradeMatch[1], 10) * 100;
+        }
+      }
+      if (username) {
+        const match = username.match(/(\d+)[_\-\/](\d+)/);
+        if (match) {
+          const grade = parseInt(match[1], 10);
+          const num = parseInt(match[2], 10);
+          return grade * 100 + num;
+        }
+      }
+      return 9999;
+    };
+
+    const rolePriority: Record<string, number> = {
+      admin: 1,
+      manager: 2,
+      auditor: 3,
+      youth_secretary: 4,
+      user: 5
+    };
+
+    return [...list].sort((a, b) => {
+      if (userRoleFilter === 'ALL') {
+        const rA = rolePriority[a.role] || 99;
+        const rB = rolePriority[b.role] || 99;
+        if (rA !== rB) return rA - rB;
+      }
+
+      const keyA = getClassSortKey(a.classId, a.username);
+      const keyB = getClassSortKey(b.classId, b.username);
+      if (keyA !== keyB) return keyA - keyB;
+
+      return a.username.localeCompare(b.username, 'vi', { numeric: true });
+    });
+  }, [users, userRoleFilter, userSearch]);
+
   // Filter Activity Reports submitted by Youth Secretaries
   const filteredActivityReports = activityReports.filter(r => {
     const matchClass = activityClassFilter === 'ALL' || r.classId === activityClassFilter;
@@ -2556,7 +2620,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 </div>
               </div>
               <p className="text-xs text-slate-400">
-                Kiểm soát bảng điểm 18 lớp, ghi nhận vi phạm và giải quyết khiếu nại của Giáo viên Chủ nhiệm • <strong className="text-amber-400">Tuần {violationHubWeek}</strong>
+                Kiểm soát bảng điểm {classes.length} lớp toàn trường, ghi nhận vi phạm và giải quyết khiếu nại của Giáo viên Chủ nhiệm • <strong className="text-amber-400">Tuần {violationHubWeek}</strong>
               </p>
             </div>
 
@@ -2571,7 +2635,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   }`}
               >
                 <Table className="w-3.5 h-3.5" />
-                <span>Bảng Điểm 18 Lớp</span>
+                <span>Bảng Điểm {classes.length} Lớp</span>
               </button>
 
               <button
@@ -2610,12 +2674,12 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             </div>
           </div>
 
-          {/* ================= SUB-TAB 1.1: 18-CLASS SCOREBOARD ================= */}
+          {/* ================= SUB-TAB 1.1: ALL CLASSES SCOREBOARD ================= */}
           {violationHubSubTab === 'scoreboard' && (
             <div className="space-y-4 animate-fadeIn">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
                 <div>
-                  <h4 className="text-xs font-bold text-slate-300">BẢNG TỔNG HỢP ĐIỂM THI ĐUA 18 LỚP TOÀN TRƯỜNG</h4>
+                  <h4 className="text-xs font-bold text-slate-300">BẢNG TỔNG HỢP ĐIỂM THI ĐUA {classes.length} LỚP TOÀN TRƯỜNG</h4>
                   <p className="text-[11px] text-slate-400">Định mức chuẩn: 1440 điểm (240đ/ngày từ T2 đến T7) • <strong className="text-amber-400">Tuần {violationHubWeek}</strong></p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -2623,10 +2687,10 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     type="button"
                     onClick={handleOpenBatchDirectScoreModal}
                     className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow active:scale-95 transition-all"
-                    title="Mở bảng nhập điểm nhanh hàng loạt cho cả 18 lớp"
+                    title={`Mở bảng nhập điểm nhanh hàng loạt cho cả ${classes.length} lớp`}
                   >
                     <span>⚡</span>
-                    <span>Nhập Điểm 18 Lớp</span>
+                    <span>Nhập Điểm {classes.length} Lớp</span>
                   </button>
                   <button
                     onClick={handleExportExcel}
@@ -5721,6 +5785,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-950 text-slate-300 border-b border-slate-800">
+                      <th className="p-3 font-bold text-center w-12">STT</th>
                       <th className="p-3 font-bold">Mã / Tài Khoản</th>
                       <th className="p-3 font-bold">Họ và Tên</th>
                       <th className="p-3 font-bold">Vai Trò / Phân Quyền</th>
@@ -5731,59 +5796,60 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {users.filter(u => {
-                      if (userRoleFilter !== 'ALL' && u.role !== userRoleFilter) return false;
-                      if (userSearch.trim()) {
-                        const q = userSearch.toLowerCase().trim();
-                        return (
-                          u.username.toLowerCase().includes(q) ||
-                          u.name.toLowerCase().includes(q) ||
-                          (u.classId && u.classId.toLowerCase().includes(q)) ||
-                          (u.assignedZone && u.assignedZone.toLowerCase().includes(q)) ||
-                          (u.roleTitle && u.roleTitle.toLowerCase().includes(q))
-                        );
-                      }
-                      return true;
-                    }).map(u => (
-                      <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="p-3 font-mono font-bold text-amber-400 whitespace-nowrap">{u.username}</td>
-                        <td className="p-3 font-bold text-white whitespace-nowrap">{u.name}</td>
-                        <td className="p-3">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${u.role === 'admin' ? 'bg-red-950 text-red-300 border-red-700' :
-                            u.role === 'manager' ? 'bg-blue-950 text-blue-300 border-blue-700' :
-                              u.role === 'auditor' ? 'bg-amber-950 text-amber-300 border-amber-700' :
-                                u.role === 'youth_secretary' ? 'bg-emerald-950 text-emerald-300 border-emerald-700' :
-                                  'bg-slate-800 text-slate-300 border-slate-700'
-                            }`}>
-                            {u.roleTitle}
-                          </span>
+                    {filteredSortedUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="p-8 text-center text-slate-500">
+                          Không tìm thấy tài khoản người dùng nào phù hợp bộ lọc!
                         </td>
-                        <td className="p-3 text-slate-300">
-                          {u.role === 'auditor' ? (
-                            <span className="text-amber-400 font-bold">📍 {u.assignedZone || 'Khối 10'}</span>
-                          ) : u.classId ? (
-                            <span className="text-blue-400 font-bold">🏫 {u.classId}</span>
-                          ) : (
-                            <span className="text-slate-500 italic">Toàn trường</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-slate-400 text-[11px]">
-                          {u.phone && <div>📞 {u.phone}</div>}
-                          {u.email && <div>✉️ {u.email}</div>}
-                          {!u.phone && !u.email && <span className="text-slate-600">Chưa cập nhật</span>}
-                        </td>
-                        <td className="p-3 text-center">
-                          <button
-                            onClick={() => toggleUserActive(u.id)}
-                            title="Bấm để Khóa / Mở khóa tài khoản"
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${u.isActive
-                              ? 'bg-emerald-950 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
-                              : 'bg-rose-950 text-rose-300 border-rose-700 hover:bg-rose-900'
-                              }`}
-                          >
-                            {u.isActive ? '✅ Hoạt động' : '🔒 Bị khóa'}
-                          </button>
-                        </td>
+                      </tr>
+                    ) : (
+                      filteredSortedUsers.map((u, index) => (
+                        <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
+                          <td className="p-3 text-center font-mono font-bold text-slate-400">
+                            <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 text-[11px]">
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td className="p-3 font-mono font-bold text-amber-400 whitespace-nowrap">{u.username}</td>
+                          <td className="p-3 font-bold text-white whitespace-nowrap">{u.name}</td>
+                          <td className="p-3">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${u.role === 'admin' ? 'bg-red-950 text-red-300 border-red-700' :
+                              u.role === 'manager' ? 'bg-blue-950 text-blue-300 border-blue-700' :
+                                u.role === 'auditor' ? 'bg-amber-950 text-amber-300 border-amber-700' :
+                                  u.role === 'youth_secretary' ? 'bg-emerald-950 text-emerald-300 border-emerald-700' :
+                                    'bg-slate-800 text-slate-300 border-slate-700'
+                              }`}>
+                              {u.roleTitle}
+                            </span>
+                          </td>
+                          <td className="p-3 text-slate-300">
+                            {u.role === 'admin' ? (
+                              <span className="text-red-400 font-bold">🏛️ Toàn trường</span>
+                            ) : u.role === 'auditor' ? (
+                              <span className="text-amber-400 font-bold">📍 {u.assignedZone || 'Khối 10'}</span>
+                            ) : u.classId ? (
+                              <span className="text-blue-400 font-bold">🏫 {u.classId}</span>
+                            ) : (
+                              <span className="text-slate-500 italic">Toàn trường</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-slate-400 text-[11px]">
+                            {u.phone && <div>📞 {u.phone}</div>}
+                            {u.email && <div>✉️ {u.email}</div>}
+                            {!u.phone && !u.email && <span className="text-slate-600">Chưa cập nhật</span>}
+                          </td>
+                          <td className="p-3 text-center">
+                            <button
+                              onClick={() => toggleUserActive(u.id)}
+                              title="Bấm để Khóa / Mở khóa tài khoản"
+                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${u.isActive
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
+                                : 'bg-rose-950 text-rose-300 border-rose-700 hover:bg-rose-900'
+                                }`}
+                            >
+                              {u.isActive ? '✅ Hoạt động' : '🔒 Bị khóa'}
+                            </button>
+                          </td>
                         <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
                           <button
                             onClick={() => { const p = resetPassword(u.id); alert(`Đã reset mật khẩu tài khoản ${u.username} về mặc định: ${p}`); }}
@@ -5830,7 +5896,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           )}
                         </td>
                       </tr>
-                    ))}
+                    ))
+                  )}
                   </tbody>
                 </table>
               </div>
