@@ -439,7 +439,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'admin',
     username: 'admin',
-    name: 'Thầy Lê Hoàng Long',
+    name: 'Zdrăm Thị Thành Thương',
     role: 'admin',
     roleTitle: 'Bí thư Đoàn Trường / Quản trị viên',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -892,7 +892,7 @@ export const INITIAL_NEWS: NewsPost[] = [
 3. Tuyệt đối không sử dụng điện thoại trong giờ học khi chưa có hiệu lệnh của giáo viên bộ môn.
 4. Đề nghị các Giáo viên chủ nhiệm và Ban cán sự 18 lớp thường xuyên đôn đốc, nhắc nhở chi đoàn thực hiện tốt để giữ vững thứ hạng thi đua.`,
     thumbnail: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&auto=format&fit=crop&q=80',
-    author: 'Thầy Lê Hoàng Long',
+    author: 'Cô Zdrăm Thị Thành Thương',
     authorRole: 'Bí thư Đoàn Trường',
     publishDate: '2026-09-01 06:30',
     isPinned: true,
@@ -1000,7 +1000,7 @@ export const INITIAL_NOTICES: TaskNotice[] = [
     targetClasses: ['10/1', '11/5'],
     deadline: '2026-09-04 17:00',
     createdAt: '2026-09-01 09:00',
-    assignedBy: 'Thầy Lê Hoàng Long - Bí thư Đoàn',
+    assignedBy: 'Cô Zdrăm Thị Thành Thương - Bí thư Đoàn',
     status: 'pending'
   },
   {
@@ -1041,7 +1041,7 @@ export const INITIAL_LOGS: AuditLog[] = [
     id: 'log-03',
     timestamp: '2026-09-01 09:00:00',
     userId: 'admin',
-    userName: 'Thầy Lê Hoàng Long',
+    userName: 'Cô Zdrăm Thị Thành Thương',
     userRole: 'admin',
     action: 'Đăng tải thông báo',
     details: 'Đăng thông báo khẩn "Tăng cường kiểm tra nề nếp tháng 9"',

@@ -12,6 +12,8 @@ export interface User {
   assignedZone?: string; // For Cờ đỏ (e.g. 'Khối 10')
   phone?: string;
   email?: string;
+  gender?: 'Nam' | 'Nữ';
+  dob?: string;
   isActive: boolean;
   points?: number; // Youth activity points for students
   rankTitle?: string; // e.g. "Đoàn viên Tích cực", "Đoàn viên Xuất sắc"

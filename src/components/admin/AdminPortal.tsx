@@ -1075,7 +1075,7 @@ export const AdminPortal: React.FC = () => {
     type: 'lao_dong',
     targetClasses: ['ALL'],
     deadline: '2026-09-05 17:00',
-    assignedBy: currentUser?.name ? `${currentUser.name} - ${currentUser.roleTitle || 'Ban Bí thư'}` : 'Thầy Lê Hoàng Long - Bí thư Đoàn',
+    assignedBy: currentUser?.name ? `${currentUser.name} - ${currentUser.roleTitle || 'Ban Bí thư'}` : 'Cô Zdrăm Thị Thành Thương - Bí thư Đoàn',
     status: 'pending'
   });
 
@@ -5629,7 +5629,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       type: 'lao_dong',
                       targetClasses: ['ALL'],
                       deadline: '2026-09-05 17:00',
-                      assignedBy: currentUser?.name ? `${currentUser.name} - ${currentUser.roleTitle || 'Ban Bí thư'}` : 'Thầy Lê Hoàng Long - Bí thư Đoàn',
+                      assignedBy: currentUser?.name ? `${currentUser.name} - ${currentUser.roleTitle || 'Ban Bí thư'}` : 'Cô Zdrăm Thị Thành Thương - Bí thư Đoàn',
                       status: 'pending'
                     });
                     setIsNoticeModalOpen(true);
@@ -11333,7 +11333,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     required
                     value={noticeForm.assignedBy}
                     onChange={(e) => setNoticeForm({ ...noticeForm, assignedBy: e.target.value })}
-                    placeholder="VD: Thầy Lê Hoàng Long - Bí thư Đoàn"
+                    placeholder="VD: Cô Zdrăm Thị Thành Thương - Bí thư Đoàn"
                     className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
                   />
                 </div>

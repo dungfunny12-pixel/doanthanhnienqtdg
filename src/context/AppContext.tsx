@@ -360,8 +360,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (cloudData.notices && cloudData.notices.length > 0) setNotices(cloudData.notices);
           if (cloudData.schoolSettings) setSchoolSettings(cloudData.schoolSettings);
           if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(cloudData.activitySlides);
-          if (cloudData.weeksConfig && cloudData.weeksConfig.length > 0) setWeeksConfig(cloudData.weeksConfig);
-          console.log('✅ Đã đồng bộ dữ liệu mới nhất từ Supabase Cloud!');
+          if (cloudData.weeksConfig && cloudData.weeksConfig.length > 0) {
+            setWeeksConfig(cloudData.weeksConfig);
+            const currentWeek = cloudData.weeksConfig.find(w => w.isCurrent);
+            if (currentWeek) {
+              setActiveWeekState(currentWeek.weekNumber);
+              setIsWeekLocked(Boolean(currentWeek.isLocked));
+            }
+          }
+          if (cloudData.users && cloudData.users.length > 0) {
+            setUsers(cloudData.users);
+            // Cập nhật tài khoản hiện tại với thông tin mới nhất từ Cloud (họ tên, phân quyền, ảnh đại diện)
+            setCurrentUser(prevUser => {
+              if (!prevUser) return null;
+              const matched = cloudData.users!.find(u => u.id === prevUser.id || u.username.toLowerCase() === prevUser.username.toLowerCase());
+              return matched ? { ...prevUser, ...matched } : prevUser;
+            });
+          }
+          if (cloudData.duties && cloudData.duties.length > 0) {
+            setDuties(cloudData.duties);
+          }
+          console.log('✅ Đã đồng bộ toàn bộ dữ liệu mới nhất từ Supabase Cloud!');
         }
       }).catch(err => {
         console.warn('Không thể nạp dữ liệu từ Cloud, tiếp tục với LocalStorage:', err);
@@ -471,24 +490,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const toggleWeekLockDirect = (weekNum: number) => {
     let nextLockedState = false;
+    let targetWeekObj: WeekConfig | undefined;
     setWeeksConfig(prev => prev.map(w => {
       if (w.weekNumber === weekNum) {
         nextLockedState = !w.isLocked;
         if (weekNum === activeWeek) setIsWeekLocked(nextLockedState);
-        return { ...w, isLocked: nextLockedState };
+        targetWeekObj = { ...w, isLocked: nextLockedState };
+        return targetWeekObj;
       }
       return w;
     }));
+    if (isSupabaseConfigured() && targetWeekObj) {
+      SupabaseService.saveSingleWeek(targetWeekObj);
+    }
     setViolations(prev => prev.map(v => v.weekNumber === weekNum ? { ...v, locked: nextLockedState } : v));
     addLog('Đổi trạng thái khóa tuần', `${nextLockedState ? 'Khóa' : 'Mở khóa'} sổ thi đua Tuần ${weekNum}`);
   };
 
   const setCurrentWeek = (weekNum: number) => {
-    setWeeksConfig(prev => prev.map(w => ({
+    const updated = weeksConfig.map(w => ({
       ...w,
       isCurrent: w.weekNumber === weekNum
-    })));
+    }));
+    setWeeksConfig(updated);
     setActiveWeek(weekNum);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveWeeksConfig(updated);
+    }
     addLog('Thiết lập tuần hiện tại', `Chọn Tuần ${weekNum} làm gốc hiển thị mặc định`);
   };
 
@@ -1112,7 +1140,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const wNum = targetWeekNum !== undefined ? targetWeekNum : activeWeek;
     if (wNum === activeWeek) setIsWeekLocked(true);
-    setWeeksConfig(prev => prev.map(w => w.weekNumber === wNum ? { ...w, isLocked: true } : w));
+    let targetWeekObj: WeekConfig | undefined;
+    setWeeksConfig(prev => prev.map(w => {
+      if (w.weekNumber === wNum) {
+        targetWeekObj = { ...w, isLocked: true };
+        return targetWeekObj;
+      }
+      return w;
+    }));
+    if (isSupabaseConfigured() && targetWeekObj) {
+      SupabaseService.saveSingleWeek(targetWeekObj);
+    }
     setViolations(prev => prev.map(v => v.weekNumber === wNum ? { ...v, locked: true } : v));
     addLog('Khóa sổ thi đua tuần', `Admin đã khóa dữ liệu Tuần ${wNum} thành công. Dữ liệu đã đóng băng.`);
     return { success: true, message: `Đã khóa toàn bộ dữ liệu thi đua Tuần ${wNum} thành công!` };
@@ -1124,7 +1162,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const wNum = targetWeekNum !== undefined ? targetWeekNum : activeWeek;
     if (wNum === activeWeek) setIsWeekLocked(false);
-    setWeeksConfig(prev => prev.map(w => w.weekNumber === wNum ? { ...w, isLocked: false } : w));
+    let targetWeekObj: WeekConfig | undefined;
+    setWeeksConfig(prev => prev.map(w => {
+      if (w.weekNumber === wNum) {
+        targetWeekObj = { ...w, isLocked: false };
+        return targetWeekObj;
+      }
+      return w;
+    }));
+    if (isSupabaseConfigured() && targetWeekObj) {
+      SupabaseService.saveSingleWeek(targetWeekObj);
+    }
     setViolations(prev => prev.map(v => v.weekNumber === wNum ? { ...v, locked: false } : v));
     addLog('Mở khóa sổ thi đua tuần', `Admin đã mở khóa dữ liệu Tuần ${wNum}.`);
     return { success: true, message: `Đã mở khóa dữ liệu Tuần ${wNum}!` };
@@ -1137,16 +1185,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `user-${Date.now()}`
     };
     setUsers(prev => [...prev, newUser]);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveUser(newUser);
+    }
     addLog('Thêm người dùng', `Tạo tài khoản mới: ${userData.username} (${userData.name})`);
   };
 
   const updateUser = (id: string, updates: Partial<User>) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    setUsers(prev => prev.map(u => {
+      if (u.id === id) {
+        const updated = { ...u, ...updates };
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveUser(updated);
+        }
+        return updated;
+      }
+      return u;
+    }));
+    if (currentUser && currentUser.id === id) {
+      setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+    }
     addLog('Cập nhật người dùng', `Cập nhật thông tin tài khoản ID: ${id}`);
   };
 
   const deleteUser = (id: string) => {
+    const target = users.find(u => u.id === id);
     setUsers(prev => prev.filter(u => u.id !== id));
+    if (isSupabaseConfigured() && target) {
+      SupabaseService.deleteUser(id, target.username);
+    }
     addLog('Xóa tài khoản', `Admin xóa người dùng ID: ${id}`);
   };
 
@@ -1154,8 +1221,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers(prev => prev.map(u => {
       if (u.id === id) {
         const nextState = !u.isActive;
+        const updated = { ...u, isActive: nextState };
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveUser(updated);
+        }
         addLog('Đổi trạng thái tài khoản', `${nextState ? 'Kích hoạt' : 'Khóa'} tài khoản ${u.username}`);
-        return { ...u, isActive: nextState };
+        return updated;
       }
       return u;
     }));
@@ -1165,7 +1236,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const defPass = '123456@Password';
     setUsers(prev => prev.map(u => {
       if (u.id === userId) {
-        return { ...u, password: defPass };
+        const updated = { ...u, password: defPass };
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveUser(updated);
+        }
+        return updated;
       }
       return u;
     }));
@@ -1188,7 +1263,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setUsers(prev => prev.map(u => {
       if (u.id === userId) {
-        return { ...u, password: newPassword };
+        const updated = { ...u, password: newPassword };
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveUser(updated);
+        }
+        return updated;
       }
       return u;
     }));
@@ -1208,16 +1287,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `duty-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`
     };
     setDuties(prev => [...prev, newDuty]);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveDuty(newDuty);
+    }
     addLog('Thêm phân công trực', `Phân công ${newDuty.auditorName} trực ${newDuty.zone} (${newDuty.day} - Tuần ${newDuty.weekNumber})`);
   };
 
   const updateDutyAssignment = (dutyId: string, updates: Partial<DutyAssignment>) => {
-    setDuties(prev => prev.map(d => d.id === dutyId ? { ...d, ...updates } : d));
+    setDuties(prev => prev.map(d => {
+      if (d.id === dutyId) {
+        const updated = { ...d, ...updates };
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveDuty(updated);
+        }
+        return updated;
+      }
+      return d;
+    }));
     addLog('Cập nhật phân công trực', `Cập nhật ca trực ID: ${dutyId}`);
   };
 
   const deleteDutyAssignment = (dutyId: string) => {
     setDuties(prev => prev.filter(d => d.id !== dutyId));
+    if (isSupabaseConfigured()) {
+      SupabaseService.deleteDuty(dutyId);
+    }
     addLog('Xóa phân công trực', `Xóa ca trực ID: ${dutyId}`);
   };
 
@@ -1252,6 +1346,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...prev.filter(d => d.weekNumber !== weekNum),
       ...generated
     ]);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveDutiesBatch(generated);
+    }
     addLog('Tạo lịch trực tự động', `Tạo lịch phân công trực chuẩn cho Tuần ${weekNum} (${generated.length} ca trực)`);
   };
 
@@ -1269,6 +1366,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...prev.filter(d => d.weekNumber !== toWeek),
       ...copiedDuties
     ]);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveDutiesBatch(copiedDuties);
+    }
     addLog('Sao chép lịch trực', `Sao chép ${copiedDuties.length} ca trực từ Tuần ${fromWeek} sang Tuần ${toWeek}`);
   };
 
@@ -1354,13 +1454,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isActive: auditorData.isActive
       };
       setUsers(prev => [...prev, newUser]);
+      if (isSupabaseConfigured()) {
+        SupabaseService.saveUser(newUser);
+      }
     }
     addLog('Thêm cán bộ cờ đỏ', `Thêm ${auditorData.name} (${auditorData.classId}) vào Đội Cờ đỏ`);
   };
 
   const updateAuditorMember = (id: string, updates: Partial<AuditorMember>) => {
     setAuditors(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    setUsers(prev => prev.map(u => {
+      if (u.id === id) {
+        const updated = { ...u, ...updates };
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveUser(updated);
+        }
+        return updated;
+      }
+      return u;
+    }));
     if (updates.name) {
       setDuties(prev => prev.map(d => d.auditorId === id ? { ...d, auditorName: updates.name! } : d));
     }
@@ -1370,14 +1482,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteAuditorMember = (id: string) => {
     const target = auditors.find(a => a.id === id);
     setAuditors(prev => prev.filter(a => a.id !== id));
+    const targetUser = users.find(u => u.id === id);
     setUsers(prev => prev.filter(u => u.id !== id));
+    if (isSupabaseConfigured() && targetUser) {
+      SupabaseService.deleteUser(id, targetUser.username);
+    }
     setDuties(prev => prev.filter(d => d.auditorId !== id));
     addLog('Xóa cán bộ cờ đỏ', `Xóa thành viên cờ đỏ: ${target?.name || id}`);
   };
 
   const toggleAuditorActive = (id: string) => {
     setAuditors(prev => prev.map(a => a.id === id ? { ...a, isActive: !a.isActive } : a));
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, isActive: !u.isActive } : u));
+    setUsers(prev => prev.map(u => {
+      if (u.id === id) {
+        const updated = { ...u, isActive: !u.isActive };
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveUser(updated);
+        }
+        return updated;
+      }
+      return u;
+    }));
   };
 
   // Events & QR Check-in

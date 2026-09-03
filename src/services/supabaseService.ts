@@ -94,6 +94,17 @@ export const SupabaseService = {
         .select('*')
         .order('week_number', { ascending: true });
 
+      // 10. Users
+      const { data: rawUsers } = await client
+        .from('users')
+        .select('*')
+        .eq('is_deleted', false);
+
+      // 11. Duty Schedule
+      const { data: rawDuties } = await client
+        .from('duty_schedule')
+        .select('*');
+
       if (classErr) {
         console.warn('Không thể tải dữ liệu từ Supabase, sử dụng dữ liệu cục bộ:', classErr.message);
         return null;
@@ -271,6 +282,40 @@ export const SupabaseService = {
           }))
         : undefined;
 
+      const users: User[] | undefined = (rawUsers && rawUsers.length > 0)
+        ? rawUsers.map(u => ({
+            id: u.custom_id || u.user_id || u.username,
+            username: u.username,
+            name: u.full_name || u.name || u.username,
+            role: (u.role || 'user') as any,
+            roleTitle: u.role_title || '',
+            avatar: u.avatar_url || '',
+            email: u.email || '',
+            phone: u.phone_number || u.phone || '',
+            classId: u.class_id || undefined,
+            studentId: u.student_id || undefined,
+            gender: u.gender || undefined,
+            dob: u.dob || undefined,
+            isActive: u.is_active ?? true,
+            assignedZone: u.assigned_zone || undefined,
+            password: u.password_plain || undefined
+          }))
+        : undefined;
+
+      const duties: DutyAssignment[] | undefined = (rawDuties && rawDuties.length > 0)
+        ? rawDuties.map(d => ({
+            id: d.custom_duty_id || d.duty_id || `duty-${d.week_number}-${d.day}-${d.zone}`,
+            weekNumber: d.week_number,
+            day: d.day,
+            zone: d.zone,
+            auditorId: d.auditor_id || `auditor-${d.auditor_name || 'codo'}`,
+            auditorName: d.auditor_name,
+            auditorClass: d.auditor_class || '10/1',
+            shiftTime: d.shift_time || '06:45 - 07:15 (Đầu giờ)',
+            isLiveNow: Boolean(d.is_live_now)
+          }))
+        : undefined;
+
       return {
         classes,
         criteria,
@@ -280,7 +325,9 @@ export const SupabaseService = {
         notices,
         schoolSettings,
         activitySlides,
-        weeksConfig
+        weeksConfig,
+        users,
+        duties
       };
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu từ Supabase:', err);
@@ -944,6 +991,169 @@ export const SupabaseService = {
         message: `Lỗi đồng bộ: ${e?.message || 'Không xác định'}`,
         count: 0
       };
+    }
+  },
+
+  /**
+   * Lưu 1 người dùng lên Supabase Cloud
+   */
+  async saveUser(u: User): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      const payload: any = {
+        username: u.username,
+        full_name: u.name,
+        name: u.name,
+        role: u.role === 'youth_secretary' ? 'youth_secretary' : u.role,
+        role_title: u.roleTitle || '',
+        avatar_url: u.avatar || null,
+        email: u.email || null,
+        phone_number: u.phone || null,
+        class_id: u.classId || null,
+        student_id: u.studentId || null,
+        gender: u.gender || null,
+        dob: u.dob || null,
+        assigned_zone: u.assignedZone || null,
+        custom_id: u.id,
+        is_active: u.isActive ?? true,
+        is_deleted: false,
+        updated_at: new Date().toISOString()
+      };
+      if (u.password) {
+        payload.password_plain = u.password;
+      }
+      const { error } = await client.from('users').upsert(payload, { onConflict: 'username' });
+      if (error) {
+        console.warn('Lỗi lưu user lên Supabase:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn('Lỗi ngoại lệ khi lưu user:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu hàng loạt người dùng lên Supabase Cloud
+   */
+  async saveUsersBatch(usersList: User[]): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client || usersList.length === 0) return false;
+    try {
+      const mapped = usersList.map(u => ({
+        username: u.username,
+        full_name: u.name,
+        name: u.name,
+        role: u.role,
+        role_title: u.roleTitle || '',
+        avatar_url: u.avatar || null,
+        email: u.email || null,
+        phone_number: u.phone || null,
+        class_id: u.classId || null,
+        student_id: u.studentId || null,
+        gender: u.gender || null,
+        dob: u.dob || null,
+        assigned_zone: u.assignedZone || null,
+        custom_id: u.id,
+        password_plain: u.password || null,
+        is_active: u.isActive ?? true,
+        is_deleted: false,
+        updated_at: new Date().toISOString()
+      }));
+      const { error } = await client.from('users').upsert(mapped, { onConflict: 'username' });
+      if (error) {
+        console.warn('Lỗi lưu users batch:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn('Lỗi ngoại lệ khi lưu users batch:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa người dùng (soft delete) trên Supabase Cloud
+   */
+  async deleteUser(userId: string, username?: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      if (username) {
+        await client.from('users').update({ is_deleted: true, updated_at: new Date().toISOString() }).eq('username', username);
+      } else {
+        await client.from('users').update({ is_deleted: true, updated_at: new Date().toISOString() }).or(`custom_id.eq.${userId},username.eq.${userId}`);
+      }
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa user:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu 1 phân công trực cờ đỏ lên Supabase Cloud
+   */
+  async saveDuty(duty: DutyAssignment): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('duty_schedule').upsert({
+        week_number: duty.weekNumber,
+        day: duty.day,
+        zone: duty.zone,
+        auditor_name: duty.auditorName,
+        auditor_class: duty.auditorClass,
+        shift_time: duty.shiftTime || '06:45 - 07:15 (Đầu giờ)',
+        is_live_now: Boolean(duty.isLiveNow),
+        custom_duty_id: duty.id
+      });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu duty_schedule:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu hàng loạt lịch trực cờ đỏ lên Supabase Cloud
+   */
+  async saveDutiesBatch(dutiesList: DutyAssignment[]): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client || dutiesList.length === 0) return false;
+    try {
+      const mapped = dutiesList.map(d => ({
+        week_number: d.weekNumber,
+        day: d.day,
+        zone: d.zone,
+        auditor_name: d.auditorName,
+        auditor_class: d.auditorClass,
+        shift_time: d.shiftTime || '06:45 - 07:15 (Đầu giờ)',
+        is_live_now: Boolean(d.isLiveNow),
+        custom_duty_id: d.id
+      }));
+      await client.from('duty_schedule').upsert(mapped);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu duties batch:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa lịch trực cờ đỏ trên Supabase Cloud
+   */
+  async deleteDuty(dutyId: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('duty_schedule').delete().eq('custom_duty_id', dutyId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa duty:', err);
+      return false;
     }
   }
 };
