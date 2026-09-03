@@ -16,9 +16,12 @@ import {
   KeyRound,
   Bell,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  Database
 } from 'lucide-react';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { SupabaseConfigModal } from './SupabaseConfigModal';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 export const Header: React.FC = () => {
   const { 
@@ -45,6 +48,7 @@ export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
 
   // Filter notifications relevant to current logged-in user
   const userNotifications = notifications.filter(n => {
@@ -239,6 +243,23 @@ export const Header: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Cloud Database (Supabase) Connection Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsSupabaseModalOpen(true)}
+              title={isSupabaseConfigured() ? 'Cơ sở dữ liệu Supabase: Đã kết nối' : 'Cơ sở dữ liệu Supabase: Chưa kết nối (Bấm để cấu hình)'}
+              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all ${
+                isSupabaseConfigured()
+                  ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300 shadow-glow'
+                  : 'bg-slate-800/90 text-slate-300 hover:text-white hover:bg-slate-700 border-slate-700'
+              }`}
+            >
+              <Database className={`w-3.5 h-3.5 ${isSupabaseConfigured() ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <span className="hidden xl:inline text-[11px]">
+                {isSupabaseConfigured() ? 'Cloud DB' : 'Cấu hình DB'}
+              </span>
+            </button>
 
             {/* Authenticated User Status or Login Trigger */}
             {currentUser ? (
@@ -458,6 +479,12 @@ export const Header: React.FC = () => {
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
+      />
+
+      {/* Supabase Cloud Database Configuration & Sync Modal */}
+      <SupabaseConfigModal
+        isOpen={isSupabaseModalOpen}
+        onClose={() => setIsSupabaseModalOpen(false)}
       />
 
     </header>
