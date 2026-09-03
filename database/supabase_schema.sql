@@ -665,9 +665,62 @@ FOR SELECT USING (
     )
 );
 
--- 5. POLICY CÔNG KHAI ĐỌC DỮ LIỆU CƠ BẢN (CLASSES, CRITERIA, WEEKS, FINAL_SCORES, POSTS)
-CREATE POLICY "Public read active criteria" ON public.criteria FOR SELECT USING (is_deleted = false AND is_active = true);
-CREATE POLICY "Public read active classes" ON public.classes FOR SELECT USING (is_deleted = false);
+-- 11. BẢNG NEWS (Bản tin & Tin tức Phong trào)
+CREATE TABLE IF NOT EXISTS public.news (
+    news_id VARCHAR(50) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    title VARCHAR(255) NOT NULL,
+    excerpt TEXT,
+    content TEXT NOT NULL,
+    category VARCHAR(50) NOT NULL DEFAULT 'news',
+    author_name VARCHAR(150) NOT NULL DEFAULT 'Đoàn Trường',
+    image_url TEXT,
+    urgency VARCHAR(20) NOT NULL DEFAULT 'normal',
+    is_pinned BOOLEAN NOT NULL DEFAULT false,
+    is_hidden BOOLEAN NOT NULL DEFAULT false,
+    views INT NOT NULL DEFAULT 0,
+    tags TEXT[] DEFAULT ARRAY['Đoàn Trường', 'Phong trào']::TEXT[],
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 12. BẢNG TASK_NOTICES (Thông báo Điều động & Lao động)
+CREATE TABLE IF NOT EXISTS public.task_notices (
+    notice_id VARCHAR(50) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'dieu_dong',
+    deadline VARCHAR(100),
+    target_classes TEXT[] DEFAULT ARRAY['ALL']::TEXT[],
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    created_by_name VARCHAR(150) NOT NULL DEFAULT 'BCH Đoàn Trường',
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Kích hoạt RLS cho news và task_notices
+ALTER TABLE public.news ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_notices ENABLE ROW LEVEL SECURITY;
+
+-- 5. POLICY CÔNG KHAI ĐỌC DỮ LIỆU CƠ BẢN
+CREATE POLICY "Public read active criteria" ON public.criteria FOR SELECT USING (true);
+CREATE POLICY "Public read active classes" ON public.classes FOR SELECT USING (true);
 CREATE POLICY "Public read weeks" ON public.weeks FOR SELECT USING (true);
 CREATE POLICY "Public read final scores" ON public.weekly_final_scores FOR SELECT USING (true);
-CREATE POLICY "Public read published posts" ON public.posts FOR SELECT USING (is_deleted = false AND status = 'Published');
+CREATE POLICY "Public read published posts" ON public.posts FOR SELECT USING (true);
+CREATE POLICY "Public read students" ON public.students FOR SELECT USING (true);
+CREATE POLICY "Public read violations" ON public.violations FOR SELECT USING (true);
+CREATE POLICY "Public read news" ON public.news FOR SELECT USING (true);
+CREATE POLICY "Public read task_notices" ON public.task_notices FOR SELECT USING (true);
+CREATE POLICY "Public read users" ON public.users FOR SELECT USING (true);
+
+-- 6. POLICY CHO PHÉP ĐỒNG BỘ TỪ WEB CLIENT (ANON / AUTHENTICATED)
+CREATE POLICY "Allow web client all on classes" ON public.classes FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on criteria" ON public.criteria FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on students" ON public.students FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on violations" ON public.violations FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on news" ON public.news FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on task_notices" ON public.task_notices FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+
