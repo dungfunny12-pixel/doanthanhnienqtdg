@@ -104,7 +104,13 @@ export const SupabaseService = {
         standardScore: Number(c.standard_score) || 1440,
         isArchived: c.is_archived || false,
         academicYearId: c.academic_year || '2025_2026'
-      }));
+      })).sort((a, b) => {
+        if (a.grade !== b.grade) return a.grade - b.grade;
+        const numA = parseInt(a.id.split('/')[1] || '0', 10);
+        const numB = parseInt(b.id.split('/')[1] || '0', 10);
+        if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
+        return a.id.localeCompare(b.id);
+      });
 
       const criteria: Criterion[] = (rawCriteria || []).map(cr => ({
         id: cr.criterion_id || cr.criteria_code,

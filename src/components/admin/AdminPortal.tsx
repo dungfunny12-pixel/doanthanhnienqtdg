@@ -803,6 +803,7 @@ export const AdminPortal: React.FC = () => {
 
   // Master Data sub-tab: 'students' | 'classes'
   const [masterSubTab, setMasterSubTab] = useState<'students' | 'classes'>('students');
+  const [classGradeTab, setClassGradeTab] = useState<'ALL' | 10 | 11 | 12>('ALL');
 
   // ================= GROUP FILTER FOR VIOLATIONS (TÌM KIẾM THI ĐUA THEO NHÓM MẶC ĐỊNH) =================
   const [defaultCriterionGroup, setDefaultCriterionGroup] = useState<string>(() => {
@@ -3266,19 +3267,12 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                  {/* Batch Action Bar if selected */}
                   {selectedStudentIds.length > 0 && (
-                    <div className="flex items-center gap-1.5 p-1 bg-red-950/60 border border-red-800 rounded-xl animate-fadeIn">
+                    <div className="flex items-center gap-1.5 p-1 bg-red-950/80 border border-red-700 rounded-xl animate-fadeIn">
                       <span className="text-[11px] font-black text-amber-300 px-2">
                         Đã chọn: {selectedStudentIds.length}
                       </span>
-                      <button
-                        type="button"
-                        onClick={handleBatchDeleteStudents}
-                        className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-black flex items-center gap-1 shadow-glow transition-all active:scale-95"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Xóa đã chọn ({selectedStudentIds.length})</span>
-                      </button>
                       <button
                         type="button"
                         onClick={() => handleBatchMakeUnionMember(true)}
@@ -3293,7 +3287,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         onClick={() => setSelectedStudentIds([])}
                         className="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold"
                       >
-                        Hủy
+                        Bỏ chọn
                       </button>
                     </div>
                   )}
@@ -3306,6 +3300,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <span>Import Excel</span>
                   </button>
 
+                  {/* THÊM HỌC SINH */}
                   <button
                     onClick={() => {
                       setEditingStudent(null);
@@ -3334,10 +3329,30 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       });
                       setIsStudentModalOpen(true);
                     }}
-                    className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow"
+                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all active:scale-95"
                   >
                     <Plus className="w-4 h-4" />
                     <span>+ Thêm Học Sinh / Đoàn Viên</span>
+                  </button>
+
+                  {/* XÓA HỌC SINH (HOẠT ĐỘNG KHI CHỌN HOẶC NHẮC CHỌN) */}
+                  <button
+                    onClick={() => {
+                      if (selectedStudentIds.length === 0) {
+                        alert('👉 Vui lòng tích chọn ô vuông ở cột đầu tiên của các học sinh bạn muốn xóa trong danh sách!');
+                      } else {
+                        handleBatchDeleteStudents();
+                      }
+                    }}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${
+                      selectedStudentIds.length > 0
+                        ? 'bg-red-600 hover:bg-red-500 text-white shadow-glow animate-pulse'
+                        : 'bg-slate-900 hover:bg-red-950/60 text-red-400 border border-red-800/60'
+                    }`}
+                    title={selectedStudentIds.length > 0 ? `Xóa ${selectedStudentIds.length} học sinh đã chọn` : 'Tích chọn học sinh để xóa'}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-300" />
+                    <span>{selectedStudentIds.length > 0 ? `Xóa Đã Chọn (${selectedStudentIds.length})` : 'Xóa Học Sinh'}</span>
                   </button>
                 </div>
               </div>
@@ -3485,106 +3500,223 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             </div>
           )}
 
-          {/* Master Sub-Tab 2: CLASSES */}
+          {/* Master Sub-Tab 2: CLASSES (SORTED & GROUPED BY GRADE) */}
           {operationsSubTab === 'classes' && (
-            <div className="space-y-4 animate-fadeIn">
-              <div className="flex items-center justify-between">
+            <div className="space-y-6 animate-fadeIn">
+              {/* Header & Filter Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
                 <div>
-                  <h4 className="text-xs font-bold text-slate-300">DANH SÁCH 18 LỚP HỌC TOÀN TRƯỜNG</h4>
+                  <h4 className="text-sm font-black text-white flex items-center gap-2">
+                    <span>DANH SÁCH 18 LỚP HỌC TOÀN TRƯỜNG</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800 text-[10px] font-bold">
+                      Sắp xếp theo Khối 10, 11, 12
+                    </span>
+                  </h4>
                   <p className="text-[11px] text-slate-400">Quản lý lớp học, giáo viên chủ nhiệm, bí thư chi đoàn và sĩ số</p>
                 </div>
-                <button
-                  onClick={() => {
-                    setEditingClass(null);
-                    setClassForm({
-                      id: `10/${classes.filter(c => c.grade === 10).length + 1}`,
-                      name: `Lớp 10/${classes.filter(c => c.grade === 10).length + 1}`,
-                      grade: 10,
-                      gvcnName: '',
-                      gvcnId: '',
-                      bithuName: '',
-                      bithuId: '',
-                      totalStudents: 40,
-                      unionMembers: 30
-                    });
-                    setIsClassModalOpen(true);
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+ Thêm Lớp Mới</span>
-                </button>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Grade Filter Pills */}
+                  <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
+                    <button
+                      onClick={() => setClassGradeTab('ALL')}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        classGradeTab === 'ALL'
+                          ? 'bg-blue-600 text-white shadow-glow'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Tất cả 18 Lớp
+                    </button>
+                    <button
+                      onClick={() => setClassGradeTab(10)}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        classGradeTab === 10
+                          ? 'bg-sky-600 text-white shadow-glow'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Khối 10 (6 Lớp)
+                    </button>
+                    <button
+                      onClick={() => setClassGradeTab(11)}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        classGradeTab === 11
+                          ? 'bg-emerald-600 text-white shadow-glow'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Khối 11 (6 Lớp)
+                    </button>
+                    <button
+                      onClick={() => setClassGradeTab(12)}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        classGradeTab === 12
+                          ? 'bg-purple-600 text-white shadow-glow'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Khối 12 (6 Lớp)
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setEditingClass(null);
+                      setClassForm({
+                        id: `10/${classes.filter(c => c.grade === 10).length + 1}`,
+                        name: `Lớp 10/${classes.filter(c => c.grade === 10).length + 1}`,
+                        grade: 10,
+                        gvcnName: '',
+                        gvcnId: '',
+                        bithuName: '',
+                        bithuId: '',
+                        totalStudents: 40,
+                        unionMembers: 30
+                      });
+                      setIsClassModalOpen(true);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Thêm Lớp Mới</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {classes.map(c => (
-                  <div
-                    key={c.id}
-                    className={`p-4 rounded-2xl border space-y-2 text-xs transition-all ${c.isArchived
-                      ? 'bg-slate-950/40 border-slate-800 opacity-60'
-                      : 'bg-slate-950 border-slate-800 hover:border-slate-700'
-                      }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-white text-sm">{c.name}</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-900 text-amber-400 font-mono text-[10px]">
-                        Khối {c.grade}
-                      </span>
+              {/* RENDER BY GRADES (10, 11, 12) */}
+              {[10, 11, 12].filter(grade => classGradeTab === 'ALL' || classGradeTab === grade).map(grade => {
+                const gradeClasses = classes
+                  .filter(c => c.grade === grade)
+                  .sort((a, b) => {
+                    const numA = parseInt(a.id.split('/')[1] || '0', 10);
+                    const numB = parseInt(b.id.split('/')[1] || '0', 10);
+                    if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
+                    return a.id.localeCompare(b.id);
+                  });
+
+                const gradeColors = {
+                  10: {
+                    badge: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+                    border: 'border-sky-500/20',
+                    headerBg: 'from-sky-950/40 to-slate-900/40',
+                    dot: 'bg-sky-400'
+                  },
+                  11: {
+                    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+                    border: 'border-emerald-500/20',
+                    headerBg: 'from-emerald-950/40 to-slate-900/40',
+                    dot: 'bg-emerald-400'
+                  },
+                  12: {
+                    badge: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+                    border: 'border-purple-500/20',
+                    headerBg: 'from-purple-950/40 to-slate-900/40',
+                    dot: 'bg-purple-400'
+                  }
+                }[grade as 10 | 11 | 12];
+
+                const totalGradeStudents = gradeClasses.reduce((acc, c) => acc + (c.totalStudents || 0), 0);
+                const totalGradeUnion = gradeClasses.reduce((acc, c) => acc + (c.unionMembers || 0), 0);
+
+                return (
+                  <div key={grade} className={`p-4 rounded-3xl bg-slate-950/60 border ${gradeColors.border} space-y-3.5`}>
+                    {/* Grade Section Title */}
+                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
+                      <div className="flex items-center gap-2.5">
+                        <span className={`w-3 h-3 rounded-full ${gradeColors.dot} shadow-glow`}></span>
+                        <h3 className="text-sm font-black text-white tracking-wide uppercase">
+                          KHỐI {grade} ({gradeClasses.length} LỚP: {grade}/1 - {grade}/{gradeClasses.length})
+                        </h3>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${gradeColors.badge}`}>
+                          Khối {grade}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-slate-400">
+                        <span>Tổng sĩ số: <strong className="text-white">{totalGradeStudents} HS</strong></span>
+                        <span>•</span>
+                        <span>Đoàn viên: <strong className="text-amber-300">{totalGradeUnion} ĐV</strong></span>
+                      </div>
                     </div>
-                    <p className="text-slate-300">GVCN: <strong className="text-amber-300">{c.gvcnName || 'Đang cập nhật'}</strong></p>
-                    <p className="text-slate-300">Bí thư Chi đoàn: <strong>{c.bithuName || 'Đang cập nhật'}</strong></p>
-                    <div className="flex justify-between text-slate-400 pt-1 border-t border-slate-900 text-[11px]">
-                      <span>Sĩ số: <strong>{c.totalStudents} HS</strong></span>
-                      <span>Đoàn viên: <strong>{c.unionMembers} ĐV</strong></span>
-                    </div>
 
-                    <div className="pt-2 flex justify-end gap-1.5 border-t border-slate-900">
-                      <button
-                        onClick={() => {
-                          setEditingClass(c);
-                          setClassForm({
-                            id: c.id,
-                            name: c.name,
-                            grade: c.grade,
-                            gvcnName: c.gvcnName,
-                            gvcnId: c.gvcnId,
-                            bithuName: c.bithuName,
-                            bithuId: c.bithuId,
-                            totalStudents: c.totalStudents,
-                            unionMembers: c.unionMembers
-                          });
-                          setIsClassModalOpen(true);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 flex items-center gap-1 text-[11px]"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                        <span>Sửa</span>
-                      </button>
+                    {/* Class Cards Grid in Exact Order: 10/1 -> 10/6, 11/1 -> 11/6, 12/1 -> 12/6 */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {gradeClasses.map(c => (
+                        <div
+                          key={c.id}
+                          className={`p-4 rounded-2xl border space-y-2 text-xs transition-all ${
+                            c.isArchived
+                              ? 'bg-slate-950/40 border-slate-800 opacity-60'
+                              : 'bg-slate-950 border-slate-800 hover:border-slate-700 hover:shadow-card'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-extrabold text-white text-sm">{c.name}</span>
+                            <span className="px-2 py-0.5 rounded bg-slate-900 text-amber-400 font-mono text-[10px] font-bold">
+                              Khối {c.grade}
+                            </span>
+                          </div>
+                          <p className="text-slate-300">
+                            GVCN: <strong className="text-amber-300">{c.gvcnName || 'Chưa phân công'}</strong>
+                          </p>
+                          <p className="text-slate-300">
+                            Bí thư Chi đoàn: <strong>{c.bithuName || 'Chưa phân công'}</strong>
+                          </p>
+                          <div className="flex justify-between text-slate-400 pt-1 border-t border-slate-900 text-[11px]">
+                            <span>Sĩ số: <strong>{c.totalStudents} HS</strong></span>
+                            <span>Đoàn viên: <strong>{c.unionMembers} ĐV</strong></span>
+                          </div>
 
-                      <button
-                        onClick={() => archiveClass(c.id, !c.isArchived)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center gap-1 text-[11px]"
-                      >
-                        <Archive className="w-3 h-3" />
-                        <span>{c.isArchived ? 'Khôi phục' : 'Lưu trữ'}</span>
-                      </button>
+                          <div className="pt-2 flex justify-end gap-1.5 border-t border-slate-900">
+                            <button
+                              onClick={() => {
+                                setEditingClass(c);
+                                setClassForm({
+                                  id: c.id,
+                                  name: c.name,
+                                  grade: c.grade,
+                                  gvcnName: c.gvcnName,
+                                  gvcnId: c.gvcnId,
+                                  bithuName: c.bithuName,
+                                  bithuId: c.bithuId,
+                                  totalStudents: c.totalStudents,
+                                  unionMembers: c.unionMembers
+                                });
+                                setIsClassModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 flex items-center gap-1 text-[11px]"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>Sửa</span>
+                            </button>
 
-                      <button
-                        onClick={() => {
-                          if (confirm(`Bạn có chắc chắn muốn xóa ${c.name}?`)) {
-                            const res = deleteClass(c.id);
-                            alert(res.message);
-                          }
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-rose-950 text-rose-400 flex items-center gap-1 text-[11px]"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>Xóa</span>
-                      </button>
+                            <button
+                              onClick={() => archiveClass(c.id, !c.isArchived)}
+                              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center gap-1 text-[11px]"
+                            >
+                              <Archive className="w-3 h-3" />
+                              <span>{c.isArchived ? 'Khôi phục' : 'Lưu trữ'}</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                if (confirm(`Bạn có chắc chắn muốn xóa ${c.name}?`)) {
+                                  const res = deleteClass(c.id);
+                                  alert(res.message);
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-rose-950 text-rose-400 flex items-center gap-1 text-[11px]"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Xóa</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
 
