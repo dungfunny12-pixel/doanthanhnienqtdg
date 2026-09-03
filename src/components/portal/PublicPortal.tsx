@@ -17,6 +17,7 @@ import {
   LogIn, 
   LogOut,
   LayoutDashboard,
+  KeyRound,
   Info,
   X,
   ExternalLink,
@@ -31,6 +32,7 @@ import {
 import confetti from 'canvas-confetti';
 import { ClassWeeklyScore, NewsPost, DayOfWeek } from '../../types';
 import { YouthUnionBadge } from '../common/YouthUnionBadge';
+import { ChangePasswordModal } from '../common/ChangePasswordModal';
 
 export const PublicPortal: React.FC = () => {
   const { 
@@ -50,6 +52,8 @@ export const PublicPortal: React.FC = () => {
     schoolSettings,
     activitySlides
   } = useApp();
+
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   // Filters for leaderboard & media
   const [selectedGrade, setSelectedGrade] = useState<'ALL' | 10 | 11 | 12>('ALL');
@@ -700,8 +704,17 @@ export const PublicPortal: React.FC = () => {
                   </button>
 
                   <button
+                    type="button"
+                    onClick={() => setIsChangePasswordOpen(true)}
+                    className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-amber-950/60 text-amber-300 hover:text-amber-200 text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-800 hover:border-amber-700/60 transition-colors active:scale-95"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Đổi Mật Khẩu Tài Khoản</span>
+                  </button>
+
+                  <button
                     onClick={logout}
-                    className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-800 transition-colors"
+                    className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-800 hover:border-rose-700/60 transition-colors active:scale-95"
                   >
                     <LogOut className="w-3.5 h-3.5 text-rose-400" />
                     <span>Đăng Xuất Khỏi Hệ Thống</span>
@@ -1199,6 +1212,12 @@ export const PublicPortal: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Reusable Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
 
     </div>
   );
