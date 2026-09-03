@@ -131,7 +131,7 @@ export const PublicPortal: React.FC = () => {
       
       {/* Top Banner Hero Image if Configured */}
       {schoolSettings.bannerTopImage && (
-        <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-800 h-48 sm:h-56 md:h-60 relative group bg-slate-950">
+        <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 min-h-[13rem] sm:min-h-[15rem] md:h-60 relative group bg-gradient-to-r from-red-950 via-slate-900 to-indigo-950 flex items-center">
           <img 
             src={schoolSettings.bannerTopImage} 
             alt="Top Banner" 
@@ -139,27 +139,33 @@ export const PublicPortal: React.FC = () => {
             // @ts-ignore
             fetchPriority="high"
             decoding="async"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 bg-slate-900" 
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-95 contrast-105" 
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&auto=format&fit=crop&q=80';
+            }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-transparent flex items-center p-5 sm:p-8">
-            <div className="flex items-center gap-4 sm:gap-6 max-w-3xl">
+          {/* Subtle vignette gradient allowing background photo to be bright and vivid */}
+          <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-slate-950/85 via-slate-950/45 to-slate-950/20 sm:to-transparent pointer-events-none" />
+          
+          <div className="relative z-10 w-full p-4 sm:p-7 md:p-8 flex items-center">
+            <div className="flex flex-row items-center gap-3.5 sm:gap-6 max-w-3xl">
               {/* Huy hiệu Đoàn Thanh Niên */}
               <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl p-1.5 bg-gradient-to-tr from-red-600 via-amber-500 to-emerald-600 shadow-glow border border-amber-400/50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md">
+                <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl p-1.5 bg-gradient-to-tr from-red-600 via-amber-500 to-emerald-600 shadow-glow border border-amber-400/60 flex items-center justify-center bg-slate-950/85 backdrop-blur-md">
                   <YouthUnionBadge src={schoolSettings.youthUnionLogoUrl} className="w-full h-full" />
                 </div>
               </div>
 
               {/* Thông tin Đoàn trường */}
               <div className="space-y-1 sm:space-y-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/90 text-white text-[11px] sm:text-xs font-black uppercase tracking-wider border border-red-400/30 shadow-md">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-red-600/90 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider border border-red-400/40 shadow-md backdrop-blur-sm">
                   <span>⭐</span>
-                  <span>{schoolSettings.youthUnionName}</span>
+                  <span className="truncate">{schoolSettings.youthUnionName}</span>
                 </div>
-                <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-white leading-tight drop-shadow-md">
+                <h2 className="text-base sm:text-2xl md:text-3xl font-black text-white leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
                   {schoolSettings.schoolName}
                 </h2>
-                <p className="text-amber-300 font-bold text-xs sm:text-sm drop-shadow">
+                <p className="text-amber-300 font-bold text-[11px] sm:text-sm drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] line-clamp-2">
                   "{schoolSettings.slogan}"
                 </p>
               </div>

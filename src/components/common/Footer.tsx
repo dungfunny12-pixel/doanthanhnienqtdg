@@ -9,20 +9,26 @@ export const Footer: React.FC = () => {
     <footer className="mt-16 bg-slate-950 border-t border-slate-800 text-slate-400 text-xs py-8">
       {/* Footer Banner Image if configured */}
       {schoolSettings.footerBannerImage && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-800 h-36 sm:h-48 relative group">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mb-8">
+          <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 min-h-[9rem] sm:h-44 md:h-52 relative group bg-gradient-to-r from-red-950 via-slate-900 to-indigo-950 flex items-end">
             <img 
               src={schoolSettings.footerBannerImage} 
               alt="Footer Banner" 
               loading="lazy"
               decoding="async"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 bg-slate-900" 
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-90 contrast-105" 
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=1200&auto=format&fit=crop&q=80';
+              }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent flex items-end p-6">
-              <div>
-                <p className="text-amber-400 font-extrabold text-xs uppercase tracking-widest">{schoolSettings.slogan}</p>
-                <h3 className="text-white font-black text-lg sm:text-xl">{schoolSettings.youthUnionName}</h3>
-              </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none" />
+            <div className="relative z-10 p-4 sm:p-6 w-full">
+              <p className="text-amber-400 font-extrabold text-[11px] sm:text-xs uppercase tracking-widest drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
+                {schoolSettings.slogan}
+              </p>
+              <h3 className="text-white font-black text-sm sm:text-xl md:text-2xl mt-0.5 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                {schoolSettings.youthUnionName}
+              </h3>
             </div>
           </div>
         </div>
