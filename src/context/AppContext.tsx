@@ -314,6 +314,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (cloudData.violations) setViolations(cloudData.violations);
           if (cloudData.news && cloudData.news.length > 0) setNews(cloudData.news);
           if (cloudData.notices && cloudData.notices.length > 0) setNotices(cloudData.notices);
+          if (cloudData.schoolSettings) setSchoolSettings(cloudData.schoolSettings);
+          if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(cloudData.activitySlides);
           console.log('✅ Đã đồng bộ dữ liệu mới nhất từ Supabase Cloud!');
         }
       }).catch(err => {
@@ -390,7 +392,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // School Settings
   const updateSchoolSettings = (updates: Partial<SchoolSettings>) => {
-    setSchoolSettings(prev => ({ ...prev, ...updates }));
+    const updated = { ...schoolSettings, ...updates };
+    setSchoolSettings(updated);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveSchoolSettings(updated);
+    }
     addLog('Cập nhật cài đặt trường', 'Thay đổi thông tin nhận diện, tên trường hoặc màu sắc giao diện');
   };
 
@@ -449,11 +455,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isArchived: false
     };
     setClasses(prev => [...prev, classObj]);
+    if (isSupabaseConfigured()) SupabaseService.saveClass(classObj);
     addLog('Thêm lớp học mới', `Tạo mới ${classObj.name} (Khối ${classObj.grade})`);
   };
 
   const updateClass = (id: string, updates: Partial<ClassInfo>) => {
-    setClasses(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    setClasses(prev => prev.map(c => {
+      if (c.id === id) {
+        const updated = { ...c, ...updates };
+        if (isSupabaseConfigured()) SupabaseService.saveClass(updated);
+        return updated;
+      }
+      return c;
+    }));
     addLog('Cập nhật lớp học', `Sửa thông tin Lớp ID: ${id}`);
   };
 
@@ -473,12 +487,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     setClasses(prev => prev.filter(c => c.id !== id));
     setStudents(prev => prev.filter(s => s.classId !== id));
+    if (isSupabaseConfigured()) SupabaseService.deleteClass(id);
     addLog('Xóa lớp học', `Xóa lớp ${targetClass.name} (${id})`);
     return { success: true, message: `Đã xóa lớp ${targetClass.name} thành công!` };
   };
 
   const archiveClass = (id: string, isArchived: boolean) => {
-    setClasses(prev => prev.map(c => c.id === id ? { ...c, isArchived } : c));
+    setClasses(prev => prev.map(c => {
+      if (c.id === id) {
+        const updated = { ...c, isArchived };
+        if (isSupabaseConfigured()) SupabaseService.saveClass(updated);
+        return updated;
+      }
+      return c;
+    }));
     addLog(isArchived ? 'Lưu trữ lớp học' : 'Khôi phục lớp học', `${isArchived ? 'Lưu trữ' : 'Khôi phục'} Lớp ID: ${id}`);
   };
 
@@ -486,23 +508,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addStudent = (studentData: Omit<Student, 'id' | 'violationsCount'>) => {
     const newStudent: Student = {
       ...studentData,
-      id: `st-${Date.now()}`,
+      id: studentData.studentId || `st-${Date.now()}`,
       violationsCount: 0
     };
     setStudents(prev => [...prev, newStudent]);
+    if (isSupabaseConfigured()) SupabaseService.saveStudent(newStudent);
     // Also update class total count
     setClasses(prev => prev.map(c => c.id === studentData.classId ? { ...c, totalStudents: c.totalStudents + 1, unionMembers: studentData.isUnionMember ? c.unionMembers + 1 : c.unionMembers } : c));
     addLog('Thêm học sinh mới', `Thêm em ${newStudent.name} (${newStudent.studentId}) vào lớp ${newStudent.classId}`);
   };
 
   const updateStudent = (id: string, updates: Partial<Student>) => {
-    setStudents(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    setStudents(prev => prev.map(s => {
+      if (s.id === id || s.studentId === id) {
+        const updated = { ...s, ...updates };
+        if (isSupabaseConfigured()) SupabaseService.saveStudent(updated);
+        return updated;
+      }
+      return s;
+    }));
     addLog('Cập nhật học sinh', `Cập nhật hồ sơ học sinh ID: ${id}`);
   };
 
   const deleteStudent = (id: string) => {
-    const st = students.find(s => s.id === id);
-    setStudents(prev => prev.filter(s => s.id !== id));
+    const st = students.find(s => s.id === id || s.studentId === id);
+    setStudents(prev => prev.filter(s => s.id !== id && s.studentId !== id));
+    if (isSupabaseConfigured()) SupabaseService.deleteStudent(id);
     if (st) {
       setClasses(prev => prev.map(c => c.id === st.classId ? { ...c, totalStudents: Math.max(0, c.totalStudents - 1) } : c));
       addLog('Xóa học sinh', `Xóa học sinh ${st.name} khỏi danh sách`);
@@ -862,23 +893,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addCriterion = (critData: Omit<Criterion, 'id'>) => {
     const newCrit: Criterion = {
       ...critData,
-      id: `crit-${Date.now()}`
+      id: critData.code || `crit-${Date.now()}`
     };
     setCriteria(prev => [...prev, newCrit]);
+    if (isSupabaseConfigured()) SupabaseService.saveCriterion(newCrit);
     addLog('Thêm tiêu chí mới', `Tạo tiêu chí "${critData.name}" (${critData.points}${critData.unit})`);
   };
 
   const updateCriterion = (id: string, updates: Partial<Criterion>) => {
-    setCriteria(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    setCriteria(prev => prev.map(c => {
+      if (c.id === id) {
+        const updated = { ...c, ...updates };
+        if (isSupabaseConfigured()) SupabaseService.saveCriterion(updated);
+        return updated;
+      }
+      return c;
+    }));
     addLog('Cập nhật tiêu chí', `Sửa thông tin tiêu chí ID: ${id}`);
   };
 
   const deleteCriterion = (id: string): { success: boolean; message: string } => {
-    // Check if used in any violation history
     const isUsed = violations.some(v => v.criterionId === id);
     if (isUsed) {
-      // Per specification: Tiêu chí đã có lịch sử chấm điểm chỉ cho phép Ẩn/Tắt chứ không xóa cứng
-      setCriteria(prev => prev.map(c => c.id === id ? { ...c, isEnabled: false } : c));
+      setCriteria(prev => prev.map(c => {
+        if (c.id === id) {
+          const updated = { ...c, isEnabled: false };
+          if (isSupabaseConfigured()) SupabaseService.saveCriterion(updated);
+          return updated;
+        }
+        return c;
+      }));
       addLog('Ẩn tiêu chí đã dùng', `Tiêu chí ID ${id} đã có lịch sử chấm điểm nên được chuyển sang trạng thái Tắt/Ẩn thay vì xóa.`);
       return { 
         success: false, 
@@ -886,6 +930,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }
     setCriteria(prev => prev.filter(c => c.id !== id));
+    if (isSupabaseConfigured()) SupabaseService.deleteCriterion(id);
     addLog('Xóa tiêu chí', `Xóa hoàn toàn tiêu chí ID: ${id}`);
     return { success: true, message: 'Đã xóa tiêu chí thành công!' };
   };
@@ -894,8 +939,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCriteria(prev => prev.map(c => {
       if (c.id === id) {
         const nextState = !c.isEnabled;
+        const updated = { ...c, isEnabled: nextState };
+        if (isSupabaseConfigured()) SupabaseService.saveCriterion(updated);
         addLog('Đổi trạng thái tiêu chí', `${nextState ? 'Bật' : 'Tắt'} tiêu chí "${c.name}"`);
-        return { ...c, isEnabled: nextState };
+        return updated;
       }
       return c;
     }));
@@ -1286,16 +1333,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isHidden: false
     };
     setNews(prev => [newPost, ...prev]);
+    if (isSupabaseConfigured()) SupabaseService.saveNews(newPost);
     addLog('Đăng tin tức mới', `Đăng bài viết "${postData.title}"`);
   };
 
   const updateNewsPost = (id: string, updates: Partial<NewsPost>) => {
-    setNews(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n));
+    setNews(prev => prev.map(n => {
+      if (n.id === id) {
+        const updated = { ...n, ...updates };
+        if (isSupabaseConfigured()) SupabaseService.saveNews(updated);
+        return updated;
+      }
+      return n;
+    }));
     addLog('Cập nhật bài viết', `Chỉnh sửa bài viết ID: ${id}`);
   };
 
   const deleteNewsPost = (id: string) => {
     setNews(prev => prev.filter(n => n.id !== id));
+    if (isSupabaseConfigured()) SupabaseService.deleteNews(id);
     addLog('Xóa bài viết', `Xóa bài viết ID: ${id}`);
   };
 
@@ -1303,8 +1359,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNews(prev => prev.map(n => {
       if (n.id === id) {
         const nextHidden = !n.isHidden;
+        const updated = { ...n, isHidden: nextHidden };
+        if (isSupabaseConfigured()) SupabaseService.saveNews(updated);
         addLog('Đổi trạng thái bài viết', `${nextHidden ? 'Ẩn' : 'Hiển thị'} bài viết "${n.title}"`);
-        return { ...n, isHidden: nextHidden };
+        return updated;
       }
       return n;
     }));
@@ -1319,6 +1377,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'pending'
     };
     setNotices(prev => [newNotice, ...prev]);
+    if (isSupabaseConfigured()) SupabaseService.saveTaskNotice(newNotice);
     addLog('Phát thông báo điều động', `Tạo thông báo nhiệm vụ "${noticeData.title}"`);
   };
 
@@ -1330,17 +1389,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: noticeData.status || 'pending'
     };
     setNotices(prev => [newNotice, ...prev]);
+    if (isSupabaseConfigured()) SupabaseService.saveTaskNotice(newNotice);
     addLog('Tạo thông báo điều động', `Tạo nhiệm vụ "${noticeData.title}"`);
   };
 
   const updateNotice = (id: string, updates: Partial<TaskNotice>) => {
-    setNotices(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n));
+    setNotices(prev => prev.map(n => {
+      if (n.id === id) {
+        const updated = { ...n, ...updates };
+        if (isSupabaseConfigured()) SupabaseService.saveTaskNotice(updated);
+        return updated;
+      }
+      return n;
+    }));
     addLog('Cập nhật nhiệm vụ điều động', `Chỉnh sửa nhiệm vụ ID: ${id}`);
   };
 
   const deleteNotice = (id: string) => {
     const target = notices.find(n => n.id === id);
     setNotices(prev => prev.filter(n => n.id !== id));
+    if (isSupabaseConfigured()) SupabaseService.deleteTaskNotice(id);
     addLog('Xóa nhiệm vụ điều động', `Xóa nhiệm vụ "${target?.title || id}"`);
   };
 
@@ -1351,22 +1419,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `slide-${Date.now()}`
     };
     setActivitySlides(prev => [...prev, newSlide]);
+    if (isSupabaseConfigured()) SupabaseService.saveActivitySlide(newSlide);
     addLog('Thêm slide ảnh hoạt động', `Thêm slide "${newSlide.title}"`);
   };
 
   const updateActivitySlide = (id: string, updates: Partial<ActivitySlide>) => {
-    setActivitySlides(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    setActivitySlides(prev => prev.map(s => {
+      if (s.id === id) {
+        const updated = { ...s, ...updates };
+        if (isSupabaseConfigured()) SupabaseService.saveActivitySlide(updated);
+        return updated;
+      }
+      return s;
+    }));
     addLog('Cập nhật slide ảnh', `Chỉnh sửa slide ID: ${id}`);
   };
 
   const deleteActivitySlide = (id: string) => {
     const target = activitySlides.find(s => s.id === id);
     setActivitySlides(prev => prev.filter(s => s.id !== id));
+    if (isSupabaseConfigured()) SupabaseService.deleteActivitySlide(id);
     addLog('Xóa slide ảnh hoạt động', `Xóa slide "${target?.title || id}"`);
   };
 
   const toggleActivitySlideStatus = (id: string) => {
-    setActivitySlides(prev => prev.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s));
+    setActivitySlides(prev => prev.map(s => {
+      if (s.id === id) {
+        const updated = { ...s, isActive: !s.isActive };
+        if (isSupabaseConfigured()) SupabaseService.saveActivitySlide(updated);
+        return updated;
+      }
+      return s;
+    }));
     addLog('Đổi trạng thái slide ảnh', `Bật/Tắt hiển thị slide ID: ${id}`);
   };
 

@@ -703,6 +703,43 @@ CREATE TABLE IF NOT EXISTS public.task_notices (
 ALTER TABLE public.news ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_notices ENABLE ROW LEVEL SECURITY;
 
+-- 13. BẢNG SCHOOL_SETTINGS (Cài đặt Nhận diện & Thông tin Nhà trường)
+CREATE TABLE IF NOT EXISTS public.school_settings (
+    id VARCHAR(50) PRIMARY KEY DEFAULT 'current',
+    school_name VARCHAR(255) NOT NULL DEFAULT 'Trường THPT Quang Trung - Đông Giang',
+    youth_union_name VARCHAR(255) NOT NULL DEFAULT 'Đoàn trường THPT Quang Trung - Đông Giang',
+    slogan TEXT DEFAULT 'Tuổi trẻ Quang Trung – Tiên phong, Gương mẫu, Bản lĩnh, Sáng tạo',
+    address TEXT DEFAULT 'Thôn Trung Sơn, xã Đông Giang, TP Đà Nẵng',
+    email VARCHAR(150) DEFAULT 'doantruongquangtrungdonggiang@gmail.com',
+    phone VARCHAR(50) DEFAULT '0988806194',
+    theme_color VARCHAR(50) DEFAULT 'red',
+    logo_url TEXT,
+    youth_union_logo_url TEXT,
+    banner_top_image TEXT,
+    footer_banner_image TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 14. BẢNG ACTIVITY_SLIDES (Slide Ảnh Hoạt Động Đoàn Trường)
+CREATE TABLE IF NOT EXISTS public.activity_slides (
+    slide_id VARCHAR(50) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    title VARCHAR(255) NOT NULL,
+    subtitle TEXT,
+    image_url TEXT NOT NULL,
+    date VARCHAR(50),
+    tag VARCHAR(50) DEFAULT 'Phong trào',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    order_num INT NOT NULL DEFAULT 1,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Kích hoạt RLS
+ALTER TABLE public.school_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activity_slides ENABLE ROW LEVEL SECURITY;
+
 -- 5. POLICY CÔNG KHAI ĐỌC DỮ LIỆU CƠ BẢN
 CREATE POLICY "Public read active criteria" ON public.criteria FOR SELECT USING (true);
 CREATE POLICY "Public read active classes" ON public.classes FOR SELECT USING (true);
@@ -714,6 +751,8 @@ CREATE POLICY "Public read violations" ON public.violations FOR SELECT USING (tr
 CREATE POLICY "Public read news" ON public.news FOR SELECT USING (true);
 CREATE POLICY "Public read task_notices" ON public.task_notices FOR SELECT USING (true);
 CREATE POLICY "Public read users" ON public.users FOR SELECT USING (true);
+CREATE POLICY "Public read school_settings" ON public.school_settings FOR SELECT USING (true);
+CREATE POLICY "Public read activity_slides" ON public.activity_slides FOR SELECT USING (true);
 
 -- 6. POLICY CHO PHÉP ĐỒNG BỘ TỪ WEB CLIENT (ANON / AUTHENTICATED)
 CREATE POLICY "Allow web client all on classes" ON public.classes FOR ALL USING (true) WITH CHECK (true);
@@ -723,4 +762,8 @@ CREATE POLICY "Allow web client all on violations" ON public.violations FOR ALL 
 CREATE POLICY "Allow web client all on news" ON public.news FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow web client all on task_notices" ON public.task_notices FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow web client all on users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on school_settings" ON public.school_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on activity_slides" ON public.activity_slides FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on weeks" ON public.weeks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow web client all on duty_schedule" ON public.duty_schedule FOR ALL USING (true) WITH CHECK (true);
 

@@ -8,11 +8,12 @@ import {
   NewsPost, 
   TaskNotice, 
   User, 
-  SchoolSettings 
+  SchoolSettings,
+  ActivitySlide
 } from '../types';
 
 /**
- * Service đồng bộ dữ liệu giữa Frontend và Supabase PostgreSQL Cloud
+ * Service đồng bộ dữ liệu hai chiều toàn diện giữa Frontend và Supabase PostgreSQL Cloud
  */
 export const SupabaseService = {
   /**
@@ -28,6 +29,7 @@ export const SupabaseService = {
     notices?: TaskNotice[];
     users?: User[];
     schoolSettings?: SchoolSettings;
+    activitySlides?: ActivitySlide[];
   } | null> {
     const client = getSupabaseClient();
     if (!client || !isSupabaseConfigured()) return null;
@@ -69,6 +71,20 @@ export const SupabaseService = {
         .select('*')
         .eq('is_deleted', false);
 
+      // 7. School Settings
+      const { data: rawSettings } = await client
+        .from('school_settings')
+        .select('*')
+        .eq('id', 'current')
+        .maybeSingle();
+
+      // 8. Activity Slides
+      const { data: rawSlides } = await client
+        .from('activity_slides')
+        .select('*')
+        .eq('is_deleted', false)
+        .order('order_num', { ascending: true });
+
       if (classErr) {
         console.warn('Không thể tải dữ liệu từ Supabase, sử dụng dữ liệu cục bộ:', classErr.message);
         return null;
@@ -90,14 +106,14 @@ export const SupabaseService = {
       }));
 
       const criteria: Criterion[] = (rawCriteria || []).map(cr => ({
-        id: cr.criterion_id,
+        id: cr.criterion_id || cr.criteria_code,
         groupId: (cr.group_id || 'I.1') as any,
         groupName: cr.group_name || 'Nề nếp',
         groupStandardScore: Number(cr.group_standard_score) || 40,
-        code: cr.code || cr.criterion_id,
-        name: cr.criterion_name,
+        code: cr.code || cr.criteria_code || cr.criterion_id,
+        name: cr.name || cr.criterion_name,
         type: (cr.type === 'bonus' || cr.type === 'Cộng' ? 'bonus' : 'deduction'),
-        points: Number(cr.default_points) || 10,
+        points: Number(cr.score_value || cr.default_points) || 10,
         unit: cr.unit || 'đ / lần',
         isEnabled: cr.is_active ?? true,
         description: cr.description || ''
@@ -110,15 +126,15 @@ export const SupabaseService = {
         classId: s.class_id,
         grade: (Number(s.class_id?.substring(0, 2)) || 10) as 10 | 11 | 12,
         gender: s.gender || 'Nam',
-        dob: s.date_of_birth || '2008-01-01',
+        dob: s.date_of_birth || s.dob || '2008-01-01',
         ethnicity: s.ethnicity || 'Kinh',
-        phone: s.phone_number || '',
+        phone: s.phone_number || s.phone || '',
         address: s.address || '',
         isUnionMember: s.is_union_member || false,
         unionCardNumber: s.union_card_number || '',
         unionPosition: s.union_position || 'Đoàn viên',
         unionJoinedDate: s.union_join_date || '',
-        points: Number(s.activity_points) || 0,
+        points: Number(s.activity_points) || 100,
         rankTitle: s.rank_title || 'Đoàn viên',
         violationsCount: 0,
         status: s.is_deleted ? 'inactive' : 'active'
@@ -187,13 +203,45 @@ export const SupabaseService = {
         status: nt.status || 'pending'
       }));
 
+      let schoolSettings: SchoolSettings | undefined = undefined;
+      if (rawSettings) {
+        schoolSettings = {
+          schoolName: rawSettings.school_name,
+          youthUnionName: rawSettings.youth_union_name,
+          slogan: rawSettings.slogan,
+          address: rawSettings.address,
+          email: rawSettings.email,
+          phone: rawSettings.phone,
+          themeColor: rawSettings.theme_color,
+          logoUrl: rawSettings.logo_url,
+          youthUnionLogoUrl: rawSettings.youth_union_logo_url,
+          bannerTopImage: rawSettings.banner_top_image,
+          footerBannerImage: rawSettings.footer_banner_image
+        };
+      }
+
+      const activitySlides: ActivitySlide[] | undefined = (rawSlides && rawSlides.length > 0)
+        ? rawSlides.map(sl => ({
+            id: sl.slide_id,
+            title: sl.title,
+            subtitle: sl.subtitle || '',
+            imageUrl: sl.image_url,
+            date: sl.date || '',
+            tag: sl.tag || 'Phong trào',
+            isActive: sl.is_active,
+            order: sl.order_num || 1
+          }))
+        : undefined;
+
       return {
         classes,
         criteria,
         students,
         violations,
         news,
-        notices
+        notices,
+        schoolSettings,
+        activitySlides
       };
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu từ Supabase:', err);
@@ -211,6 +259,7 @@ export const SupabaseService = {
     violations: Violation[];
     news: NewsPost[];
     notices: TaskNotice[];
+    schoolSettings?: SchoolSettings;
   }): Promise<{ success: boolean; message: string }> {
     const client = getSupabaseClient();
     if (!client) {
@@ -239,26 +288,25 @@ export const SupabaseService = {
       // 2. Seed Criteria
       if (payload.criteria.length > 0) {
         const mappedCriteria = payload.criteria.map(cr => ({
-          criterion_id: cr.id,
-          criterion_name: cr.name,
-          code: cr.code,
+          criteria_code: cr.code || cr.id,
           group_id: cr.groupId,
           group_name: cr.groupName,
-          group_standard_score: cr.groupStandardScore,
-          type: cr.type,
-          default_points: cr.points,
+          group_standard_score: cr.groupStandardScore || 40,
+          name: cr.name,
+          type: cr.type === 'bonus' ? 'Cộng' : 'Trừ',
+          score_value: cr.points,
           unit: cr.unit,
           description: cr.description,
           is_active: cr.isEnabled,
           is_deleted: false
         }));
-        await client.from('criteria').upsert(mappedCriteria, { onConflict: 'criterion_id' });
+        await client.from('criteria').upsert(mappedCriteria, { onConflict: 'criteria_code' });
       }
 
       // 3. Seed Students
       if (payload.students.length > 0) {
         const mappedStudents = payload.students.map(s => ({
-          student_id: s.studentId,
+          student_id: s.studentId || s.id,
           class_id: s.classId,
           full_name: s.name,
           gender: s.gender,
@@ -270,11 +318,16 @@ export const SupabaseService = {
           phone_number: s.phone || null,
           address: s.address || null,
           ethnicity: s.ethnicity || 'Kinh',
-          activity_points: s.points || 0,
+          activity_points: s.points || 100,
           rank_title: s.rankTitle || 'Đoàn viên',
           is_deleted: false
         }));
         await client.from('students').upsert(mappedStudents, { onConflict: 'student_id' });
+      }
+
+      // 4. Seed Settings
+      if (payload.schoolSettings) {
+        await this.saveSchoolSettings(payload.schoolSettings);
       }
 
       return {
@@ -286,6 +339,296 @@ export const SupabaseService = {
         success: false,
         message: `Lỗi đồng bộ dữ liệu: ${err?.message || 'Không xác định'}`
       };
+    }
+  },
+
+  /**
+   * Lưu Cài đặt Nhận diện Nhà trường lên Cloud
+   */
+  async saveSchoolSettings(settings: SchoolSettings): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('school_settings').upsert({
+        id: 'current',
+        school_name: settings.schoolName,
+        youth_union_name: settings.youthUnionName,
+        slogan: settings.slogan,
+        address: settings.address,
+        email: settings.email,
+        phone: settings.phone,
+        theme_color: settings.themeColor,
+        logo_url: settings.logoUrl,
+        youth_union_logo_url: settings.youthUnionLogoUrl,
+        banner_top_image: settings.bannerTopImage,
+        footer_banner_image: settings.footerBannerImage,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu school_settings lên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu Slide ảnh hoạt động phong trào
+   */
+  async saveActivitySlide(slide: ActivitySlide): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('activity_slides').upsert({
+        slide_id: slide.id,
+        title: slide.title,
+        subtitle: slide.subtitle,
+        image_url: slide.imageUrl,
+        date: slide.date,
+        tag: slide.tag,
+        is_active: slide.isActive,
+        order_num: slide.order,
+        is_deleted: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'slide_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu activity_slide lên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa Slide ảnh
+   */
+  async deleteActivitySlide(slideId: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('activity_slides').update({ is_deleted: true }).eq('slide_id', slideId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa activity_slide:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu lớp học
+   */
+  async saveClass(c: ClassInfo): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('classes').upsert({
+        class_id: c.id,
+        class_name: c.name,
+        grade: c.grade,
+        gvcn_name: c.gvcnName,
+        gvcn_id: c.gvcnId || null,
+        bithu_name: c.bithuName,
+        bithu_id: c.bithuId || null,
+        total_students: c.totalStudents,
+        union_members_count: c.unionMembers,
+        standard_score: c.standardScore,
+        is_archived: c.isArchived,
+        academic_year: c.academicYearId || '2025_2026',
+        is_deleted: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'class_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu class:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa lớp học
+   */
+  async deleteClass(classId: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('classes').update({ is_deleted: true }).eq('class_id', classId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa class:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu học sinh / đoàn viên
+   */
+  async saveStudent(s: Student): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('students').upsert({
+        student_id: s.studentId || s.id,
+        class_id: s.classId,
+        full_name: s.name,
+        gender: s.gender,
+        date_of_birth: s.dob,
+        is_union_member: s.isUnionMember,
+        union_join_date: s.unionJoinedDate || null,
+        union_card_number: s.unionCardNumber || null,
+        union_position: s.unionPosition || 'Đoàn viên',
+        phone_number: s.phone || null,
+        address: s.address || null,
+        ethnicity: s.ethnicity || 'Kinh',
+        activity_points: s.points || 100,
+        rank_title: s.rankTitle || 'Đoàn viên',
+        is_deleted: s.status === 'inactive'
+      }, { onConflict: 'student_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu student:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa học sinh
+   */
+  async deleteStudent(studentId: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('students').update({ is_deleted: true }).eq('student_id', studentId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa student:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu tiêu chí chấm điểm
+   */
+  async saveCriterion(cr: Criterion): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('criteria').upsert({
+        criteria_code: cr.code || cr.id,
+        group_id: cr.groupId,
+        group_name: cr.groupName,
+        group_standard_score: cr.groupStandardScore || 40,
+        name: cr.name,
+        type: cr.type === 'bonus' ? 'Cộng' : 'Trừ',
+        score_value: cr.points,
+        unit: cr.unit,
+        description: cr.description,
+        is_active: cr.isEnabled,
+        is_deleted: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'criteria_code' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu criterion:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa / Ẩn tiêu chí
+   */
+  async deleteCriterion(code: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('criteria').update({ is_deleted: true }).eq('criteria_code', code);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa criterion:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu bài viết tin tức
+   */
+  async saveNews(n: NewsPost): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('news').upsert({
+        news_id: n.id,
+        title: n.title,
+        excerpt: n.excerpt,
+        content: n.content,
+        category: n.category,
+        author_name: n.author,
+        image_url: n.thumbnail,
+        urgency: n.urgency,
+        is_pinned: n.isPinned,
+        is_hidden: n.isHidden,
+        tags: n.tags,
+        views: n.views,
+        is_deleted: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'news_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu news:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa bài viết tin tức
+   */
+  async deleteNews(newsId: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('news').update({ is_deleted: true }).eq('news_id', newsId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa news:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu thông báo điều động
+   */
+  async saveTaskNotice(nt: TaskNotice): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('task_notices').upsert({
+        notice_id: nt.id,
+        title: nt.title,
+        content: nt.content,
+        type: nt.type,
+        deadline: nt.deadline,
+        target_classes: nt.targetClasses,
+        status: nt.status,
+        created_by_name: nt.assignedBy,
+        is_deleted: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'notice_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu notice:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa thông báo điều động
+   */
+  async deleteTaskNotice(noticeId: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('task_notices').update({ is_deleted: true }).eq('notice_id', noticeId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa notice:', err);
+      return false;
     }
   },
 
