@@ -469,22 +469,80 @@ export const SupabaseService = {
         student_id: s.studentId || s.id,
         class_id: s.classId,
         full_name: s.name,
+        name: s.name,
+        grade: s.grade,
         gender: s.gender,
-        date_of_birth: s.dob,
-        is_union_member: s.isUnionMember,
-        union_join_date: s.unionJoinedDate || null,
-        union_card_number: s.unionCardNumber || null,
-        union_position: s.unionPosition || 'Đoàn viên',
-        phone_number: s.phone || null,
-        address: s.address || null,
+        dob: s.dob,
         ethnicity: s.ethnicity || 'Kinh',
+        phone_number: s.phone || null,
+        phone: s.phone || null,
+        address: s.address || null,
+        is_union_member: s.isUnionMember,
+        union_joined_date: s.unionJoinedDate || null,
+        union_joined_place: s.unionJoinedPlace || null,
+        union_card_number: s.unionCardNumber || null,
+        union_position: s.unionPosition || (s.isUnionMember ? 'Đoàn viên' : 'Học sinh'),
+        union_fee_status: s.unionFeeStatus || 'paid',
+        union_booklet_status: s.unionBookletStatus || 'submitted',
+        conduct_rating: s.conductRating || 'Xuất sắc',
+        custom_notes: s.customNotes || '',
         activity_points: s.points || 100,
+        points: s.points || 100,
         rank_title: s.rankTitle || 'Đoàn viên',
+        status: s.status || 'active',
         is_deleted: s.status === 'inactive'
       }, { onConflict: 'student_id' });
       return true;
     } catch (err) {
       console.warn('Lỗi lưu student:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu hàng loạt học sinh lên Supabase Cloud (Import Excel / Nâng cấp hàng loạt)
+   */
+  async saveStudentsBatch(students: Student[]): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client || students.length === 0) return false;
+
+    try {
+      const mapped = students.map(s => ({
+        student_id: s.studentId || s.id,
+        class_id: s.classId,
+        full_name: s.name,
+        name: s.name,
+        grade: s.grade,
+        gender: s.gender,
+        dob: s.dob,
+        ethnicity: s.ethnicity || 'Kinh',
+        phone_number: s.phone || null,
+        phone: s.phone || null,
+        address: s.address || null,
+        is_union_member: s.isUnionMember,
+        union_joined_date: s.unionJoinedDate || null,
+        union_joined_place: s.unionJoinedPlace || null,
+        union_card_number: s.unionCardNumber || null,
+        union_position: s.unionPosition || (s.isUnionMember ? 'Đoàn viên' : 'Học sinh'),
+        union_fee_status: s.unionFeeStatus || 'paid',
+        union_booklet_status: s.unionBookletStatus || 'submitted',
+        conduct_rating: s.conductRating || 'Xuất sắc',
+        custom_notes: s.customNotes || '',
+        activity_points: s.points || 100,
+        points: s.points || 100,
+        rank_title: s.rankTitle || 'Đoàn viên',
+        status: s.status || 'active',
+        is_deleted: s.status === 'inactive'
+      }));
+
+      const { error } = await client.from('students').upsert(mapped, { onConflict: 'student_id' });
+      if (error) {
+        console.error('Lỗi khi lưu hàng loạt học sinh lên Supabase:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Lỗi ngoại lệ khi lưu học sinh:', err);
       return false;
     }
   },
@@ -500,6 +558,26 @@ export const SupabaseService = {
       return true;
     } catch (err) {
       console.warn('Lỗi xóa student:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa hàng loạt học sinh trên Supabase Cloud
+   */
+  async deleteStudentsBatch(studentIds: string[]): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client || studentIds.length === 0) return false;
+
+    try {
+      const { error } = await client.from('students').update({ is_deleted: true }).in('student_id', studentIds);
+      if (error) {
+        console.error('Lỗi khi xóa hàng loạt học sinh:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Lỗi ngoại lệ khi xóa học sinh:', err);
       return false;
     }
   },

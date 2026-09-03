@@ -103,6 +103,7 @@ interface AppContextType {
   addStudent: (student: Omit<Student, 'id' | 'violationsCount'>) => void;
   updateStudent: (id: string, updates: Partial<Student>) => void;
   deleteStudent: (id: string) => void;
+  deleteStudentsBatch: (ids: string[]) => void;
   transferStudent: (studentId: string, newClassId: string) => void;
   importStudents: (studentsList: Array<Omit<Student, 'id' | 'violationsCount'>>) => number;
   upsertStudentsFromExcel: (studentsList: Array<Partial<Student> & { studentId: string; name: string; classId: string }>) => { added: number; updated: number };
@@ -532,23 +533,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteStudent = (id: string) => {
     const st = students.find(s => s.id === id || s.studentId === id);
+    const studentIdToDelete = st?.studentId || id;
     setStudents(prev => prev.filter(s => s.id !== id && s.studentId !== id));
-    if (isSupabaseConfigured()) SupabaseService.deleteStudent(id);
+    if (isSupabaseConfigured()) SupabaseService.deleteStudent(studentIdToDelete);
     if (st) {
-      setClasses(prev => prev.map(c => c.id === st.classId ? { ...c, totalStudents: Math.max(0, c.totalStudents - 1) } : c));
+      setClasses(prev => prev.map(c => c.id === st.classId ? { ...c, totalStudents: Math.max(0, c.totalStudents - 1), unionMembers: st.isUnionMember ? Math.max(0, c.unionMembers - 1) : c.unionMembers } : c));
       addLog('Xóa học sinh', `Xóa học sinh ${st.name} khỏi danh sách`);
     }
   };
 
+  const deleteStudentsBatch = (studentIds: string[]) => {
+    if (!studentIds || studentIds.length === 0) return;
+    setStudents(prev => prev.filter(s => !studentIds.includes(s.id) && !studentIds.includes(s.studentId)));
+    if (isSupabaseConfigured()) {
+      SupabaseService.deleteStudentsBatch(studentIds);
+    }
+    // Update class counts
+    setClasses(prev => prev.map(c => {
+      const remainingInClass = students.filter(s => s.classId === c.id && !studentIds.includes(s.id) && !studentIds.includes(s.studentId));
+      const unionCount = remainingInClass.filter(s => s.isUnionMember).length;
+      return { ...c, totalStudents: remainingInClass.length, unionMembers: unionCount };
+    }));
+    addLog('Xóa hàng loạt học sinh', `Đã xóa ${studentIds.length} học sinh khỏi hệ thống`);
+  };
+
   const transferStudent = (studentId: string, newClassId: string) => {
-    const st = students.find(s => s.id === studentId);
+    const st = students.find(s => s.id === studentId || s.studentId === studentId);
     if (!st) return;
     const oldClassId = st.classId;
     const newClass = classes.find(c => c.id === newClassId);
-    setStudents(prev => prev.map(s => s.id === studentId ? { ...s, classId: newClassId, grade: newClass?.grade || s.grade } : s));
+    const updatedStudent = { ...st, classId: newClassId, grade: (newClass?.grade || st.grade) as 10 | 11 | 12 };
+    setStudents(prev => prev.map(s => (s.id === studentId || s.studentId === studentId) ? updatedStudent : s));
+    if (isSupabaseConfigured()) SupabaseService.saveStudent(updatedStudent);
     setClasses(prev => prev.map(c => {
-      if (c.id === oldClassId) return { ...c, totalStudents: Math.max(0, c.totalStudents - 1) };
-      if (c.id === newClassId) return { ...c, totalStudents: c.totalStudents + 1 };
+      if (c.id === oldClassId) return { ...c, totalStudents: Math.max(0, c.totalStudents - 1), unionMembers: st.isUnionMember ? Math.max(0, c.unionMembers - 1) : c.unionMembers };
+      if (c.id === newClassId) return { ...c, totalStudents: c.totalStudents + 1, unionMembers: st.isUnionMember ? c.unionMembers + 1 : c.unionMembers };
       return c;
     }));
     addLog('Chuyển lớp học sinh', `Chuyển học sinh ${st.name} từ Lớp ${oldClassId} sang Lớp ${newClassId}`);
@@ -557,10 +576,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importStudents = (studentsList: Array<Omit<Student, 'id' | 'violationsCount'>>): number => {
     const newStudents: Student[] = studentsList.map((s, idx) => ({
       ...s,
-      id: `st-${Date.now()}-${idx}`,
+      id: s.studentId || `st-${Date.now()}-${idx}`,
       violationsCount: 0
     }));
     setStudents(prev => [...prev, ...newStudents]);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveStudentsBatch(newStudents);
+    }
     addLog('Import Excel Học Sinh', `Đã import thành công ${newStudents.length} học sinh từ file Excel`);
     return newStudents.length;
   };
@@ -568,11 +590,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const upsertStudentsFromExcel = (studentsList: Array<Partial<Student> & { studentId: string; name: string; classId: string }>): { added: number; updated: number } => {
     let added = 0;
     let updated = 0;
+    let mergedList: Student[] = [];
 
     setStudents(prev => {
       let currentList = [...prev];
       studentsList.forEach(incoming => {
-        const existingIdx = currentList.findIndex(s => s.studentId === incoming.studentId);
+        const existingIdx = currentList.findIndex(s => 
+          (incoming.studentId && s.studentId === incoming.studentId) || 
+          (incoming.name && incoming.classId && s.name.trim().toLowerCase() === incoming.name.trim().toLowerCase() && s.classId === incoming.classId)
+        );
         const gradeVal = Number(incoming.classId.split('/')[0] || 10) as 10 | 11 | 12;
 
         if (existingIdx >= 0) {
@@ -580,14 +606,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           currentList[existingIdx] = {
             ...currentList[existingIdx],
             ...incoming,
-            grade: gradeVal
+            grade: gradeVal,
+            phone: incoming.phone !== undefined && incoming.phone !== '' ? incoming.phone : currentList[existingIdx].phone,
+            address: incoming.address !== undefined && incoming.address !== '' ? incoming.address : currentList[existingIdx].address
           };
           updated++;
         } else {
           // Add new
           const newStudent: Student = {
-            id: `st-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            studentId: incoming.studentId,
+            id: incoming.studentId || `st-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            studentId: incoming.studentId || `HS${Math.floor(10000000 + Math.random() * 90000000)}`,
             name: incoming.name,
             classId: incoming.classId,
             grade: gradeVal,
@@ -595,6 +623,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             dob: incoming.dob || '2009-01-01',
             ethnicity: incoming.ethnicity || 'Kinh',
             phone: incoming.phone || '',
+            address: incoming.address || '',
             isUnionMember: incoming.isUnionMember !== undefined ? incoming.isUnionMember : true,
             unionCardNumber: incoming.unionCardNumber || '',
             unionPosition: incoming.unionPosition || 'Đoàn viên',
@@ -613,8 +642,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           added++;
         }
       });
+      mergedList = currentList;
       return currentList;
     });
+
+    // Cập nhật lên Supabase Cloud ngay lập tức
+    if (isSupabaseConfigured() && mergedList.length > 0) {
+      SupabaseService.saveStudentsBatch(mergedList);
+    }
+
+    // Cập nhật lại sĩ số các lớp
+    setClasses(prev => prev.map(c => {
+      const classSts = mergedList.filter(s => s.classId === c.id && s.status !== 'inactive');
+      const unionCount = classSts.filter(s => s.isUnionMember).length;
+      if (classSts.length > 0) {
+        return { ...c, totalStudents: classSts.length, unionMembers: unionCount };
+      }
+      return c;
+    }));
 
     addLog('Cập nhật dữ liệu từ Excel', `Đã đồng bộ Excel: Thêm mới ${added} học sinh, Cập nhật ${updated} hồ sơ`);
     return { added, updated };
@@ -1950,6 +1995,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addStudent,
         updateStudent,
         deleteStudent,
+        deleteStudentsBatch,
         transferStudent,
         importStudents,
         upsertStudentsFromExcel,

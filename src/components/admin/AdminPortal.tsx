@@ -136,6 +136,7 @@ export const AdminPortal: React.FC = () => {
     addStudent,
     updateStudent,
     deleteStudent,
+    deleteStudentsBatch,
     transferStudent,
     importStudents,
     upsertStudentsFromExcel,
@@ -827,15 +828,48 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
-  // Student Filters
+  // Student Filters & Multi-Selection
   const [studentClassFilter, setStudentClassFilter] = useState<string>('ALL');
   const [studentUnionFilter, setStudentUnionFilter] = useState<string>('ALL');
   const [studentSearch, setStudentSearch] = useState<string>('');
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+
+  const toggleSelectAllStudents = () => {
+    if (selectedStudentIds.length === filteredStudents.length && filteredStudents.length > 0) {
+      setSelectedStudentIds([]);
+    } else {
+      setSelectedStudentIds(filteredStudents.map(s => s.id || s.studentId));
+    }
+  };
+
+  const toggleStudentSelection = (id: string) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBatchDeleteStudents = () => {
+    if (selectedStudentIds.length === 0) return;
+    if (confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa ${selectedStudentIds.length} học sinh đã chọn?\nDữ liệu sẽ được xóa đồng thời trên máy và hệ thống Supabase Cloud!`)) {
+      deleteStudentsBatch(selectedStudentIds);
+      setSelectedStudentIds([]);
+      alert(`✅ Đã xóa thành công ${selectedStudentIds.length} học sinh khỏi hệ thống!`);
+    }
+  };
+
+  const handleBatchMakeUnionMember = (isMember: boolean) => {
+    if (selectedStudentIds.length === 0) return;
+    selectedStudentIds.forEach(id => {
+      updateStudent(id, { isUnionMember: isMember });
+    });
+    alert(`✅ Đã cập nhật trạng thái Đoàn viên cho ${selectedStudentIds.length} học sinh đã chọn!`);
+    setSelectedStudentIds([]);
+  };
 
   const toggleUnionStatus = (studentId: string) => {
-    const st = students.find(s => s.id === studentId);
+    const st = students.find(s => s.id === studentId || s.studentId === studentId);
     if (st) {
-      updateStudent(studentId, { isUnionMember: !st.isUnionMember });
+      updateStudent(st.id || studentId, { isUnionMember: !st.isUnionMember });
     }
   };
 
@@ -2194,6 +2228,34 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
     setIsCopyDutyModalOpen(false);
   };
 
+  // Helper for flexible Excel row key extraction
+  const extractRowField = (row: any, ...fieldAliases: string[]): string => {
+    for (const alias of fieldAliases) {
+      if (row[alias] !== undefined && row[alias] !== null && String(row[alias]).trim() !== '') {
+        return String(row[alias]).trim();
+      }
+    }
+    const rowKeys = Object.keys(row);
+    for (const alias of fieldAliases) {
+      const cleanAlias = alias.toLowerCase().replace(/[^a-z0-9à-ỹ]/gi, '');
+      const matchedKey = rowKeys.find(k => k.toLowerCase().replace(/[^a-z0-9à-ỹ]/gi, '') === cleanAlias);
+      if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null && String(row[matchedKey]).trim() !== '') {
+        return String(row[matchedKey]).trim();
+      }
+    }
+    return '';
+  };
+
+  const formatExcelDob = (rawVal: any): string => {
+    if (!rawVal) return '2009-01-01';
+    const valStr = String(rawVal).trim();
+    if (!isNaN(Number(valStr)) && Number(valStr) > 10000 && Number(valStr) < 60000) {
+      const d = new Date(Math.round((Number(valStr) - 25569) * 86400 * 1000));
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    }
+    return valStr;
+  };
+
   // Handle Real Excel File Upload and Smart Upsert
   const handleExcelFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -2216,18 +2278,20 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
         const parsedList: Array<Partial<Student> & { studentId: string; name: string; classId: string }> = [];
 
         rawData.forEach((row: any) => {
-          const studentId = row['Mã HS'] || row['Mã Học Sinh'] || row['studentId'] || `HS2024${Math.floor(1000 + Math.random() * 9000)}`;
-          const name = row['Họ và Tên'] || row['Họ Tên'] || row['name'] || '';
-          const classId = row['Lớp'] || row['classId'] || '10/1';
+          const studentId = extractRowField(row, 'Mã HS', 'Mã Học Sinh', 'Mã định danh', 'Mã số', 'Số định danh', 'ID', 'studentId', 'MSHS') || `HS${Math.floor(10000000 + Math.random() * 90000000)}`;
+          const name = extractRowField(row, 'Họ và Tên', 'Họ và tên', 'Họ Tên', 'Họ tên', 'Tên học sinh', 'Tên', 'name');
+          const classId = extractRowField(row, 'Lớp', 'Lớp học', 'Chi đoàn', 'Class', 'classId') || '10/1';
 
           if (name && classId) {
-            const gender = (row['Giới tính'] === 'Nữ' || row['Giới Tính'] === 'Nu' || row['gender'] === 'Nữ') ? 'Nữ' : 'Nam';
-            const dob = row['Ngày sinh'] || row['Ngày Sinh'] || row['dob'] || '2009-01-01';
-            const ethnicity = row['Dân tộc'] || row['Dân Tộc'] || row['ethnicity'] || 'Kinh';
-            const phone = row['Số điện thoại'] || row['SĐT'] || row['phone'] || '';
-            const address = row['Địa chỉ liên hệ'] || row['Địa chỉ'] || row['Địa Chỉ'] || row['address'] || '';
-            const unionStr = String(row['Đoàn viên'] || row['Đoàn Viên'] || '').toLowerCase();
-            const isUnion = unionStr.includes('đoàn') || unionStr.includes('co') || unionStr.includes('yes') || unionStr.includes('rồi');
+            const rawGender = extractRowField(row, 'Giới tính', 'Giới Tính', 'Phái', 'Gender', 'gender');
+            const gender = (rawGender === 'Nữ' || rawGender === 'Nu' || rawGender === 'nữ' || rawGender === 'F') ? 'Nữ' : 'Nam';
+            const rawDob = extractRowField(row, 'Ngày sinh', 'Ngày Sinh', 'DOB', 'dob', 'Ngày tháng năm sinh', 'Năm sinh');
+            const dob = formatExcelDob(rawDob);
+            const ethnicity = extractRowField(row, 'Dân tộc', 'Dân Tộc', 'ethnicity') || 'Kinh';
+            const phone = extractRowField(row, 'Số điện thoại', 'Số Điện Thoại', 'Số ĐT', 'SĐT', 'SDT', 'Điện thoại', 'Phone', 'phone', 'Sđt', 'Số điện thoại phụ huynh', 'SĐT liên hệ');
+            const address = extractRowField(row, 'Địa chỉ liên hệ', 'Địa chỉ', 'Địa Chỉ', 'Địa Chỉ Liên Hệ', 'Nơi ở', 'Hộ khẩu', 'Thường trú', 'Quê quán', 'Address', 'address');
+            const rawUnion = extractRowField(row, 'Đoàn viên', 'Đoàn Viên', 'Đã kết nạp', 'isUnionMember').toLowerCase();
+            const isUnion = rawUnion.includes('đoàn') || rawUnion.includes('co') || rawUnion.includes('yes') || rawUnion.includes('rồi') || rawUnion === 'x' || rawUnion === '1';
 
             parsedList.push({
               studentId: String(studentId).trim(),
@@ -2239,21 +2303,21 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
               phone: String(phone).trim(),
               address: String(address).trim(),
               isUnionMember: isUnion,
-              unionCardNumber: row['Số thẻ đoàn'] ? String(row['Số thẻ đoàn']).trim() : '',
-              unionPosition: row['Chức vụ Đoàn'] ? String(row['Chức vụ Đoàn']).trim() : isUnion ? 'Đoàn viên' : 'Học sinh',
-              unionJoinedDate: row['Ngày vào Đoàn'] ? String(row['Ngày vào Đoàn']).trim() : '',
-              unionJoinedPlace: row['Nơi kết nạp'] ? String(row['Nơi kết nạp']).trim() : '',
-              unionFeeStatus: (row['Đoàn phí'] === 'Chưa nộp' || row['Đoàn phí'] === 'Chưa') ? 'unpaid' : 'paid',
-              unionBookletStatus: (row['Sổ đoàn'] === 'Chưa nộp' || row['Sổ đoàn'] === 'Chưa') ? 'not_submitted' : 'submitted',
-              conductRating: row['Xếp loại'] || 'Xuất sắc',
-              customNotes: row['Ghi chú'] || ''
+              unionCardNumber: extractRowField(row, 'Số thẻ đoàn', 'Số thẻ Đoàn', 'Số thẻ'),
+              unionPosition: extractRowField(row, 'Chức vụ Đoàn', 'Chức vụ', 'Chức vụ chi đoàn') || (isUnion ? 'Đoàn viên' : 'Học sinh'),
+              unionJoinedDate: extractRowField(row, 'Ngày vào Đoàn', 'Ngày vào đoàn', 'Ngày kết nạp'),
+              unionJoinedPlace: extractRowField(row, 'Nơi kết nạp', 'Nơi vào Đoàn') || 'Đoàn trường THPT Quang Trung',
+              unionFeeStatus: (extractRowField(row, 'Đoàn phí') === 'Chưa nộp' || extractRowField(row, 'Đoàn phí') === 'Chưa') ? 'unpaid' : 'paid',
+              unionBookletStatus: (extractRowField(row, 'Sổ đoàn') === 'Chưa nộp' || extractRowField(row, 'Sổ đoàn') === 'Chưa') ? 'not_submitted' : 'submitted',
+              conductRating: (extractRowField(row, 'Xếp loại') as any) || 'Xuất sắc',
+              customNotes: extractRowField(row, 'Ghi chú', 'Ghi Chú') || ''
             });
           }
         });
 
         if (parsedList.length > 0) {
           const res = upsertStudentsFromExcel(parsedList);
-          alert(`Đồng bộ thành công từ file Excel!\n• Thêm mới: ${res.added} học sinh\n• Cập nhật: ${res.updated} hồ sơ`);
+          alert(`🎉 Đồng bộ thành công ${parsedList.length} hồ sơ từ file Excel!\n• Thêm mới: ${res.added} học sinh\n• Cập nhật: ${res.updated} hồ sơ\n• Đã lưu tự động vào CSDL Supabase Cloud!`);
           setIsImportModalOpen(false);
         } else {
           alert('Không tìm thấy dòng dữ liệu hợp lệ! Vui lòng kiểm tra tiêu đề cột của file Excel.');
@@ -3201,7 +3265,39 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                  {selectedStudentIds.length > 0 && (
+                    <div className="flex items-center gap-1.5 p-1 bg-red-950/60 border border-red-800 rounded-xl animate-fadeIn">
+                      <span className="text-[11px] font-black text-amber-300 px-2">
+                        Đã chọn: {selectedStudentIds.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleBatchDeleteStudents}
+                        className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-black flex items-center gap-1 shadow-glow transition-all active:scale-95"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Xóa đã chọn ({selectedStudentIds.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBatchMakeUnionMember(true)}
+                        className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center gap-1"
+                        title="Chuyển thành Đoàn viên"
+                      >
+                        <Star className="w-3 h-3 text-amber-300" />
+                        <span>Vào Đoàn</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStudentIds([])}
+                        className="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold"
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => setIsImportModalOpen(true)}
                     className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
@@ -3251,6 +3347,15 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-950 text-slate-300 border-b border-slate-800">
+                      <th className="p-3 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={filteredStudents.length > 0 && selectedStudentIds.length === filteredStudents.length}
+                          onChange={toggleSelectAllStudents}
+                          className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-red-600 focus:ring-0 cursor-pointer"
+                          title="Chọn tất cả học sinh đang hiển thị"
+                        />
+                      </th>
                       <th className="p-3 font-bold">Mã HS</th>
                       <th className="p-3 font-bold">Họ và Tên</th>
                       <th className="p-3 font-bold">Lớp</th>
@@ -3265,41 +3370,54 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {filteredStudents.map(st => (
-                      <tr key={st.id} className="hover:bg-slate-800/40">
-                        <td className="p-3 font-mono font-bold text-amber-400">{st.studentId}</td>
-                        <td className="p-3 font-bold text-white whitespace-nowrap">{st.name}</td>
-                        <td className="p-3 font-semibold text-slate-300 whitespace-nowrap">{st.classId}</td>
-                        <td className="p-3 text-slate-400 whitespace-nowrap">{st.dob}</td>
-                        <td className="p-3 text-slate-400">{st.gender}</td>
-                        <td className="p-3 text-slate-400">{st.ethnicity}</td>
-                        <td className="p-3 font-mono text-slate-300 whitespace-nowrap">{st.phone || '—'}</td>
-                        <td className="p-3 text-slate-400 max-w-[200px] truncate" title={st.address || 'Chưa cập nhật'}>
-                          {st.address || '—'}
-                        </td>
-                        <td className="p-3 text-center">
-                          <button
-                            onClick={() => toggleUnionStatus(st.id)}
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${st.isUnionMember
-                              ? 'bg-red-950 text-red-300 border-red-800 hover:bg-red-900'
-                              : 'bg-slate-900 text-slate-500 border-slate-700 hover:bg-slate-800'
-                              }`}
-                          >
-                            {st.isUnionMember ? '⭐ Đoàn viên' : 'Chưa'}
-                          </button>
-                        </td>
-                        <td className="p-3 text-slate-400">
-                          {st.isUnionMember ? (
-                            <div>
-                              <span className="font-bold text-slate-300">{st.unionPosition || 'Đoàn viên'}</span>
-                              <span className="text-[10px] block text-slate-500">
-                                {st.unionBookletStatus === 'submitted' ? 'Đã nộp sổ Đoàn' : 'Chưa nộp sổ'} • {st.unionFeeStatus === 'paid' ? 'Đã đóng đoàn phí' : 'Nợ đoàn phí'}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-slate-600">-</span>
-                          )}
-                        </td>
+                    {filteredStudents.map(st => {
+                      const isSelected = selectedStudentIds.includes(st.id) || selectedStudentIds.includes(st.studentId);
+                      return (
+                        <tr 
+                          key={st.id} 
+                          className={`transition-colors ${isSelected ? 'bg-red-950/30' : 'hover:bg-slate-800/40'}`}
+                        >
+                          <td className="p-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleStudentSelection(st.id || st.studentId)}
+                              className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-red-600 focus:ring-0 cursor-pointer"
+                            />
+                          </td>
+                          <td className="p-3 font-mono font-bold text-amber-400">{st.studentId}</td>
+                          <td className="p-3 font-bold text-white whitespace-nowrap">{st.name}</td>
+                          <td className="p-3 font-semibold text-slate-300 whitespace-nowrap">{st.classId}</td>
+                          <td className="p-3 text-slate-400 whitespace-nowrap">{st.dob}</td>
+                          <td className="p-3 text-slate-400">{st.gender}</td>
+                          <td className="p-3 text-slate-400">{st.ethnicity}</td>
+                          <td className="p-3 font-mono text-slate-300 whitespace-nowrap">{st.phone || '—'}</td>
+                          <td className="p-3 text-slate-400 max-w-[200px] truncate" title={st.address || 'Chưa cập nhật'}>
+                            {st.address || '—'}
+                          </td>
+                          <td className="p-3 text-center">
+                            <button
+                              onClick={() => toggleUnionStatus(st.id)}
+                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${st.isUnionMember
+                                ? 'bg-red-950 text-red-300 border-red-800 hover:bg-red-900'
+                                : 'bg-slate-900 text-slate-500 border-slate-700 hover:bg-slate-800'
+                                }`}
+                            >
+                              {st.isUnionMember ? '⭐ Đoàn viên' : 'Chưa'}
+                            </button>
+                          </td>
+                          <td className="p-3 text-slate-400">
+                            {st.isUnionMember ? (
+                              <div>
+                                <span className="font-bold text-slate-300">{st.unionPosition || 'Đoàn viên'}</span>
+                                <span className="text-[10px] block text-slate-500">
+                                  {st.unionBookletStatus === 'submitted' ? 'Đã nộp sổ Đoàn' : 'Chưa nộp sổ'} • {st.unionFeeStatus === 'paid' ? 'Đã đóng đoàn phí' : 'Nợ đoàn phí'}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-600">-</span>
+                            )}
+                          </td>
                         <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
                           <button
                             onClick={() => {
@@ -3359,7 +3477,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           </button>
                         </td>
                       </tr>
-                    ))}
+                    );
+                  })}
                   </tbody>
                 </table>
               </div>

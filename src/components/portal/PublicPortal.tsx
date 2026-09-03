@@ -15,6 +15,8 @@ import {
   Sparkles, 
   Lock, 
   LogIn, 
+  LogOut,
+  LayoutDashboard,
   Info,
   X,
   ExternalLink,
@@ -32,6 +34,9 @@ import { YouthUnionBadge } from '../common/YouthUnionBadge';
 
 export const PublicPortal: React.FC = () => {
   const { 
+    currentUser,
+    setActiveView,
+    logout,
     activeWeek, 
     setActiveWeek, 
     getWeeklyScores, 
@@ -648,57 +653,114 @@ export const PublicPortal: React.FC = () => {
         <div className="lg:col-span-3 space-y-4">
           <div className="sticky top-24 space-y-4">
             
-            {/* Login Card */}
-            <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
-              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-800">
-                <div className="p-2 bg-red-600/20 text-red-400 rounded-xl border border-red-600/30">
-                  <LogIn className="w-5 h-5" />
+            {/* User Profile & Launchpad Card (If logged in) OR Login Form (If guest) */}
+            {currentUser ? (
+              <div className="glass-panel rounded-3xl p-5 border border-red-500/40 shadow-glow bg-gradient-to-b from-red-950/30 via-slate-900 to-slate-950 space-y-4">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
+                  <div className="p-2 bg-emerald-600/20 text-emerald-400 rounded-xl border border-emerald-600/30">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-white">TÀI KHOẢN ĐÃ ĐĂNG NHẬP</h3>
+                    <p className="text-[11px] text-slate-400">Phiên làm việc hiện tại của bạn</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-black text-white">ĐĂNG NHẬP HỆ THỐNG</h3>
-                  <p className="text-[11px] text-slate-400">Đăng nhập tài khoản & mật khẩu</p>
+
+                <div className="flex items-center gap-3 p-3 bg-slate-950 rounded-2xl border border-slate-800">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 text-white font-black text-base flex items-center justify-center shadow-md shrink-0">
+                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider">Đang hoạt động</span>
+                    </div>
+                    <h4 className="font-bold text-white text-xs sm:text-sm truncate">{currentUser.name}</h4>
+                    <p className="text-[11px] text-amber-400 font-semibold truncate">
+                      {currentUser.roleTitle || (currentUser.role === 'admin' ? 'Bí thư Đoàn Trường / Quản trị' : currentUser.role === 'manager' ? `GVCN Lớp ${currentUser.classId}` : currentUser.role === 'auditor' ? 'Cán bộ Đội Cờ Đỏ' : currentUser.role === 'youth_secretary' ? `Bí thư Chi đoàn ${currentUser.classId}` : 'Đoàn viên / Học sinh')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      if (currentUser.role === 'admin') setActiveView('admin');
+                      else if (currentUser.role === 'manager') setActiveView('manager');
+                      else if (currentUser.role === 'auditor') setActiveView('auditor');
+                      else if (currentUser.role === 'youth_secretary') setActiveView('secretary');
+                      else setActiveView('student');
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-glow transition-all active:scale-95"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>
+                      {currentUser.role === 'admin' ? 'Vào Bảng Điều Hành Quản Trị' : currentUser.role === 'manager' ? 'Vào Cổng Giáo Viên Chủ Nhiệm' : currentUser.role === 'auditor' ? 'Vào Bảng Chấm Điểm Cờ Đỏ' : 'Vào Không Gian Chi Đoàn'}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={logout}
+                    className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-800 transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Đăng Xuất Khỏi Hệ Thống</span>
+                  </button>
                 </div>
               </div>
-
-              <form onSubmit={handleLoginSubmit} className="space-y-3">
-                {loginError && (
-                  <div className="p-2.5 rounded-xl bg-red-950/80 border border-red-800 text-red-300 text-xs flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{loginError}</span>
+            ) : (
+              /* Login Card */
+              <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
+                <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-800">
+                  <div className="p-2 bg-red-600/20 text-red-400 rounded-xl border border-red-600/30">
+                    <LogIn className="w-5 h-5" />
                   </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Tên Đăng Nhập / Mã Tài Khoản</label>
-                  <input
-                    type="text"
-                    required
-                    value={loginUsername}
-                    onChange={(e) => setLoginUsername(e.target.value)}
-                    placeholder="vd: admin, gvcn_10_1, codo_nam..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 transition-colors font-mono"
-                  />
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-white">ĐĂNG NHẬP HỆ THỐNG</h3>
+                    <p className="text-[11px] text-slate-400">Đăng nhập tài khoản & mật khẩu</p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Mật Khẩu Truy Cập</label>
-                  <input
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="Mặc định: 123456@Password"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 transition-colors font-mono"
-                  />
-                </div>
+                <form onSubmit={handleLoginSubmit} className="space-y-3">
+                  {loginError && (
+                    <div className="p-2.5 rounded-xl bg-red-950/80 border border-red-800 text-red-300 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{loginError}</span>
+                    </div>
+                  )}
 
-                <button
-                  type="submit"
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold shadow-glow transition-all active:scale-95"
-                >
-                  Xác Thực & Vào Hệ Thống
-                </button>
-              </form>
-            </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Tên Đăng Nhập / Mã Tài Khoản</label>
+                    <input
+                      type="text"
+                      required
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      placeholder="vd: admin, gvcn_10_1, codo_nam..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 transition-colors font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Mật Khẩu Truy Cập</label>
+                    <input
+                      type="password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="Mặc định: 123456@Password"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 transition-colors font-mono"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold shadow-glow transition-all active:scale-95"
+                  >
+                    Xác Thực & Vào Hệ Thống
+                  </button>
+                </form>
+              </div>
+            )}
 
             {/* Quick Infobox */}
             <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 text-xs space-y-2">

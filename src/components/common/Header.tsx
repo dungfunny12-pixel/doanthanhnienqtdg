@@ -47,13 +47,22 @@ export const Header: React.FC = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
 
-  // Filter notifications relevant to current logged-in user
+  // Filter notifications strictly relevant to current logged-in user role & class authorization
   const userNotifications = notifications.filter(n => {
-    if (!currentUser) return n.targetRole === 'all' || n.targetClassId === 'ALL';
+    // If not logged in, only public announcements with no class restriction
+    if (!currentUser) {
+      return (n.targetRole === 'all' || !n.targetRole) && (!n.targetClassId || n.targetClassId === 'ALL');
+    }
+    // Admin has full global visibility
     if (currentUser.role === 'admin') return true;
-    if (n.targetClassId && currentUser.classId && n.targetClassId === currentUser.classId) return true;
-    if (n.targetRole === currentUser.role || n.targetRole === 'all') return true;
-    return false;
+
+    // Check Role Authorization
+    const roleMatches = !n.targetRole || n.targetRole === 'all' || n.targetRole === currentUser.role;
+
+    // Check Class Authorization
+    const classMatches = !n.targetClassId || n.targetClassId === 'ALL' || (currentUser.classId && n.targetClassId === currentUser.classId);
+
+    return roleMatches && classMatches;
   });
 
   const userUnreadCount = userNotifications.filter(n => !n.isRead).length;
@@ -320,7 +329,19 @@ export const Header: React.FC = () => {
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <span className="font-bold text-white text-xs leading-tight">{n.title}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-white text-xs leading-tight">{n.title}</span>
+                            {n.targetRole && n.targetRole !== 'all' && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-blue-950 text-blue-300 border border-blue-800">
+                                {n.targetRole === 'manager' ? 'GVCN' : n.targetRole === 'auditor' ? 'Cờ Đỏ' : n.targetRole === 'youth_secretary' ? 'Bí Thư' : 'Học Sinh'}
+                              </span>
+                            )}
+                            {n.targetClassId && n.targetClassId !== 'ALL' && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
+                                Lớp {n.targetClassId}
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[9px] text-slate-500 shrink-0">{n.createdAt}</span>
                         </div>
                         <p className="text-[11px] text-slate-300 mt-1 leading-snug">{n.message}</p>
