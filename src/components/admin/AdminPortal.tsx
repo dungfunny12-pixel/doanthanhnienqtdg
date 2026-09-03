@@ -2276,8 +2276,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 key={tab.id}
                 onClick={() => setAdminTab(tab.id as any)}
                 className={`w-full px-3 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs font-bold border text-center ${isActive
-                    ? 'bg-red-600 border-red-500 text-white shadow-glow'
-                    : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700'
+                  ? 'bg-red-600 border-red-500 text-white shadow-glow'
+                  : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700'
                   }`}
               >
                 <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
@@ -2337,8 +2337,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setViolationHubSubTab('scoreboard')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${violationHubSubTab === 'scoreboard'
-                    ? 'bg-red-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-red-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <Table className="w-3.5 h-3.5" />
@@ -2349,8 +2349,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setViolationHubSubTab('violations_list')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${violationHubSubTab === 'violations_list'
-                    ? 'bg-red-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-red-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <ShieldAlert className="w-3.5 h-3.5" />
@@ -2365,8 +2365,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setViolationHubSubTab('appeals')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${violationHubSubTab === 'appeals'
-                    ? 'bg-purple-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-purple-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <Scale className="w-3.5 h-3.5" />
@@ -2480,8 +2480,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                   setIsViolationModalOpen(true);
                                 }}
                                 className={`px-1.5 py-0.5 rounded transition-all ${ded > 0
-                                    ? 'text-rose-400 hover:bg-rose-950 font-bold'
-                                    : 'text-slate-500 hover:text-white hover:bg-slate-800'
+                                  ? 'text-rose-400 hover:bg-rose-950 font-bold'
+                                  : 'text-slate-500 hover:text-white hover:bg-slate-800'
                                   }`}
                                 title={`Ghi nhận / Trừ điểm ${item.className} vào Thứ ${d.replace('T', '')}`}
                               >
@@ -2511,8 +2511,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                               setIsViolationModalOpen(true);
                             }}
                             className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono transition-all inline-flex items-center gap-1 shadow-sm ${item.totalDeduction > 0
-                                ? 'bg-rose-950/80 text-rose-300 border border-rose-700/60 hover:bg-rose-900'
-                                : 'bg-slate-900/80 text-slate-400 border border-slate-800 hover:text-rose-400 hover:bg-slate-800'
+                              ? 'bg-rose-950/80 text-rose-300 border border-rose-700/60 hover:bg-rose-900'
+                              : 'bg-slate-900/80 text-slate-400 border border-slate-800 hover:text-rose-400 hover:bg-slate-800'
                               }`}
                             title="Bấm để Ghi nhận / Quản lý Trừ điểm của lớp"
                           >
@@ -2527,8 +2527,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                             type="button"
                             onClick={() => setBonusModalClass({ classId: item.classId, className: item.className })}
                             className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono transition-all inline-flex items-center gap-1 shadow-sm ${item.totalBonus > 0
-                                ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600 hover:bg-emerald-900'
-                                : 'bg-slate-900/80 text-slate-400 border border-slate-800 hover:text-emerald-300 hover:bg-slate-800'
+                              ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600 hover:bg-emerald-900'
+                              : 'bg-slate-900/80 text-slate-400 border border-slate-800 hover:text-emerald-300 hover:bg-slate-800'
                               }`}
                             title="Bấm để Thêm / Sửa / Xóa điểm thưởng của lớp"
                           >
@@ -2718,8 +2718,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       key={group.id}
                       onClick={() => setSelectedCriterionGroup(group.id)}
                       className={`px-3 py-1.5 rounded-xl font-bold transition-all ${selectedCriterionGroup === group.id
-                          ? 'bg-red-600 text-white shadow-glow'
-                          : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
+                        ? 'bg-red-600 text-white shadow-glow'
+                        : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
                         }`}
                     >
                       {group.label}
@@ -2805,9 +2805,9 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         <td className="p-3 text-slate-400">{vio.reportedBy.name}</td>
                         <td className="p-3 text-center">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${vio.status === 'accepted' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' :
-                              vio.status === 'appealed' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
-                                vio.status === 'approved_appeal' ? 'bg-blue-950 text-blue-300 border border-blue-800' :
-                                  'bg-amber-950 text-amber-300 border border-amber-800'
+                            vio.status === 'appealed' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
+                              vio.status === 'approved_appeal' ? 'bg-blue-950 text-blue-300 border border-blue-800' :
+                                'bg-amber-950 text-amber-300 border border-amber-800'
                             }`}>
                             {vio.status === 'accepted' ? 'Đã duyệt' : vio.status === 'appealed' ? 'Đang khiếu nại' : vio.status === 'approved_appeal' ? 'Đã hủy lỗi' : 'Chờ duyệt'}
                           </span>
@@ -3009,8 +3009,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setOperationsSubTab('students')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${operationsSubTab === 'students'
-                    ? 'bg-blue-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>👨‍🎓 Học Sinh & Đoàn Viên ({students.length})</span>
@@ -3020,8 +3020,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setOperationsSubTab('classes')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${operationsSubTab === 'classes'
-                    ? 'bg-blue-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>🏫 Danh Sách Lớp ({classes.length})</span>
@@ -3031,8 +3031,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setOperationsSubTab('duties')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${operationsSubTab === 'duties'
-                    ? 'bg-blue-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>🛡️ Phân Công Trực Tuần</span>
@@ -3042,8 +3042,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setOperationsSubTab('weeks')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${operationsSubTab === 'weeks'
-                    ? 'bg-blue-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>📅 Cấu Hình Tuần ({weeksConfig.length})</span>
@@ -3171,8 +3171,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           <button
                             onClick={() => toggleUnionStatus(st.id)}
                             className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${st.isUnionMember
-                                ? 'bg-red-950 text-red-300 border-red-800 hover:bg-red-900'
-                                : 'bg-slate-900 text-slate-500 border-slate-700 hover:bg-slate-800'
+                              ? 'bg-red-950 text-red-300 border-red-800 hover:bg-red-900'
+                              : 'bg-slate-900 text-slate-500 border-slate-700 hover:bg-slate-800'
                               }`}
                           >
                             {st.isUnionMember ? '⭐ Đoàn viên' : 'Chưa'}
@@ -3292,8 +3292,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   <div
                     key={c.id}
                     className={`p-4 rounded-2xl border space-y-2 text-xs transition-all ${c.isArchived
-                        ? 'bg-slate-950/40 border-slate-800 opacity-60'
-                        : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                      ? 'bg-slate-950/40 border-slate-800 opacity-60'
+                      : 'bg-slate-950 border-slate-800 hover:border-slate-700'
                       }`}
                   >
                     <div className="flex items-center justify-between">
@@ -3601,8 +3601,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                             <button
                               onClick={() => toggleAuditorActive(auditor.id)}
                               className={`px-2 py-0.2 rounded-full text-[9px] font-bold border transition-colors ${auditor.isActive
-                                  ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                                  : 'bg-slate-900 text-slate-500 border-slate-700'
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                : 'bg-slate-900 text-slate-500 border-slate-700'
                                 }`}
                             >
                               {auditor.isActive ? 'Đang trực' : 'Tạm nghỉ'}
@@ -3764,8 +3764,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   <div
                     key={w.weekNumber}
                     className={`p-4 rounded-2xl border space-y-3 text-xs transition-all ${w.isCurrent
-                        ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500 shadow-glow'
-                        : 'bg-slate-950 border-slate-800'
+                      ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500 shadow-glow'
+                      : 'bg-slate-950 border-slate-800'
                       }`}
                   >
                     <div className="flex items-center justify-between">
@@ -3790,8 +3790,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       <button
                         onClick={() => toggleWeekLockDirect(w.weekNumber)}
                         className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border flex items-center gap-1 transition-colors ${w.isLocked
-                            ? 'bg-rose-950 text-rose-300 border-rose-700 hover:bg-rose-900'
-                            : 'bg-emerald-950 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
+                          ? 'bg-rose-950 text-rose-300 border-rose-700 hover:bg-rose-900'
+                          : 'bg-emerald-950 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
                           }`}
                       >
                         {w.isLocked ? <Lock className="w-3 h-3 text-rose-400" /> : <Unlock className="w-3 h-3 text-emerald-400" />}
@@ -3870,8 +3870,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setMediaHubSubTab('news')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${mediaHubSubTab === 'news'
-                    ? 'bg-blue-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>📰 Bản Tin Phong Trào ({news.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length})</span>
@@ -3881,8 +3881,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setMediaHubSubTab('announcements')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${mediaHubSubTab === 'announcements'
-                    ? 'bg-amber-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-amber-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>📢 Thông Báo Chỉ Đạo ({news.filter(n => n.category === 'announcement' || n.id.startsWith('ann-')).length})</span>
@@ -3892,8 +3892,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setMediaHubSubTab('tasks_notices')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${mediaHubSubTab === 'tasks_notices'
-                    ? 'bg-red-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-red-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>🛠️ Điều Động & Lao Động ({notices.length})</span>
@@ -3903,8 +3903,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setMediaHubSubTab('events')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${mediaHubSubTab === 'events'
-                    ? 'bg-emerald-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-emerald-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>🏆 Sự Kiện Phong Trào ({events.length})</span>
@@ -3914,8 +3914,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setMediaHubSubTab('activity_reports')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${mediaHubSubTab === 'activity_reports'
-                    ? 'bg-purple-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-purple-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>🚩 Báo Cáo Phong Trào ({activityReports.length})</span>
@@ -4004,8 +4004,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         onClick={() => toggleNewsVisibility(article.id)}
                         title={article.isHidden ? 'Hiển thị ra trang chủ' : 'Ẩn khỏi trang chủ'}
                         className={`p-2 rounded-xl border text-xs font-bold transition-colors ${article.isHidden
-                            ? 'bg-slate-900 border-slate-700 text-slate-400'
-                            : 'bg-emerald-950 border-emerald-800 text-emerald-300'
+                          ? 'bg-slate-900 border-slate-700 text-slate-400'
+                          : 'bg-emerald-950 border-emerald-800 text-emerald-300'
                           }`}
                       >
                         {article.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -4124,8 +4124,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         onClick={() => toggleNewsVisibility(ann.id)}
                         title={ann.isHidden ? 'Hiển thị ra trang chủ' : 'Ẩn khỏi trang chủ'}
                         className={`p-2 rounded-xl border text-xs font-bold transition-colors ${ann.isHidden
-                            ? 'bg-slate-900 border-slate-700 text-slate-400'
-                            : 'bg-emerald-950 border-emerald-800 text-emerald-300'
+                          ? 'bg-slate-900 border-slate-700 text-slate-400'
+                          : 'bg-emerald-950 border-emerald-800 text-emerald-300'
                           }`}
                       >
                         {ann.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -4215,8 +4215,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                             {item.type === 'lao_dong' ? 'LAO ĐỘNG' : item.type === 'cuoc_hop' ? 'CUỘC HỌP' : 'ĐIỀU ĐỘNG'}
                           </span>
                           <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${item.status === 'completed'
-                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                              : 'bg-amber-950 text-amber-300 border border-amber-800'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                            : 'bg-amber-950 text-amber-300 border border-amber-800'
                             }`}>
                             {item.status === 'completed' ? '✓ ĐÃ HOÀN THÀNH' : '⏳ ĐANG TRIỂN KHAI'}
                           </span>
@@ -4244,8 +4244,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         }}
                         title="Đổi trạng thái hoàn thành"
                         className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-colors ${item.status === 'completed'
-                            ? 'bg-slate-900 border-slate-700 text-slate-400'
-                            : 'bg-emerald-950 border-emerald-800 text-emerald-300'
+                          ? 'bg-slate-900 border-slate-700 text-slate-400'
+                          : 'bg-emerald-950 border-emerald-800 text-emerald-300'
                           }`}
                       >
                         {item.status === 'completed' ? 'Mở Lại' : '✓ Hoàn Thành'}
@@ -4351,8 +4351,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         </div>
                         <div className="absolute top-2 right-2">
                           <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${ev.isRegistrationOpen
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-slate-800 text-slate-400'
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-slate-800 text-slate-400'
                             }`}>
                             {ev.isRegistrationOpen ? 'Đang Mở Đăng Ký' : 'Đã Đóng'}
                           </span>
@@ -4551,9 +4551,9 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       <div className="space-y-1">
                         <div className="flex items-center flex-wrap gap-2">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${report.activityType === 'the_thao' ? 'bg-amber-950 text-amber-300 border-amber-800' :
-                              report.activityType === 'tinh_nguyen' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
-                                report.activityType === 'van_nghe' ? 'bg-purple-950 text-purple-300 border-purple-800' :
-                                  'bg-blue-950 text-blue-300 border-blue-800'
+                            report.activityType === 'tinh_nguyen' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
+                              report.activityType === 'van_nghe' ? 'bg-purple-950 text-purple-300 border-purple-800' :
+                                'bg-blue-950 text-blue-300 border-blue-800'
                             }`}>
                             {report.activityType === 'the_thao' ? '🏅 Hội Thao' :
                               report.activityType === 'tinh_nguyen' ? '🌱 Tình Nguyện' :
@@ -4773,8 +4773,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   type="button"
                   onClick={() => setCritGroupFilter('ALL')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${critGroupFilter === 'ALL'
-                      ? 'bg-red-600 text-white shadow-glow'
-                      : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                    ? 'bg-red-600 text-white shadow-glow'
+                    : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
                     }`}
                 >
                   Tất cả nhóm ({criteria.length})
@@ -4787,8 +4787,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       key={grp}
                       onClick={() => setCritGroupFilter(grp)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${critGroupFilter === grp
-                          ? 'bg-red-600 text-white shadow-glow'
-                          : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                        ? 'bg-red-600 text-white shadow-glow'
+                        : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
                         }`}
                     >
                       <span>{grp}</span>
@@ -4817,8 +4817,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     key={tf.id}
                     onClick={() => setCritTypeFilter(tf.id as any)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${critTypeFilter === tf.id
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-slate-900 text-slate-400 hover:text-white'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-white'
                       }`}
                   >
                     {tf.label}
@@ -4840,8 +4840,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     key={sf.id}
                     onClick={() => setCritStatusFilter(sf.id as any)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${critStatusFilter === sf.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-900 text-slate-400 hover:text-white'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-white'
                       }`}
                   >
                     {sf.label}
@@ -4957,8 +4957,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <button
                       onClick={() => toggleCriterion(c.id)}
                       className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border transition-colors ${c.isEnabled
-                          ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300'
-                          : 'bg-slate-900 border-slate-700 text-slate-500'
+                        ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300'
+                        : 'bg-slate-900 border-slate-700 text-slate-500'
                         }`}
                     >
                       {c.isEnabled ? 'Đang Bật' : 'Tạm Tắt'}
@@ -5003,8 +5003,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setSystemHubSubTab('users')}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${systemHubSubTab === 'users'
-                    ? 'bg-purple-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-purple-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>👥 Tài Khoản & Phân Quyền ({users.length})</span>
@@ -5014,8 +5014,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setSystemHubSubTab('settings')}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${systemHubSubTab === 'settings'
-                    ? 'bg-red-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-red-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>🎨 Nhận Diện Trường</span>
@@ -5025,8 +5025,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setSystemHubSubTab('slides')}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${systemHubSubTab === 'slides'
-                    ? 'bg-amber-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-amber-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>📸 Slide Ảnh Hoạt Động ({activitySlides.length})</span>
@@ -5036,8 +5036,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setSystemHubSubTab('export')}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${systemHubSubTab === 'export'
-                    ? 'bg-emerald-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-emerald-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>📑 Chốt Sổ & Báo Cáo</span>
@@ -5047,8 +5047,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setSystemHubSubTab('backup')}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${systemHubSubTab === 'backup'
-                    ? 'bg-cyan-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-cyan-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>💾 Sao Lưu & CSDL</span>
@@ -5058,8 +5058,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setSystemHubSubTab('rollover')}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${systemHubSubTab === 'rollover'
-                    ? 'bg-gradient-to-r from-red-600 to-amber-600 text-white shadow-glow'
-                    : 'text-amber-400 hover:text-white'
+                  ? 'bg-gradient-to-r from-red-600 to-amber-600 text-white shadow-glow'
+                  : 'text-amber-400 hover:text-white'
                   }`}
               >
                 <span>🔄 Chuyển Giao Năm Học</span>
@@ -5069,8 +5069,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 type="button"
                 onClick={() => setSystemHubSubTab('logs')}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${systemHubSubTab === 'logs'
-                    ? 'bg-blue-600 text-white shadow-glow'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>📜 Nhật Ký ({auditLogs.length})</span>
@@ -5125,8 +5125,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       key={rf.id}
                       onClick={() => setUserRoleFilter(rf.id)}
                       className={`px-3 py-1.5 rounded-xl font-bold transition-all ${userRoleFilter === rf.id
-                          ? 'bg-purple-600 text-white shadow-glow'
-                          : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
+                        ? 'bg-purple-600 text-white shadow-glow'
+                        : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
                         }`}
                     >
                       {rf.label}
@@ -5180,10 +5180,10 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         <td className="p-3 font-bold text-white whitespace-nowrap">{u.name}</td>
                         <td className="p-3">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${u.role === 'admin' ? 'bg-red-950 text-red-300 border-red-700' :
-                              u.role === 'manager' ? 'bg-blue-950 text-blue-300 border-blue-700' :
-                                u.role === 'auditor' ? 'bg-amber-950 text-amber-300 border-amber-700' :
-                                  u.role === 'youth_secretary' ? 'bg-emerald-950 text-emerald-300 border-emerald-700' :
-                                    'bg-slate-800 text-slate-300 border-slate-700'
+                            u.role === 'manager' ? 'bg-blue-950 text-blue-300 border-blue-700' :
+                              u.role === 'auditor' ? 'bg-amber-950 text-amber-300 border-amber-700' :
+                                u.role === 'youth_secretary' ? 'bg-emerald-950 text-emerald-300 border-emerald-700' :
+                                  'bg-slate-800 text-slate-300 border-slate-700'
                             }`}>
                             {u.roleTitle}
                           </span>
@@ -5207,8 +5207,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                             onClick={() => toggleUserActive(u.id)}
                             title="Bấm để Khóa / Mở khóa tài khoản"
                             className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${u.isActive
-                                ? 'bg-emerald-950 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
-                                : 'bg-rose-950 text-rose-300 border-rose-700 hover:bg-rose-900'
+                              ? 'bg-emerald-950 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
+                              : 'bg-rose-950 text-rose-300 border-rose-700 hover:bg-rose-900'
                               }`}
                           >
                             {u.isActive ? '✅ Hoạt động' : '🔒 Bị khóa'}
@@ -5313,8 +5313,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         key={theme.id}
                         onClick={() => setSettingsForm({ ...settingsForm, themeColor: theme.id as any })}
                         className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${settingsForm.themeColor === theme.id
-                            ? `${theme.bg} text-white border-white shadow-glow ring-2 ring-white/50 scale-105`
-                            : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
+                          ? `${theme.bg} text-white border-white shadow-glow ring-2 ring-white/50 scale-105`
+                          : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
                           }`}
                       >
                         <div className={`w-5 h-5 rounded-full ${theme.bg} border-2 border-white`} />
@@ -5647,8 +5647,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   <div
                     key={slide.id}
                     className={`glass-panel rounded-2xl p-4 border flex flex-col justify-between space-y-3 transition-all ${slide.isActive
-                        ? 'border-slate-800 hover:border-slate-700 bg-slate-900/60'
-                        : 'border-slate-800/50 bg-slate-950/40 opacity-70'
+                      ? 'border-slate-800 hover:border-slate-700 bg-slate-900/60'
+                      : 'border-slate-800/50 bg-slate-950/40 opacity-70'
                       }`}
                   >
                     <div className="space-y-3">
@@ -5670,8 +5670,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
                         <div className="absolute top-2 right-2">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${slide.isActive
-                              ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                              : 'bg-slate-900 text-slate-400 border-slate-800'
+                            ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                            : 'bg-slate-900 text-slate-400 border-slate-800'
                             }`}>
                             {slide.isActive ? '🟢 Đang Bật' : '🔒 Đang Tắt'}
                           </span>
@@ -5700,8 +5700,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         type="button"
                         onClick={() => toggleActivitySlideStatus(slide.id)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors ${slide.isActive
-                            ? 'bg-slate-800 hover:bg-slate-700 text-amber-300'
-                            : 'bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200'
+                          ? 'bg-slate-800 hover:bg-slate-700 text-amber-300'
+                          : 'bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200'
                           }`}
                       >
                         {slide.isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -5817,8 +5817,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         setPinError('');
                       }}
                       className={`px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all ${Boolean(weeksConfig.find(w => w.weekNumber === selectedReportWeek)?.isLocked)
-                          ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                          : 'bg-rose-600 hover:bg-rose-500 text-white shadow-glow'
+                        ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                        : 'bg-rose-600 hover:bg-rose-500 text-white shadow-glow'
                         }`}
                       title={`Khóa / Mở khóa sổ điểm thi đua Tuần ${selectedReportWeek}`}
                     >
@@ -5835,8 +5835,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   type="button"
                   onClick={() => setReportViewTab('weeks_grid')}
                   className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${reportViewTab === 'weeks_grid'
-                      ? 'bg-emerald-600 text-white shadow-glow'
-                      : 'text-slate-400 hover:text-white'
+                    ? 'bg-emerald-600 text-white shadow-glow'
+                    : 'text-slate-400 hover:text-white'
                     }`}
                 >
                   <Calendar className="w-4 h-4" />
@@ -5847,8 +5847,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   type="button"
                   onClick={() => setReportViewTab('cumulative_ranking')}
                   className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${reportViewTab === 'cumulative_ranking'
-                      ? 'bg-amber-600 text-white shadow-glow'
-                      : 'text-slate-400 hover:text-white'
+                    ? 'bg-amber-600 text-white shadow-glow'
+                    : 'text-slate-400 hover:text-white'
                     }`}
                 >
                   <Trophy className="w-4 h-4" />
@@ -5859,8 +5859,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   type="button"
                   onClick={() => setReportViewTab('charts')}
                   className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${reportViewTab === 'charts'
-                      ? 'bg-blue-600 text-white shadow-glow'
-                      : 'text-slate-400 hover:text-white'
+                    ? 'bg-blue-600 text-white shadow-glow'
+                    : 'text-slate-400 hover:text-white'
                     }`}
                 >
                   <BarChart3 className="w-4 h-4" />
@@ -5871,8 +5871,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   type="button"
                   onClick={() => setReportViewTab('weekly_analysis')}
                   className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${reportViewTab === 'weekly_analysis'
-                      ? 'bg-purple-600 text-white shadow-glow'
-                      : 'text-slate-400 hover:text-white'
+                    ? 'bg-purple-600 text-white shadow-glow'
+                    : 'text-slate-400 hover:text-white'
                     }`}
                 >
                   <Search className="w-4 h-4" />
@@ -5883,8 +5883,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   type="button"
                   onClick={() => setReportViewTab('semester_summary')}
                   className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${reportViewTab === 'semester_summary'
-                      ? 'bg-gradient-to-r from-red-600 to-amber-600 text-white shadow-glow'
-                      : 'text-amber-400 hover:text-white bg-slate-900/60 border border-amber-500/20'
+                    ? 'bg-gradient-to-r from-red-600 to-amber-600 text-white shadow-glow'
+                    : 'text-amber-400 hover:text-white bg-slate-900/60 border border-amber-500/20'
                     }`}
                 >
                   <Award className="w-4 h-4 text-amber-400" />
@@ -5923,8 +5923,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         <div
                           key={week.weekNumber}
                           className={`p-4 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${week.weekNumber === activeWeek
-                              ? 'bg-slate-900 border-amber-500/60 shadow-lg ring-1 ring-amber-500/30'
-                              : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
+                            ? 'bg-slate-900 border-amber-500/60 shadow-lg ring-1 ring-amber-500/30'
+                            : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
                             }`}
                         >
                           <div className="space-y-2">
@@ -5949,8 +5949,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                   </span>
                                 )}
                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${week.isLocked
-                                    ? 'bg-rose-950 text-rose-300 border-rose-800'
-                                    : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                  ? 'bg-rose-950 text-rose-300 border-rose-800'
+                                  : 'bg-emerald-950 text-emerald-300 border-emerald-800'
                                   }`}>
                                   {week.isLocked ? '🔒 Đã Khóa' : '🟢 Mở Điểm'}
                                 </span>
@@ -6037,8 +6037,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           type="button"
                           onClick={() => setCumulativeGradeFilter(g)}
                           className={`px-3 py-1 rounded-lg transition-all ${cumulativeGradeFilter === g
-                              ? 'bg-amber-600 text-white shadow-glow'
-                              : 'text-slate-400 hover:text-white'
+                            ? 'bg-amber-600 text-white shadow-glow'
+                            : 'text-slate-400 hover:text-white'
                             }`}
                         >
                           {g === 'ALL' ? 'Tất Cả 18 Lớp' : `Khối ${g}`}
@@ -6180,12 +6180,12 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                               {/* Rating / Tier Badge */}
                               <td className="p-3 text-center">
                                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${item.cumulativeRank === 1
-                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                    : item.rating === 'Xuất sắc'
-                                      ? 'bg-purple-950/40 text-purple-300 border-purple-800/50'
-                                      : item.rating === 'Tiên tiến'
-                                        ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
-                                        : 'bg-rose-950/40 text-rose-300 border-rose-800/50'
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                  : item.rating === 'Xuất sắc'
+                                    ? 'bg-purple-950/40 text-purple-300 border-purple-800/50'
+                                    : item.rating === 'Tiên tiến'
+                                      ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
+                                      : 'bg-rose-950/40 text-rose-300 border-rose-800/50'
                                   }`}>
                                   {item.cumulativeRank === 1 ? '🏆 Cờ Luân Lưu' : item.rating}
                                 </span>
@@ -6218,8 +6218,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           type="button"
                           onClick={() => setChartGradeFilter(g)}
                           className={`px-3 py-1 rounded-lg transition-all ${chartGradeFilter === g
-                              ? 'bg-blue-600 text-white shadow-glow'
-                              : 'text-slate-400 hover:text-white'
+                            ? 'bg-blue-600 text-white shadow-glow'
+                            : 'text-slate-400 hover:text-white'
                             }`}
                         >
                           {g === 'ALL' ? 'Toàn Trường (18 Lớp)' : `Khối ${g}`}
@@ -6546,8 +6546,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                             type="button"
                             onClick={() => setSemesterReportType(t.id as any)}
                             className={`px-3 py-1.5 rounded-lg transition-all ${semesterReportType === t.id
-                                ? 'bg-amber-600 text-white shadow-glow'
-                                : 'text-slate-400 hover:text-white'
+                              ? 'bg-amber-600 text-white shadow-glow'
+                              : 'text-slate-400 hover:text-white'
                               }`}
                           >
                             {t.label}
@@ -6699,12 +6699,12 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
                             <td className="p-3 text-center">
                               <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${item.rank <= 3
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                  : item.rank <= 9
-                                    ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
-                                    : item.rank <= 15
-                                      ? 'bg-blue-950/40 text-blue-300 border-blue-800/50'
-                                      : 'bg-rose-950/40 text-rose-300 border-rose-800/50'
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                : item.rank <= 9
+                                  ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
+                                  : item.rank <= 15
+                                    ? 'bg-blue-950/40 text-blue-300 border-blue-800/50'
+                                    : 'bg-rose-950/40 text-rose-300 border-rose-800/50'
                                 }`}>
                                 {item.awardTitle}
                               </span>
@@ -6948,8 +6948,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                 alert(`Đã chuyển chế độ xem sang ${y.name}`);
                               }}
                               className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${selectedAcademicYearId === y.id
-                                  ? 'bg-amber-600 text-white shadow-glow'
-                                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700'
+                                ? 'bg-amber-600 text-white shadow-glow'
+                                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700'
                                 }`}
                             >
                               {selectedAcademicYearId === y.id ? '✓ Đang Xem' : '👁️ Xem Dữ Liệu'}
@@ -9461,8 +9461,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           <label
                             key={c.id}
                             className={`p-1.5 rounded-lg border text-center font-bold text-[11px] cursor-pointer transition-all ${isChecked
-                                ? 'bg-red-950 text-white border-red-700'
-                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                              ? 'bg-red-950 text-white border-red-700'
+                              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                               }`}
                           >
                             <input
@@ -9830,8 +9830,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       type="button"
                       onClick={() => setBonusPointsInput(pt)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono transition-colors ${bonusPointsInput === pt
-                          ? 'bg-emerald-600 text-white shadow-glow'
-                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
+                        ? 'bg-emerald-600 text-white shadow-glow'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
                         }`}
                     >
                       +{pt}đ
@@ -10078,8 +10078,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       type="button"
                       onClick={() => setDirectScoreTarget(preset)}
                       className={`px-2 py-0.5 rounded-lg font-mono text-[11px] font-bold border transition-all ${directScoreTarget === preset
-                          ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
-                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white hover:border-slate-600'
+                        ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
+                        : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white hover:border-slate-600'
                         }`}
                     >
                       {preset}
@@ -10295,8 +10295,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                               }));
                             }}
                             className={`w-24 px-2 py-1 rounded-lg text-center font-mono font-black text-xs border focus:outline-none ${delta !== 0
-                                ? 'bg-amber-950 text-amber-300 border-amber-500 shadow-sm'
-                                : 'bg-slate-950 text-slate-200 border-slate-700'
+                              ? 'bg-amber-950 text-amber-300 border-amber-500 shadow-sm'
+                              : 'bg-slate-950 text-slate-200 border-slate-700'
                               }`}
                           />
                         </td>
