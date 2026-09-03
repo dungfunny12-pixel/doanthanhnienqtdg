@@ -14,6 +14,7 @@ import {
   X,
   Bell,
   CheckCircle2,
+  CheckSquare,
   Download,
   Trash2,
   Edit3,
@@ -830,6 +831,7 @@ export const AdminPortal: React.FC = () => {
   };
 
   // Student Filters & Multi-Selection
+  const [studentGradeFilter, setStudentGradeFilter] = useState<'ALL' | '10' | '11' | '12'>('ALL');
   const [studentClassFilter, setStudentClassFilter] = useState<string>('ALL');
   const [studentUnionFilter, setStudentUnionFilter] = useState<string>('ALL');
   const [studentSearch, setStudentSearch] = useState<string>('');
@@ -1223,22 +1225,60 @@ export const AdminPortal: React.FC = () => {
     return matchWeek && matchGroup && matchDay && matchClass && matchSearch;
   });
 
-  // Filter students
-  const filteredStudents = students.filter(s => {
-    const matchClass = studentClassFilter === 'ALL' || s.classId === studentClassFilter;
-    const matchUnion = studentUnionFilter === 'ALL' ||
-      (studentUnionFilter === 'UNION' && s.isUnionMember) ||
-      (studentUnionFilter === 'NON_UNION' && !s.isUnionMember);
-    const matchSearch = s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-      s.studentId.toLowerCase().includes(studentSearch.toLowerCase()) ||
-      (s.phone && s.phone.toLowerCase().includes(studentSearch.toLowerCase())) ||
-      (s.address && s.address.toLowerCase().includes(studentSearch.toLowerCase())) ||
-      (s.ethnicity && s.ethnicity.toLowerCase().includes(studentSearch.toLowerCase())) ||
-      (s.unionCardNumber && s.unionCardNumber.toLowerCase().includes(studentSearch.toLowerCase())) ||
-      (s.unionPosition && s.unionPosition.toLowerCase().includes(studentSearch.toLowerCase())) ||
-      s.classId.toLowerCase().includes(studentSearch.toLowerCase());
-    return matchClass && matchUnion && matchSearch;
-  });
+  // Filter students with Grade, Class, Union Status and Search keyword
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => {
+      const matchGrade = studentGradeFilter === 'ALL' || 
+        s.classId.startsWith(`${studentGradeFilter}/`) || 
+        s.grade?.toString() === studentGradeFilter;
+      const matchClass = studentClassFilter === 'ALL' || s.classId === studentClassFilter;
+      const matchUnion = studentUnionFilter === 'ALL' ||
+        ((studentUnionFilter === 'YES' || studentUnionFilter === 'UNION') && s.isUnionMember) ||
+        ((studentUnionFilter === 'NO' || studentUnionFilter === 'NON_UNION') && !s.isUnionMember);
+      const search = studentSearch.trim().toLowerCase();
+      const matchSearch = !search ||
+        s.name.toLowerCase().includes(search) ||
+        s.studentId.toLowerCase().includes(search) ||
+        (s.phone && s.phone.toLowerCase().includes(search)) ||
+        (s.address && s.address.toLowerCase().includes(search)) ||
+        (s.ethnicity && s.ethnicity.toLowerCase().includes(search)) ||
+        (s.unionCardNumber && s.unionCardNumber.toLowerCase().includes(search)) ||
+        (s.unionPosition && s.unionPosition.toLowerCase().includes(search)) ||
+        s.classId.toLowerCase().includes(search);
+      return matchGrade && matchClass && matchUnion && matchSearch;
+    });
+  }, [students, studentGradeFilter, studentClassFilter, studentUnionFilter, studentSearch]);
+
+  // Student classes available for the current grade filter
+  const availableStudentClasses = useMemo(() => {
+    if (studentGradeFilter === 'ALL') return classes;
+    return classes.filter(c => c.grade.toString() === studentGradeFilter || c.id.startsWith(`${studentGradeFilter}/`));
+  }, [classes, studentGradeFilter]);
+
+  // Student statistics for filter badges
+  const studentStats = useMemo(() => {
+    const countTotal = students.length;
+    const count10 = students.filter(s => s.grade === 10 || s.classId.startsWith('10/')).length;
+    const count11 = students.filter(s => s.grade === 11 || s.classId.startsWith('11/')).length;
+    const count12 = students.filter(s => s.grade === 12 || s.classId.startsWith('12/')).length;
+
+    const scopedStudents = studentGradeFilter === 'ALL' 
+      ? students 
+      : students.filter(s => s.grade?.toString() === studentGradeFilter || s.classId.startsWith(`${studentGradeFilter}/`));
+    
+    const scopedUnion = scopedStudents.filter(s => s.isUnionMember).length;
+    const scopedNonUnion = scopedStudents.length - scopedUnion;
+
+    return {
+      total: countTotal,
+      grade10: count10,
+      grade11: count11,
+      grade12: count12,
+      scopedTotal: scopedStudents.length,
+      scopedUnion,
+      scopedNonUnion
+    };
+  }, [students, studentGradeFilter]);
 
   // Filter Activity Reports submitted by Youth Secretaries
   const filteredActivityReports = activityReports.filter(r => {
@@ -2056,19 +2096,24 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
   // Handle Student Form Save
   const handleSaveStudent = (e: React.FormEvent) => {
     e.preventDefault();
-    const gradeVal = Number(studentForm.classId.split('/')[0]) as 10 | 11 | 12;
+    const gradeVal = (Number(studentForm.classId.split('/')[0]) || 10) as 10 | 11 | 12;
+    const cleanStudentData = {
+      ...studentForm,
+      studentId: studentForm.studentId.trim(),
+      name: studentForm.name.trim(),
+      phone: studentForm.phone.trim(),
+      address: studentForm.address.trim(),
+      dob: studentForm.dob,
+      ethnicity: studentForm.ethnicity.trim() || 'Kinh',
+      grade: gradeVal
+    };
+
     if (editingStudent) {
-      updateStudent(editingStudent.id, {
-        ...studentForm,
-        grade: gradeVal
-      });
-      alert(`Đã cập nhật hồ sơ học sinh/đoàn viên ${studentForm.name} thành công!`);
+      updateStudent(editingStudent.id || editingStudent.studentId, cleanStudentData);
+      alert(`✅ Đã lưu và đồng bộ hồ sơ học sinh/đoàn viên "${cleanStudentData.name}" vào hệ thống!`);
     } else {
-      addStudent({
-        ...studentForm,
-        grade: gradeVal
-      });
-      alert(`Đã thêm mới học sinh ${studentForm.name} vào lớp ${studentForm.classId}!`);
+      addStudent(cleanStudentData);
+      alert(`✅ Đã thêm mới và lưu học sinh "${cleanStudentData.name}" vào lớp ${cleanStudentData.classId}!`);
     }
     setIsStudentModalOpen(false);
     setEditingStudent(null);
@@ -3229,140 +3274,260 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
           {/* Master Sub-Tab 1: STUDENTS */}
           {operationsSubTab === 'students' && (
             <div className="space-y-4 animate-fadeIn">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                  {/* Class Filter */}
-                  <select
-                    value={studentClassFilter}
-                    onChange={(e) => setStudentClassFilter(e.target.value)}
-                    className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-400 font-bold text-xs"
-                  >
-                    <option value="ALL">Tất cả lớp ({classes.length} lớp)</option>
-                    {classes.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+              {/* Scientific Filter Bar Container */}
+              <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
+                
+                {/* 1. Grade Selector Pills */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                  <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                    <span className="text-xs font-bold text-slate-400 mr-1 flex items-center gap-1">
+                      <span>🏷️ Khối lớp:</span>
+                    </span>
+                    {(['ALL', '10', '11', '12'] as const).map(g => {
+                      const isSelected = studentGradeFilter === g;
+                      const count = g === 'ALL' ? studentStats.total : g === '10' ? studentStats.grade10 : g === '11' ? studentStats.grade11 : studentStats.grade12;
+                      return (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => {
+                            setStudentGradeFilter(g);
+                            setStudentClassFilter('ALL');
+                          }}
+                          className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-red-600 text-white shadow-glow'
+                              : 'bg-slate-950 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                          }`}
+                        >
+                          <span>{g === 'ALL' ? 'Tất cả Khối' : `Khối ${g}`}</span>
+                          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                            isSelected ? 'bg-black/30 text-white font-mono' : 'bg-slate-800 text-slate-400 font-mono'
+                          }`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
 
-                  <select
-                    value={studentUnionFilter}
-                    onChange={(e) => setStudentUnionFilter(e.target.value)}
-                    className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold text-xs"
-                  >
-                    <option value="ALL">Tất cả đoàn viên / học sinh</option>
-                    <option value="YES">Chỉ Đoàn viên ({students.filter(s => s.isUnionMember).length})</option>
-                    <option value="NO">Chưa vào Đoàn ({students.filter(s => !s.isUnionMember).length})</option>
-                  </select>
-
-                  {/* Search Input */}
-                  <div className="relative flex-1 sm:w-64">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-500" />
-                    <input
-                      type="text"
-                      value={studentSearch}
-                      onChange={(e) => setStudentSearch(e.target.value)}
-                      placeholder="Tìm mã HS, họ tên, SĐT, địa chỉ, dân tộc..."
-                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs placeholder-slate-500"
-                    />
+                  {/* Realtime Counter Badge */}
+                  <div className="flex items-center gap-2">
+                    <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-bold text-slate-300 flex items-center gap-1.5 shadow-sm">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>Hiển thị: <strong className="text-amber-400">{filteredStudents.length}</strong> / {students.length} học sinh</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                  {/* Batch Action Bar if selected */}
-                  {selectedStudentIds.length > 0 && (
-                    <div className="flex items-center gap-1.5 p-1 bg-red-950/80 border border-red-700 rounded-xl animate-fadeIn">
-                      <span className="text-[11px] font-black text-amber-300 px-2">
-                        Đã chọn: {selectedStudentIds.length}
+                {/* 2. Secondary Filter Bar (Class, Union Status, Search & Primary Actions) */}
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+                  <div className="flex flex-wrap items-center gap-2 flex-1">
+                    {/* Dynamic Class Selector */}
+                    <div className="relative min-w-[170px]">
+                      <select
+                        value={studentClassFilter}
+                        onChange={(e) => setStudentClassFilter(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-400 font-bold text-xs focus:outline-none focus:border-amber-500 cursor-pointer shadow-sm"
+                      >
+                        <option value="ALL">
+                          {studentGradeFilter === 'ALL' ? `🏫 Tất cả ${classes.length} lớp` : `🏫 Tất cả lớp Khối ${studentGradeFilter}`}
+                        </option>
+                        {availableStudentClasses.map(c => {
+                          const classStudentCount = students.filter(s => s.classId === c.id).length;
+                          return (
+                            <option key={c.id} value={c.id}>
+                              {c.name} ({classStudentCount} HS)
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    {/* Union Status Filter Pills */}
+                    <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-700/80 text-xs font-bold shadow-sm">
+                      <button
+                        type="button"
+                        onClick={() => setStudentUnionFilter('ALL')}
+                        className={`px-2.5 py-1 rounded-lg transition-all ${
+                          studentUnionFilter === 'ALL'
+                            ? 'bg-slate-800 text-white font-black'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Tất cả học sinh"
+                      >
+                        Tất cả ({studentStats.scopedTotal})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStudentUnionFilter('YES')}
+                        className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                          studentUnionFilter === 'YES' || studentUnionFilter === 'UNION'
+                            ? 'bg-red-600 text-white font-black shadow-glow'
+                            : 'text-amber-400 hover:text-amber-300'
+                        }`}
+                        title="Chỉ đoàn viên"
+                      >
+                        <span>⭐ Đoàn viên</span>
+                        <span className="text-[10px] opacity-80">({studentStats.scopedUnion})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStudentUnionFilter('NO')}
+                        className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                          studentUnionFilter === 'NO' || studentUnionFilter === 'NON_UNION'
+                            ? 'bg-slate-700 text-white font-black'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                        title="Chưa kết nạp Đoàn"
+                      >
+                        <span>Chưa vào</span>
+                        <span className="text-[10px] opacity-80">({studentStats.scopedNonUnion})</span>
+                      </button>
+                    </div>
+
+                    {/* Search Bar with Clear Button */}
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+                      <input
+                        type="text"
+                        value={studentSearch}
+                        onChange={(e) => setStudentSearch(e.target.value)}
+                        placeholder="Tìm theo Mã HS, Họ tên, SĐT, Địa chỉ, Dân tộc..."
+                        className="w-full pl-8 pr-8 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-red-500 shadow-sm"
+                      />
+                      {studentSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setStudentSearch('')}
+                          className="absolute right-2.5 top-2.5 text-slate-500 hover:text-white p-0.5 rounded-full"
+                          title="Xóa tìm kiếm"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Primary Action Buttons */}
+                  <div className="flex items-center gap-2 shrink-0 justify-end">
+                    <button
+                      onClick={() => setIsImportModalOpen(true)}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                      title="Nhập danh sách học sinh từ file Excel"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      <span>Import Excel</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setEditingStudent(null);
+                        setStudentForm({
+                          studentId: `HS2024${Math.floor(1000 + Math.random() * 9000)}`,
+                          name: '',
+                          classId: availableStudentClasses[0]?.id || classes[0]?.id || '10/1',
+                          grade: (Number((availableStudentClasses[0]?.id || '10/1').split('/')[0]) || 10) as 10 | 11 | 12,
+                          gender: 'Nam',
+                          dob: '2009-01-01',
+                          ethnicity: 'Kinh',
+                          phone: '',
+                          address: 'Thôn Trung Sơn, xã Đông Giang, TP Đà Nẵng',
+                          isUnionMember: true,
+                          unionCardNumber: '',
+                          unionPosition: 'Đoàn viên',
+                          unionJoinedDate: '2024-03-26',
+                          unionJoinedPlace: 'Đoàn trường THPT Quang Trung',
+                          unionFeeStatus: 'paid',
+                          unionBookletStatus: 'submitted',
+                          conductRating: 'Xuất sắc',
+                          customNotes: '',
+                          points: 100,
+                          rankTitle: 'Đoàn viên Tích cực',
+                          status: 'active'
+                        });
+                        setIsStudentModalOpen(true);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all active:scale-95"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>+ Thêm Học Sinh</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (selectedStudentIds.length === 0) {
+                          alert('👉 Vui lòng tích chọn ô vuông ở cột đầu tiên của các học sinh bạn muốn xóa trong danh sách!');
+                        } else {
+                          handleBatchDeleteStudents();
+                        }
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${
+                        selectedStudentIds.length > 0
+                          ? 'bg-red-600 hover:bg-red-500 text-white shadow-glow animate-pulse'
+                          : 'bg-slate-950 hover:bg-red-950/60 text-red-400 border border-red-800/60'
+                      }`}
+                      title={selectedStudentIds.length > 0 ? `Xóa ${selectedStudentIds.length} học sinh đã chọn` : 'Tích chọn ô vuông để xóa'}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-300" />
+                      <span>{selectedStudentIds.length > 0 ? `Xóa Đã Chọn (${selectedStudentIds.length})` : 'Xóa Học Sinh'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Batch Action Bar if any student is selected */}
+                {selectedStudentIds.length > 0 && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-red-950/70 border border-red-600/80 rounded-xl animate-fadeIn">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1 rounded-lg bg-red-600 text-white">
+                        <CheckSquare className="w-3.5 h-3.5" />
                       </span>
+                      <span className="text-xs font-black text-amber-300">
+                        Đang chọn: {selectedStudentIds.length} học sinh
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => handleBatchMakeUnionMember(true)}
-                        className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center gap-1"
-                        title="Chuyển thành Đoàn viên"
+                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
                       >
-                        <Star className="w-3 h-3 text-amber-300" />
-                        <span>Vào Đoàn</span>
+                        <Star className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Chuyển vào Đoàn ({selectedStudentIds.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBatchMakeUnionMember(false)}
+                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold flex items-center gap-1 transition-all"
+                      >
+                        <span>Rút khỏi Đoàn</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleBatchDeleteStudents}
+                        className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Xóa ({selectedStudentIds.length})</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setSelectedStudentIds([])}
-                        className="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold"
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold"
                       >
                         Bỏ chọn
                       </button>
                     </div>
-                  )}
-
-                  <button
-                    onClick={() => setIsImportModalOpen(true)}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
-                  >
-                    <FileSpreadsheet className="w-4 h-4" />
-                    <span>Import Excel</span>
-                  </button>
-
-                  {/* THÊM HỌC SINH */}
-                  <button
-                    onClick={() => {
-                      setEditingStudent(null);
-                      setStudentForm({
-                        studentId: `HS2024${Math.floor(1000 + Math.random() * 9000)}`,
-                        name: '',
-                        classId: classes[0]?.id || '10/1',
-                        grade: 10,
-                        gender: 'Nam',
-                        dob: '2009-01-01',
-                        ethnicity: 'Kinh',
-                        phone: '',
-                        address: 'Thôn Trung Sơn, xã Đông Giang, TP Đà Nẵng',
-                        isUnionMember: true,
-                        unionCardNumber: '',
-                        unionPosition: 'Đoàn viên',
-                        unionJoinedDate: '2024-03-26',
-                        unionJoinedPlace: 'Đoàn trường THPT Quang Trung',
-                        unionFeeStatus: 'paid',
-                        unionBookletStatus: 'submitted',
-                        conductRating: 'Xuất sắc',
-                        customNotes: '',
-                        points: 100,
-                        rankTitle: 'Đoàn viên Tích cực',
-                        status: 'active'
-                      });
-                      setIsStudentModalOpen(true);
-                    }}
-                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all active:scale-95"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>+ Thêm Học Sinh / Đoàn Viên</span>
-                  </button>
-
-                  {/* XÓA HỌC SINH (HOẠT ĐỘNG KHI CHỌN HOẶC NHẮC CHỌN) */}
-                  <button
-                    onClick={() => {
-                      if (selectedStudentIds.length === 0) {
-                        alert('👉 Vui lòng tích chọn ô vuông ở cột đầu tiên của các học sinh bạn muốn xóa trong danh sách!');
-                      } else {
-                        handleBatchDeleteStudents();
-                      }
-                    }}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${
-                      selectedStudentIds.length > 0
-                        ? 'bg-red-600 hover:bg-red-500 text-white shadow-glow animate-pulse'
-                        : 'bg-slate-900 hover:bg-red-950/60 text-red-400 border border-red-800/60'
-                    }`}
-                    title={selectedStudentIds.length > 0 ? `Xóa ${selectedStudentIds.length} học sinh đã chọn` : 'Tích chọn học sinh để xóa'}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-300" />
-                    <span>{selectedStudentIds.length > 0 ? `Xóa Đã Chọn (${selectedStudentIds.length})` : 'Xóa Học Sinh'}</span>
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Students Table */}
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xl">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-950 text-slate-300 border-b border-slate-800">
-                      <th className="p-3 w-10 text-center">
+                    <tr className="bg-slate-950 text-slate-300 border-b border-slate-800 font-bold">
+                      <th className="p-3 w-12 text-center">
                         <input
                           type="checkbox"
                           checked={filteredStudents.length > 0 && selectedStudentIds.length === filteredStudents.length}
@@ -3371,129 +3536,164 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           title="Chọn tất cả học sinh đang hiển thị"
                         />
                       </th>
-                      <th className="p-3 font-bold">Mã HS</th>
-                      <th className="p-3 font-bold">Họ và Tên</th>
-                      <th className="p-3 font-bold">Lớp</th>
-                      <th className="p-3 font-bold">Ngày Sinh</th>
-                      <th className="p-3 font-bold">Giới Tính</th>
-                      <th className="p-3 font-bold">Dân Tộc</th>
-                      <th className="p-3 font-bold">Số Điện Thoại</th>
-                      <th className="p-3 font-bold">Địa Chỉ Liên Hệ</th>
-                      <th className="p-3 text-center font-bold">Đoàn Viên</th>
-                      <th className="p-3 font-bold">Chức Vụ / Hồ Sơ Sổ Đoàn</th>
-                      <th className="p-3 text-right font-bold">Thao Tác</th>
+                      <th className="p-3">Mã HS</th>
+                      <th className="p-3">Họ và Tên</th>
+                      <th className="p-3">Lớp</th>
+                      <th className="p-3">Ngày Sinh</th>
+                      <th className="p-3">Giới Tính</th>
+                      <th className="p-3">Dân Tộc</th>
+                      <th className="p-3">Số Điện Thoại</th>
+                      <th className="p-3">Địa Chỉ Liên Hệ</th>
+                      <th className="p-3 text-center">Đoàn Viên</th>
+                      <th className="p-3">Chức Vụ / Hồ Sơ Sổ Đoàn</th>
+                      <th className="p-3 text-right">Thao Tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {filteredStudents.map(st => {
-                      const isSelected = selectedStudentIds.includes(st.id) || selectedStudentIds.includes(st.studentId);
-                      return (
-                        <tr 
-                          key={st.id} 
-                          className={`transition-colors ${isSelected ? 'bg-red-950/30' : 'hover:bg-slate-800/40'}`}
-                        >
-                          <td className="p-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleStudentSelection(st.id || st.studentId)}
-                              className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-red-600 focus:ring-0 cursor-pointer"
-                            />
-                          </td>
-                          <td className="p-3 font-mono font-bold text-amber-400">{st.studentId}</td>
-                          <td className="p-3 font-bold text-white whitespace-nowrap">{st.name}</td>
-                          <td className="p-3 font-semibold text-slate-300 whitespace-nowrap">{st.classId}</td>
-                          <td className="p-3 text-slate-400 whitespace-nowrap">{st.dob}</td>
-                          <td className="p-3 text-slate-400">{st.gender}</td>
-                          <td className="p-3 text-slate-400">{st.ethnicity}</td>
-                          <td className="p-3 font-mono text-slate-300 whitespace-nowrap">{st.phone || '—'}</td>
-                          <td className="p-3 text-slate-400 max-w-[200px] truncate" title={st.address || 'Chưa cập nhật'}>
-                            {st.address || '—'}
-                          </td>
-                          <td className="p-3 text-center">
-                            <button
-                              onClick={() => toggleUnionStatus(st.id)}
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${st.isUnionMember
-                                ? 'bg-red-950 text-red-300 border-red-800 hover:bg-red-900'
-                                : 'bg-slate-900 text-slate-500 border-slate-700 hover:bg-slate-800'
-                                }`}
-                            >
-                              {st.isUnionMember ? '⭐ Đoàn viên' : 'Chưa'}
-                            </button>
-                          </td>
-                          <td className="p-3 text-slate-400">
-                            {st.isUnionMember ? (
-                              <div>
-                                <span className="font-bold text-slate-300">{st.unionPosition || 'Đoàn viên'}</span>
-                                <span className="text-[10px] block text-slate-500">
-                                  {st.unionBookletStatus === 'submitted' ? 'Đã nộp sổ Đoàn' : 'Chưa nộp sổ'} • {st.unionFeeStatus === 'paid' ? 'Đã đóng đoàn phí' : 'Nợ đoàn phí'}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-slate-600">-</span>
-                            )}
-                          </td>
-                        <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
-                          <button
-                            onClick={() => {
-                              setTransferingStudent(st);
-                              setTargetTransferClass(classes.find(c => c.id !== st.classId)?.id || '10/2');
-                            }}
-                            title="Chuyển lớp cho học sinh"
-                            className="p-1.5 rounded-lg bg-slate-800 text-blue-400 hover:bg-blue-950"
-                          >
-                            <ArrowRightLeft className="w-3.5 h-3.5" />
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setEditingStudent(st);
-                              setStudentForm({
-                                studentId: st.studentId,
-                                name: st.name,
-                                classId: st.classId,
-                                grade: st.grade,
-                                gender: st.gender,
-                                dob: st.dob,
-                                ethnicity: st.ethnicity,
-                                phone: st.phone || '',
-                                address: st.address || '',
-                                isUnionMember: st.isUnionMember,
-                                unionCardNumber: st.unionCardNumber || '',
-                                unionPosition: st.unionPosition || 'Đoàn viên',
-                                unionJoinedDate: st.unionJoinedDate || '2024-03-26',
-                                unionJoinedPlace: st.unionJoinedPlace || 'Đoàn trường THPT Quang Trung',
-                                unionFeeStatus: st.unionFeeStatus || 'paid',
-                                unionBookletStatus: st.unionBookletStatus || 'submitted',
-                                conductRating: st.conductRating || 'Xuất sắc',
-                                customNotes: st.customNotes || '',
-                                points: st.points,
-                                rankTitle: st.rankTitle,
-                                status: (st.status === 'archived' ? 'archived' : 'active') as any
-                              });
-                              setIsStudentModalOpen(true);
-                            }}
-                            title="Sửa hồ sơ học sinh"
-                            className="p-1.5 rounded-lg bg-slate-800 text-amber-400 hover:bg-amber-950"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              if (confirm(`Bạn có chắc chắn muốn xóa học sinh "${st.name}" (${st.studentId})?`)) {
-                                deleteStudent(st.id);
-                              }
-                            }}
-                            title="Xóa học sinh"
-                            className="p-1.5 rounded-lg bg-slate-800 text-rose-400 hover:bg-rose-950"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                    {filteredStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={12} className="p-8 text-center text-slate-500 space-y-2">
+                          <p className="text-base font-bold text-slate-400">Không tìm thấy học sinh nào phù hợp bộ lọc!</p>
+                          <p className="text-xs text-slate-500">Thử thay đổi Khối, Lớp, Trạng thái Đoàn viên hoặc từ khóa tìm kiếm.</p>
                         </td>
                       </tr>
-                    );
-                  })}
+                    ) : (
+                      filteredStudents.map(st => {
+                        const isSelected = selectedStudentIds.includes(st.id) || selectedStudentIds.includes(st.studentId);
+                        return (
+                          <tr 
+                            key={st.id || st.studentId} 
+                            className={`transition-colors ${isSelected ? 'bg-red-950/30' : 'hover:bg-slate-800/40'}`}
+                          >
+                            <td className="p-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleStudentSelection(st.id || st.studentId)}
+                                className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-red-600 focus:ring-0 cursor-pointer"
+                              />
+                            </td>
+                            <td className="p-3 font-mono font-bold text-amber-400 whitespace-nowrap">
+                              <span className="px-2 py-0.5 rounded-lg bg-amber-950/60 border border-amber-800/60">
+                                {st.studentId}
+                              </span>
+                            </td>
+                            <td className="p-3 font-bold text-white whitespace-nowrap">{st.name}</td>
+                            <td className="p-3 whitespace-nowrap">
+                              <span className="px-2 py-0.5 rounded-lg bg-blue-950/80 border border-blue-800/60 text-blue-300 font-bold">
+                                {st.classId}
+                              </span>
+                            </td>
+                            <td className="p-3 text-slate-300 whitespace-nowrap font-mono">{st.dob || '—'}</td>
+                            <td className="p-3 whitespace-nowrap">
+                              <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                                st.gender === 'Nam' ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-800/50' : 'bg-rose-950/80 text-rose-300 border border-rose-800/50'
+                              }`}>
+                                {st.gender}
+                              </span>
+                            </td>
+                            <td className="p-3 text-slate-300 whitespace-nowrap">{st.ethnicity || 'Kinh'}</td>
+                            <td className="p-3 font-mono whitespace-nowrap">
+                              {st.phone ? (
+                                <span className="text-emerald-400 font-bold">{st.phone}</span>
+                              ) : (
+                                <span className="text-slate-500 italic text-[11px]">Chưa cập nhật</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-slate-300 max-w-[220px] truncate" title={st.address || 'Chưa cập nhật địa chỉ'}>
+                              {st.address ? (
+                                <span>{st.address}</span>
+                              ) : (
+                                <span className="text-slate-500 italic text-[11px]">Chưa cập nhật</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-center whitespace-nowrap">
+                              <button
+                                onClick={() => toggleUnionStatus(st.id || st.studentId)}
+                                className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all active:scale-95 ${
+                                  st.isUnionMember
+                                    ? 'bg-red-950 text-red-300 border-red-700 hover:bg-red-900 shadow-sm'
+                                    : 'bg-slate-950 text-slate-500 border-slate-700 hover:bg-slate-800 hover:text-slate-300'
+                                }`}
+                                title="Click để chuyển đổi trạng thái Đoàn viên"
+                              >
+                                {st.isUnionMember ? '⭐ Đoàn viên' : 'Chưa vào'}
+                              </button>
+                            </td>
+                            <td className="p-3 text-slate-400 whitespace-nowrap">
+                              {st.isUnionMember ? (
+                                <div>
+                                  <span className="font-bold text-slate-200">{st.unionPosition || 'Đoàn viên'}</span>
+                                  <span className="text-[10px] block text-slate-400">
+                                    {st.unionBookletStatus === 'submitted' ? '✓ Đã nộp sổ' : '✕ Chưa nộp sổ'} • {st.unionFeeStatus === 'paid' ? '✓ Đã đóng phí' : '✕ Nợ phí'}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-600">—</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
+                              <button
+                                onClick={() => {
+                                  setTransferingStudent(st);
+                                  setTargetTransferClass(classes.find(c => c.id !== st.classId)?.id || '10/2');
+                                }}
+                                title="Chuyển lớp cho học sinh"
+                                className="p-1.5 rounded-lg bg-slate-800 text-blue-400 hover:bg-blue-950 border border-slate-700 hover:border-blue-700"
+                              >
+                                <ArrowRightLeft className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setEditingStudent(st);
+                                  setStudentForm({
+                                    studentId: st.studentId,
+                                    name: st.name,
+                                    classId: st.classId,
+                                    grade: st.grade,
+                                    gender: st.gender,
+                                    dob: st.dob,
+                                    ethnicity: st.ethnicity || 'Kinh',
+                                    phone: st.phone || '',
+                                    address: st.address || '',
+                                    isUnionMember: st.isUnionMember,
+                                    unionCardNumber: st.unionCardNumber || '',
+                                    unionPosition: st.unionPosition || 'Đoàn viên',
+                                    unionJoinedDate: st.unionJoinedDate || '2024-03-26',
+                                    unionJoinedPlace: st.unionJoinedPlace || 'Đoàn trường THPT Quang Trung',
+                                    unionFeeStatus: st.unionFeeStatus || 'paid',
+                                    unionBookletStatus: st.unionBookletStatus || 'submitted',
+                                    conductRating: st.conductRating || 'Xuất sắc',
+                                    customNotes: st.customNotes || '',
+                                    points: st.points,
+                                    rankTitle: st.rankTitle,
+                                    status: (st.status === 'archived' ? 'archived' : 'active') as any
+                                  });
+                                  setIsStudentModalOpen(true);
+                                }}
+                                title="Sửa hồ sơ học sinh"
+                                className="p-1.5 rounded-lg bg-slate-800 text-amber-400 hover:bg-amber-950 border border-slate-700 hover:border-amber-700"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Bạn có chắc chắn muốn xóa học sinh "${st.name}" (${st.studentId})?`)) {
+                                    deleteStudent(st.id || st.studentId);
+                                  }
+                                }}
+                                title="Xóa học sinh"
+                                className="p-1.5 rounded-lg bg-slate-800 text-rose-400 hover:bg-rose-950 border border-slate-700 hover:border-rose-700"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>

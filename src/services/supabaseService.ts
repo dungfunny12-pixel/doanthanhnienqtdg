@@ -129,22 +129,27 @@ export const SupabaseService = {
       const students: Student[] = (rawStudents || []).map(s => ({
         id: s.student_id,
         studentId: s.student_id,
-        name: s.full_name,
+        name: s.full_name || s.name || 'Học sinh',
         classId: s.class_id,
-        grade: (Number(s.class_id?.substring(0, 2)) || 10) as 10 | 11 | 12,
-        gender: s.gender || 'Nam',
-        dob: s.date_of_birth || s.dob || '2008-01-01',
+        grade: (Number(s.class_id?.substring(0, 2)) || s.grade || 10) as 10 | 11 | 12,
+        gender: (s.gender || 'Nam') as 'Nam' | 'Nữ',
+        dob: s.date_of_birth || s.dob || '2009-01-01',
         ethnicity: s.ethnicity || 'Kinh',
         phone: s.phone_number || s.phone || '',
         address: s.address || '',
-        isUnionMember: s.is_union_member || false,
+        isUnionMember: s.is_union_member ?? false,
         unionCardNumber: s.union_card_number || '',
-        unionPosition: s.union_position || 'Đoàn viên',
-        unionJoinedDate: s.union_join_date || '',
-        points: Number(s.activity_points) || 100,
+        unionPosition: s.union_position || (s.is_union_member ? 'Đoàn viên' : 'Học sinh'),
+        unionJoinedDate: s.union_join_date || s.union_joined_date || '',
+        unionJoinedPlace: s.union_joined_place || 'Đoàn trường THPT Quang Trung',
+        unionFeeStatus: (s.union_fee_status || 'paid') as 'paid' | 'unpaid',
+        unionBookletStatus: (s.union_booklet_status || 'submitted') as 'submitted' | 'not_submitted',
+        conductRating: (s.conduct_rating || 'Xuất sắc') as 'Xuất sắc' | 'Khá' | 'Trung bình' | 'Yếu',
+        customNotes: s.custom_notes || '',
+        points: Number(s.activity_points || s.points || 100),
         rankTitle: s.rank_title || 'Đoàn viên',
         violationsCount: 0,
-        status: s.is_deleted ? 'inactive' : 'active'
+        status: s.is_deleted ? 'inactive' : (s.status || 'active')
       }));
 
       const violations: Violation[] = (rawViolations || []).map(v => ({
