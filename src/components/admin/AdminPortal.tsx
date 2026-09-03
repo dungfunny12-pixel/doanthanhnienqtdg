@@ -2334,8 +2334,17 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             const rawDob = extractRowField(row, 'Ngày sinh', 'Ngày Sinh', 'DOB', 'dob', 'Ngày tháng năm sinh', 'Năm sinh');
             const dob = formatExcelDob(rawDob);
             const ethnicity = extractRowField(row, 'Dân tộc', 'Dân Tộc', 'ethnicity') || 'Kinh';
-            const phone = extractRowField(row, 'Số điện thoại', 'Số Điện Thoại', 'Số ĐT', 'SĐT', 'SDT', 'Điện thoại', 'Phone', 'phone', 'Sđt', 'Số điện thoại phụ huynh', 'SĐT liên hệ');
-            const address = extractRowField(row, 'Địa chỉ liên hệ', 'Địa chỉ', 'Địa Chỉ', 'Địa Chỉ Liên Hệ', 'Nơi ở', 'Hộ khẩu', 'Thường trú', 'Quê quán', 'Address', 'address');
+            let phone = extractRowField(row, 'Số điện thoại', 'Số Điện Thoại', 'Số ĐT', 'SĐT', 'SDT', 'Điện thoại', 'Phone', 'phone', 'Sđt', 'Số điện thoại phụ huynh', 'SĐT liên hệ', 'Di động');
+            let address = extractRowField(row, 'Địa chỉ liên hệ', 'Địa chỉ', 'Địa Chỉ', 'Địa Chỉ Liên Hệ', 'Nơi ở', 'Hộ khẩu', 'Thường trú', 'Địa chỉ thường trú', 'Nơi cư trú', 'Chỗ ở hiện nay', 'Quê quán', 'Address', 'address');
+
+            // If phone column contains letters/words (e.g. "Thôn Bến Hiên, Xã Bến Hiên..."), it is an address
+            if (phone && /[a-zA-Zà-ỹÀ-Ỹ]/.test(phone)) {
+              if (!address) {
+                address = phone;
+              }
+              phone = '';
+            }
+
             const rawUnion = extractRowField(row, 'Đoàn viên', 'Đoàn Viên', 'Đã kết nạp', 'isUnionMember').toLowerCase();
             const isUnion = rawUnion.includes('đoàn') || rawUnion.includes('co') || rawUnion.includes('yes') || rawUnion.includes('rồi') || rawUnion === 'x' || rawUnion === '1';
 
@@ -9116,7 +9125,12 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           youth_secretary: 'Bí thư Chi đoàn',
                           user: 'Đoàn viên / Học sinh'
                         };
-                        setUserForm({ ...userForm, role: r, roleTitle: titles[r] || 'Người dùng' });
+                        setUserForm({ 
+                          ...userForm, 
+                          role: r, 
+                          roleTitle: titles[r] || 'Người dùng',
+                          classId: r === 'admin' ? 'Toàn Trường' : (userForm.classId === 'Toàn Trường' ? (classes[0]?.id || '10/1') : userForm.classId)
+                        });
                       }}
                       className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold focus:border-red-500"
                     >
@@ -9130,9 +9144,19 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
                   <div>
                     <label className="block font-bold text-slate-300 mb-1">
-                      {userForm.role === 'auditor' ? 'Khu Vực Phụ Trách:' : 'Lớp Phụ Trách / Lớp Học:'}
+                      {userForm.role === 'admin' ? 'Phạm Vi Quản Lý:' : userForm.role === 'auditor' ? 'Khu Vực Phụ Trách:' : 'Lớp Phụ Trách / Lớp Học:'}
                     </label>
-                    {userForm.role === 'auditor' ? (
+                    {userForm.role === 'admin' ? (
+                      <div className="w-full p-2.5 rounded-xl bg-red-950/50 border border-red-800/80 text-red-200 font-bold flex items-center justify-between text-xs min-h-[42px]">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">🏛️</span>
+                          <span>Toàn Trường (Tất cả {classes.length} lớp)</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-md bg-red-800/60 text-[10px] text-red-100 font-bold uppercase tracking-wider whitespace-nowrap">
+                          Toàn Quyền
+                        </span>
+                      </div>
+                    ) : userForm.role === 'auditor' ? (
                       <select
                         value={userForm.assignedZone || (zones[0]?.name || 'Khối 10')}
                         onChange={(e) => setUserForm({ ...userForm, assignedZone: e.target.value })}
@@ -9167,13 +9191,18 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     </label>
                     <select
                       onChange={(e) => {
-                        const selectedSt = studentsOfClass.find(s => s.id === e.target.value);
+                        const selectedSt = studentsOfClass.find(s => s.id === e.target.value || s.studentId === e.target.value);
                         if (selectedSt) {
+                          let cleanPhone = selectedSt.phone ? String(selectedSt.phone).trim() : '';
+                          if (/[a-zA-Zà-ỹÀ-Ỹ]/.test(cleanPhone)) {
+                            cleanPhone = '';
+                          }
+
                           setUserForm(prev => ({
                             ...prev,
                             name: selectedSt.name,
                             username: selectedSt.studentId.toLowerCase(),
-                            phone: selectedSt.phone || prev.phone || '',
+                            phone: cleanPhone || prev.phone || '',
                             email: `${selectedSt.studentId.toLowerCase()}@thpt.edu.vn`,
                             password: prev.password || '123456@Password',
                             studentId: selectedSt.studentId

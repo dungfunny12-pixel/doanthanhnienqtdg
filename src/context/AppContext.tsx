@@ -217,6 +217,30 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY = 'DOANTHANHNIEN_APP_DATA_V2';
 
+const sanitizeStudent = (s: Student): Student => {
+  let phone = s.phone ? String(s.phone).trim() : '';
+  let address = s.address ? String(s.address).trim() : '';
+
+  // If phone contains Vietnamese characters/words (e.g. "Thôn Bến Hiên", "Xã Bến Hiên"), it is an address!
+  if (phone && /[a-zA-Zà-ỹÀ-Ỹ]/.test(phone)) {
+    if (!address) {
+      address = phone;
+    }
+    phone = '';
+  }
+
+  return {
+    ...s,
+    phone,
+    address
+  };
+};
+
+const sanitizeStudentList = (list: Student[]): Student[] => {
+  if (!Array.isArray(list)) return [];
+  return list.map(sanitizeStudent);
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const loadStored = <T,>(key: string, fallback: T): T => {
     try {
@@ -239,7 +263,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [weeksConfig, setWeeksConfig] = useState<WeekConfig[]>(() => loadStored('weeksConfig', INITIAL_WEEKS));
   const [classes, setClasses] = useState<ClassInfo[]>(() => loadStored('classes', INITIAL_CLASSES));
-  const [students, setStudents] = useState<Student[]>(() => loadStored('students', INITIAL_STUDENTS));
+  const [students, setStudents] = useState<Student[]>(() => sanitizeStudentList(loadStored('students', INITIAL_STUDENTS)));
   const [criteria, setCriteria] = useState<Criterion[]>(() => loadStored('criteria', INITIAL_CRITERIA));
   const [violations, setViolations] = useState<Violation[]>(() => loadStored('violations', INITIAL_VIOLATIONS));
   const [duties, setDuties] = useState<DutyAssignment[]>(() => loadStored('duties', INITIAL_DUTIES));
@@ -311,7 +335,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (cloudData) {
           if (cloudData.classes && cloudData.classes.length > 0) setClasses(cloudData.classes);
           if (cloudData.criteria && cloudData.criteria.length > 0) setCriteria(cloudData.criteria);
-          if (cloudData.students && cloudData.students.length > 0) setStudents(cloudData.students);
+          if (cloudData.students && cloudData.students.length > 0) setStudents(sanitizeStudentList(cloudData.students));
           if (cloudData.violations) setViolations(cloudData.violations);
           if (cloudData.news && cloudData.news.length > 0) setNews(cloudData.news);
           if (cloudData.notices && cloudData.notices.length > 0) setNotices(cloudData.notices);
