@@ -1,5 +1,5 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
-import { compressImage } from '../utils/imageCompressor';
+import { compressImage, dataURLtoFile } from '../utils/imageCompressor';
 import { 
   ClassInfo, 
   Student, 
@@ -522,6 +522,29 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
+      let logoUrl = settings.logoUrl || null;
+      let youthUnionLogoUrl = settings.youthUnionLogoUrl || null;
+      let bannerTopImage = settings.bannerTopImage || null;
+      let footerBannerImage = settings.footerBannerImage || null;
+
+      // Tự động tải ảnh base64 lên Supabase Storage nếu có
+      if (logoUrl && logoUrl.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(logoUrl, 'media');
+        if (uploaded) logoUrl = uploaded;
+      }
+      if (youthUnionLogoUrl && youthUnionLogoUrl.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(youthUnionLogoUrl, 'media');
+        if (uploaded) youthUnionLogoUrl = uploaded;
+      }
+      if (bannerTopImage && bannerTopImage.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(bannerTopImage, 'media');
+        if (uploaded) bannerTopImage = uploaded;
+      }
+      if (footerBannerImage && footerBannerImage.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(footerBannerImage, 'media');
+        if (uploaded) footerBannerImage = uploaded;
+      }
+
       await client.from('school_settings').upsert({
         id: 'current',
         school_name: settings.schoolName,
@@ -531,10 +554,10 @@ export const SupabaseService = {
         email: settings.email,
         phone: settings.phone,
         theme_color: settings.themeColor,
-        logo_url: settings.logoUrl || null,
-        youth_union_logo_url: settings.youthUnionLogoUrl || null,
-        banner_top_image: settings.bannerTopImage || null,
-        footer_banner_image: settings.footerBannerImage || null,
+        logo_url: logoUrl,
+        youth_union_logo_url: youthUnionLogoUrl,
+        banner_top_image: bannerTopImage,
+        footer_banner_image: footerBannerImage,
         semester_1_end_week: settings.semester1EndWeek || 18,
         semester_1_name: settings.semester1Name || 'Học Kỳ 1',
         semester_2_name: settings.semester2Name || 'Học Kỳ 2',
@@ -554,11 +577,17 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
+      let imageUrl = slide.imageUrl;
+      if (imageUrl && imageUrl.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(imageUrl, 'media');
+        if (uploaded) imageUrl = uploaded;
+      }
+
       await client.from('activity_slides').upsert({
         slide_id: slide.id,
         title: slide.title,
         subtitle: slide.subtitle,
-        image_url: slide.imageUrl,
+        image_url: imageUrl,
         date: slide.date,
         tag: slide.tag,
         is_active: slide.isActive,
@@ -807,6 +836,12 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
+      let thumbnail = n.thumbnail;
+      if (thumbnail && thumbnail.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(thumbnail, 'media');
+        if (uploaded) thumbnail = uploaded;
+      }
+
       await client.from('news').upsert({
         news_id: n.id,
         title: n.title,
@@ -814,7 +849,7 @@ export const SupabaseService = {
         content: n.content,
         category: n.category,
         author_name: n.author,
-        image_url: n.thumbnail,
+        image_url: thumbnail,
         urgency: n.urgency,
         is_pinned: n.isPinned,
         is_hidden: n.isHidden,
@@ -894,6 +929,32 @@ export const SupabaseService = {
     if (!client) return false;
 
     try {
+      let proofImages = violation.proofImages || [];
+      if (proofImages.some(img => img.startsWith('data:image/'))) {
+        proofImages = await Promise.all(
+          proofImages.map(async img => {
+            if (img.startsWith('data:image/')) {
+              const up = await this.uploadImage(img, 'proof_images');
+              return up || img;
+            }
+            return img;
+          })
+        );
+      }
+
+      let appealProofs = violation.appeal?.proofImages || null;
+      if (appealProofs && appealProofs.some(img => img.startsWith('data:image/'))) {
+        appealProofs = await Promise.all(
+          appealProofs.map(async img => {
+            if (img.startsWith('data:image/')) {
+              const up = await this.uploadImage(img, 'proof_images');
+              return up || img;
+            }
+            return img;
+          })
+        );
+      }
+
       await client.from('violations').upsert({
         violation_id: violation.id,
         week_number: violation.weekNumber,
@@ -909,10 +970,10 @@ export const SupabaseService = {
         reporter_id: violation.reportedBy.id,
         reported_by_name: violation.reportedBy.name,
         note: violation.note,
-        proof_images: violation.proofImages,
+        proof_images: proofImages,
         status: violation.status,
         appeal_reason: violation.appeal?.reason || null,
-        appeal_proofs: violation.appeal?.proofImages || null,
+        appeal_proofs: appealProofs,
         admin_response: violation.appeal?.adminResponse || null,
         is_locked: violation.locked || false,
         is_deleted: false
@@ -946,7 +1007,7 @@ export const SupabaseService = {
    * Trả về đường dẫn CDN công khai (Public URL)
    */
   async uploadImage(
-    file: File | Blob, 
+    file: File | Blob | string, 
     bucket: 'proof_images' | 'media' = 'proof_images',
     options?: { maxWidth?: number; quality?: number }
   ): Promise<string | null> {
@@ -954,6 +1015,18 @@ export const SupabaseService = {
     if (!client || !isSupabaseConfigured()) return null;
 
     try {
+      // Nếu là chuỗi URL công khai đã upload trước đó, trả về luôn
+      if (typeof file === 'string') {
+        if (file.startsWith('http://') || file.startsWith('https://')) {
+          return file;
+        }
+        if (file.startsWith('data:')) {
+          file = dataURLtoFile(file);
+        } else {
+          return null;
+        }
+      }
+
       // Tự động nén ảnh trước khi tải lên
       const maxWidth = options?.maxWidth || (bucket === 'media' ? 1600 : 1200);
       const quality = options?.quality || 0.82;

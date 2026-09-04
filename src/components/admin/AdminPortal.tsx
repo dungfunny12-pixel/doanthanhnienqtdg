@@ -236,14 +236,28 @@ export const AdminPortal: React.FC = () => {
     order: 1
   });
 
-  const handleSlideImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSlideImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    setIsUploadingImage('slide');
+    try {
+      if (isSupabaseConfigured()) {
+        const publicUrl = await SupabaseService.uploadImage(file, 'media');
+        if (publicUrl) {
+          setSlideForm(prev => ({ ...prev, imageUrl: publicUrl }));
+          return;
+        }
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setSlideForm(prev => ({ ...prev, imageUrl: reader.result as string }));
       };
       reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = '';
     }
   };
 
@@ -1109,14 +1123,28 @@ export const AdminPortal: React.FC = () => {
   });
   const eventThumbnailRef = useRef<HTMLInputElement>(null);
 
-  const handleEventThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEventThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    setIsUploadingImage('event');
+    try {
+      if (isSupabaseConfigured()) {
+        const publicUrl = await SupabaseService.uploadImage(file, 'media');
+        if (publicUrl) {
+          setEventForm(prev => ({ ...prev, thumbnail: publicUrl }));
+          return;
+        }
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setEventForm(prev => ({ ...prev, thumbnail: reader.result as string }));
       };
       reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = '';
     }
   };
 
@@ -2034,9 +2062,18 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
   };
 
   // ================= HANDLE FILE / IMAGE UPLOAD FOR NEWS =================
-  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    setIsUploadingImage('news_thumb');
+    try {
+      if (isSupabaseConfigured()) {
+        const publicUrl = await SupabaseService.uploadImage(file, 'media');
+        if (publicUrl) {
+          setNewsForm(prev => ({ ...prev, thumbnail: publicUrl }));
+          return;
+        }
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
@@ -2044,33 +2081,50 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
         }
       };
       reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = '';
     }
   };
 
-  const handleAttachmentsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAttachmentsUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0) {
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            const sizeInKb = (file.size / 1024).toFixed(1) + ' KB';
-            setNewsForm(prev => ({
-              ...prev,
-              attachments: [
-                ...prev.attachments,
-                {
-                  name: file.name,
-                  url: event.target!.result as string,
-                  size: sizeInKb,
-                  type: file.type
-                }
-              ]
-            }));
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+    if (!files || files.length === 0) return;
+    setIsUploadingImage('news_attach');
+    try {
+      for (const file of Array.from(files)) {
+        let fileUrl: string | null = null;
+        if (isSupabaseConfigured()) {
+          fileUrl = await SupabaseService.uploadImage(file, 'media');
+        }
+        if (!fileUrl) {
+          fileUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => resolve((ev.target?.result as string) || '');
+            reader.readAsDataURL(file);
+          });
+        }
+        const sizeInKb = (file.size / 1024).toFixed(1) + ' KB';
+        setNewsForm(prev => ({
+          ...prev,
+          attachments: [
+            ...prev.attachments,
+            {
+              name: file.name,
+              url: fileUrl!,
+              size: sizeInKb,
+              type: file.type
+            }
+          ]
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = '';
     }
   };
 
@@ -2374,16 +2428,31 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
   // Violation local photo upload ref & handler
   const violationFileInputRef = useRef<HTMLInputElement>(null);
-  const handleViolationPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleViolationPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (reader.result) {
-        setViolationForm(prev => ({ ...prev, proofImage: reader.result as string }));
+    setIsUploadingImage('violation');
+    try {
+      if (isSupabaseConfigured()) {
+        const publicUrl = await SupabaseService.uploadImage(file, 'proof_images');
+        if (publicUrl) {
+          setViolationForm(prev => ({ ...prev, proofImage: publicUrl }));
+          return;
+        }
       }
-    };
-    reader.readAsDataURL(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          setViolationForm(prev => ({ ...prev, proofImage: reader.result as string }));
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = '';
+    }
   };
 
   // Handle Zone CRUD Save
@@ -9288,7 +9357,38 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <input
                       type="file"
                       multiple
-                      onChange={handleAttachmentsUpload}
+                      onChange={async (e) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          for (const file of Array.from(files)) {
+                            let fileUrl: string | null = null;
+                            if (isSupabaseConfigured()) {
+                              fileUrl = await SupabaseService.uploadImage(file, 'media');
+                            }
+                            if (!fileUrl) {
+                              fileUrl = await new Promise<string>((resolve) => {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => resolve((ev.target?.result as string) || '');
+                                reader.readAsDataURL(file);
+                              });
+                            }
+                            const sizeInKb = (file.size / 1024).toFixed(1) + ' KB';
+                            setNewsForm(prev => ({
+                              ...prev,
+                              attachments: [
+                                ...prev.attachments,
+                                {
+                                  name: file.name,
+                                  url: fileUrl!,
+                                  size: sizeInKb,
+                                  type: file.type
+                                }
+                              ]
+                            }));
+                          }
+                        }
+                        e.target.value = '';
+                      }}
                       className="hidden"
                     />
                   </label>

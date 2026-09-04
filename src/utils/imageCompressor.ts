@@ -11,6 +11,25 @@ export interface CompressOptions {
 }
 
 /**
+ * Chuyển đổi chuỗi base64 Data URL thành đối tượng File
+ */
+export function dataURLtoFile(dataurl: string, filename?: string): File {
+  const parts = dataurl.split(',');
+  const mimeMatch = parts[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const ext = mime.split('/')[1] || 'jpg';
+  const name = filename || `upload_${Date.now()}.${ext}`;
+  
+  const bstr = atob(parts[1] || '');
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], name, { type: mime });
+}
+
+/**
  * Nén và resize ảnh tự động trên trình duyệt người dùng bằng HTML5 Canvas
  */
 export async function compressImage(

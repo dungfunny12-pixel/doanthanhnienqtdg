@@ -43,6 +43,8 @@ import { ClassWeeklyScore, ActivityParticipant, ActivityNonParticipant, Activity
 import { PhotoViewerModal } from '../common/PhotoViewerModal';
 import { SortableTh } from '../common/SortableTh';
 import { sortDataList } from '../../utils/sortUtils';
+import { SupabaseService } from '../../services/supabaseService';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 export const YouthSecretaryPortal: React.FC = () => {
   const { 
@@ -107,16 +109,30 @@ export const YouthSecretaryPortal: React.FC = () => {
     ? pendingViolations
     : pendingViolations.filter(v => v.groupName.toLowerCase().includes(inboxGroupFilter.toLowerCase()) || v.criterionId.startsWith(inboxGroupFilter));
 
-  const handleAppealFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAppealFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files[0]) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.result) {
-          setAppealProof(reader.result as string);
+      const file = files[0];
+      try {
+        if (isSupabaseConfigured()) {
+          const publicUrl = await SupabaseService.uploadImage(file, 'proof_images');
+          if (publicUrl) {
+            setAppealProof(publicUrl);
+            return;
+          }
         }
-      };
-      reader.readAsDataURL(files[0]);
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (reader.result) {
+            setAppealProof(reader.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        e.target.value = '';
+      }
     }
   };
 

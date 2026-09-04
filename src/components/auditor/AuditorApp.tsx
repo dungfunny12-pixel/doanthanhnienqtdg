@@ -27,6 +27,8 @@ import {
 import { DayOfWeek, Criterion, ClassInfo } from '../../types';
 import { PhotoViewerModal } from '../common/PhotoViewerModal';
 import { ChangePasswordModal } from '../common/ChangePasswordModal';
+import { SupabaseService } from '../../services/supabaseService';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 export const AuditorApp: React.FC = () => {
   const { 
@@ -159,40 +161,58 @@ export const AuditorApp: React.FC = () => {
     setQuantity(Math.max(1, updated.length));
   };
 
-  // Handle image upload with auto compression (< 500KB)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle image upload with auto compression (< 500KB) & Cloud Storage
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files[0]) {
       const file = files[0];
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const maxDim = 1200;
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
+      setIsUploadingPhoto(true);
+      try {
+        if (isSupabaseConfigured() && isOnline) {
+          const publicUrl = await SupabaseService.uploadImage(file, 'proof_images');
+          if (publicUrl) {
+            if (proofImages.length < 5) {
+              setProofImages(prev => [...prev, publicUrl]);
             }
+            return;
           }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-          if (proofImages.length < 5) {
-            setProofImages(prev => [...prev, compressedDataUrl]);
-          }
+        }
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const maxDim = 1200;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            if (proofImages.length < 5) {
+              setProofImages(prev => [...prev, compressedDataUrl]);
+            }
+          };
+          img.src = event.target?.result as string;
         };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsUploadingPhoto(false);
+        e.target.value = '';
+      }
     }
   };
 
