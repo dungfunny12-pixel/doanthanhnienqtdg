@@ -16,7 +16,7 @@ import {
   ActivitySlide,
   AppNotification,
   AcademicYear
-} from '../types/index.ts';
+} from '../types';
 
 export const INITIAL_SCHOOL_SETTINGS: SchoolSettings = {
   schoolName: 'Trường THPT Quang Trung - Đông Giang',
@@ -93,28 +93,28 @@ export const INITIAL_WEEKS: WeekConfig[] = [
 
 export const INITIAL_CLASSES: ClassInfo[] = [
   // Khối 10
-  { id: '10/1', name: 'Lớp 10/1', grade: 10, gvcnName: 'Thầy Nguyễn Văn Thành', gvcnId: 'gvcn_10_1', bithuName: 'Trần Thị Thu Thảo', bithuId: 'bithu_10_1', totalStudents: 42, unionMembers: 35, standardScore: 1440, isArchived: false },
-  { id: '10/2', name: 'Lớp 10/2', grade: 10, gvcnName: 'Cô Lê Thị Mai', gvcnId: 'gvcn_10_2', bithuName: 'Lê Hoàng Nam', bithuId: 'bithu_10_2', totalStudents: 40, unionMembers: 32, standardScore: 1440, isArchived: false },
-  { id: '10/3', name: 'Lớp 10/3', grade: 10, gvcnName: 'Thầy Phạm Đức Hùng', gvcnId: 'gvcn_10_3', bithuName: 'Vũ Minh Tuấn', bithuId: 'bithu_10_3', totalStudents: 43, unionMembers: 36, standardScore: 1440, isArchived: false },
-  { id: '10/4', name: 'Lớp 10/4', grade: 10, gvcnName: 'Cô Đỗ Thị Lan', gvcnId: 'gvcn_10_4', bithuName: 'Hoàng Quỳnh Như', bithuId: 'bithu_10_4', totalStudents: 41, unionMembers: 34, standardScore: 1440, isArchived: false },
-  { id: '10/5', name: 'Lớp 10/5', grade: 10, gvcnName: 'Thầy Bùi Quang Khải', gvcnId: 'gvcn_10_5', bithuName: 'Ngô Trọng Đại', bithuId: 'bithu_10_5', totalStudents: 40, unionMembers: 30, standardScore: 1440, isArchived: false },
-  { id: '10/6', name: 'Lớp 10/6', grade: 10, gvcnName: 'Cô Trần Kim Yến', gvcnId: 'gvcn_10_6', bithuName: 'Phan Bảo Ngọc', bithuId: 'bithu_10_6', totalStudents: 44, unionMembers: 38, standardScore: 1440, isArchived: false },
+  { id: '10/1', name: 'Lớp 10/1', grade: 10, gvcnName: 'Rapát Thị Mận', gvcnId: 'gvcn_10_1', bithuName: 'Nguyễn Văn An', bithuId: 'bithu_10_1', totalStudents: 42, unionMembers: 35, standardScore: 1440, isArchived: false },
+  { id: '10/2', name: 'Lớp 10/2', grade: 10, gvcnName: 'ALăng Thị Moáy', gvcnId: 'gvcn_10_2', bithuName: 'Lê Hoàng Nam', bithuId: 'bithu_10_2', totalStudents: 40, unionMembers: 32, standardScore: 1440, isArchived: false },
+  { id: '10/3', name: 'Lớp 10/3', grade: 10, gvcnName: 'Nguyễn Văn Tiểu', gvcnId: 'gvcn_10_3', bithuName: 'Vũ Minh Tuấn', bithuId: 'bithu_10_3', totalStudents: 43, unionMembers: 36, standardScore: 1440, isArchived: false },
+  { id: '10/4', name: 'Lớp 10/4', grade: 10, gvcnName: 'Bùi Ngọc Giao', gvcnId: 'gvcn_10_4', bithuName: 'Hoàng Quỳnh Như', bithuId: 'bithu_10_4', totalStudents: 41, unionMembers: 34, standardScore: 1440, isArchived: false },
+  { id: '10/5', name: 'Lớp 10/5', grade: 10, gvcnName: 'Pơloong Thị Lý', gvcnId: 'gvcn_10_5', bithuName: 'Ngô Trọng Đại', bithuId: 'bithu_10_5', totalStudents: 40, unionMembers: 30, standardScore: 1440, isArchived: false },
+  { id: '10/6', name: 'Lớp 10/6', grade: 10, gvcnName: 'Đinh Thị Thu', gvcnId: 'gvcn_10_6', bithuName: 'Phan Bảo Ngọc', bithuId: 'bithu_10_6', totalStudents: 44, unionMembers: 38, standardScore: 1440, isArchived: false },
 
   // Khối 11
-  { id: '11/1', name: 'Lớp 11/1', grade: 11, gvcnName: 'Thầy Vũ Văn Bình', gvcnId: 'gvcn_11_1', bithuName: 'Đặng Thanh Tâm', bithuId: 'bithu_11_1', totalStudents: 42, unionMembers: 40, standardScore: 1440, isArchived: false },
-  { id: '11/2', name: 'Lớp 11/2', grade: 11, gvcnName: 'Cô Hoàng Minh Nguyệt', gvcnId: 'gvcn_11_2', bithuName: 'Trịnh Gia Hưng', bithuId: 'bithu_11_2', totalStudents: 41, unionMembers: 39, standardScore: 1440, isArchived: false },
-  { id: '11/3', name: 'Lớp 11/3', grade: 11, gvcnName: 'Thầy Trương Công Định', gvcnId: 'gvcn_11_3', bithuName: 'Nguyễn Diệu Linh', bithuId: 'bithu_11_3', totalStudents: 43, unionMembers: 41, standardScore: 1440, isArchived: false },
-  { id: '11/4', name: 'Lớp 11/4', grade: 11, gvcnName: 'Cô Võ Thị Hằng', gvcnId: 'gvcn_11_4', bithuName: 'Lý Quốc Bảo', bithuId: 'bithu_11_4', totalStudents: 40, unionMembers: 38, standardScore: 1440, isArchived: false },
-  { id: '11/5', name: 'Lớp 11/5', grade: 11, gvcnName: 'Thầy Đinh Ngọc Tú', gvcnId: 'gvcn_11_5', bithuName: 'Dương Khánh An', bithuId: 'bithu_11_5', totalStudents: 42, unionMembers: 41, standardScore: 1440, isArchived: false },
-  { id: '11/6', name: 'Lớp 11/6', grade: 11, gvcnName: 'Cô Lâm Ánh Tuyết', gvcnId: 'gvcn_11_6', bithuName: 'Cao Viết Thắng', bithuId: 'bithu_11_6', totalStudents: 41, unionMembers: 40, standardScore: 1440, isArchived: false },
+  { id: '11/1', name: 'Lớp 11/1', grade: 11, gvcnName: 'Phát Xuân Quý', gvcnId: 'gvcn_11_1', bithuName: 'Đặng Thanh Tâm', bithuId: 'bithu_11_1', totalStudents: 42, unionMembers: 40, standardScore: 1440, isArchived: false },
+  { id: '11/2', name: 'Lớp 11/2', grade: 11, gvcnName: 'Phạm Thanh Phương', gvcnId: 'gvcn_11_2', bithuName: 'Trịnh Gia Hưng', bithuId: 'bithu_11_2', totalStudents: 41, unionMembers: 39, standardScore: 1440, isArchived: false },
+  { id: '11/3', name: 'Lớp 11/3', grade: 11, gvcnName: 'Alăng Thị Đặng', gvcnId: 'gvcn_11_3', bithuName: 'Nguyễn Diệu Linh', bithuId: 'bithu_11_3', totalStudents: 43, unionMembers: 41, standardScore: 1440, isArchived: false },
+  { id: '11/4', name: 'Lớp 11/4', grade: 11, gvcnName: 'Blúp Thị Viết', gvcnId: 'gvcn_11_4', bithuName: 'Lý Quốc Bảo', bithuId: 'bithu_11_4', totalStudents: 40, unionMembers: 38, standardScore: 1440, isArchived: false },
+  { id: '11/5', name: 'Lớp 11/5', grade: 11, gvcnName: 'Lê Quang Hét', gvcnId: 'gvcn_11_5', bithuName: 'Dương Khánh An', bithuId: 'bithu_11_5', totalStudents: 42, unionMembers: 41, standardScore: 1440, isArchived: false },
+  { id: '11/6', name: 'Lớp 11/6', grade: 11, gvcnName: 'Zơrâm Thị Thủy', gvcnId: 'gvcn_11_6', bithuName: 'Cao Viết Thắng', bithuId: 'bithu_11_6', totalStudents: 41, unionMembers: 40, standardScore: 1440, isArchived: false },
 
   // Khối 12
-  { id: '12/1', name: 'Lớp 12/1', grade: 12, gvcnName: 'Thầy Hồ Bá Khiêm', gvcnId: 'gvcn_12_1', bithuName: 'Mai Phương Thảo', bithuId: 'bithu_12_1', totalStudents: 44, unionMembers: 44, standardScore: 1440, isArchived: false },
-  { id: '12/2', name: 'Lớp 12/2', grade: 12, gvcnName: 'Cô Phan Kiều Oanh', gvcnId: 'gvcn_12_2', bithuName: 'Lương Thế Vinh', bithuId: 'bithu_12_2', totalStudents: 43, unionMembers: 43, standardScore: 1440, isArchived: false },
-  { id: '12/3', name: 'Lớp 12/3', grade: 12, gvcnName: 'Thầy Đoàn Nhật Nam', gvcnId: 'gvcn_12_3', bithuName: 'Chu Đình Trọng', bithuId: 'bithu_12_3', totalStudents: 42, unionMembers: 42, standardScore: 1440, isArchived: false },
-  { id: '12/4', name: 'Lớp 12/4', grade: 12, gvcnName: 'Cô Huỳnh Thục Đoan', gvcnId: 'gvcn_12_4', bithuName: 'Nguyễn Thị Hoa', bithuId: 'bithu_12_4', totalStudents: 45, unionMembers: 45, standardScore: 1440, isArchived: false },
-  { id: '12/5', name: 'Lớp 12/5', grade: 12, gvcnName: 'Thầy Tống Phước Hiệp', gvcnId: 'gvcn_12_5', bithuName: 'Đào Xuân Trường', bithuId: 'bithu_12_5', totalStudents: 40, unionMembers: 40, standardScore: 1440, isArchived: false },
-  { id: '12/6', name: 'Lớp 12/6', grade: 12, gvcnName: 'Cô Quách Thu Hương', gvcnId: 'gvcn_12_6', bithuName: 'Phùng Hải Đăng', bithuId: 'bithu_12_6', totalStudents: 41, unionMembers: 41, standardScore: 1440, isArchived: false }
+  { id: '12/1', name: 'Lớp 12/1', grade: 12, gvcnName: 'Zơrâm Thị Thủy', gvcnId: 'gvcn_12_1', bithuName: 'Mai Phương Thảo', bithuId: 'bithu_12_1', totalStudents: 44, unionMembers: 44, standardScore: 1440, isArchived: false },
+  { id: '12/2', name: 'Lớp 12/2', grade: 12, gvcnName: 'Thông Thị Bông', gvcnId: 'gvcn_12_2', bithuName: 'Lương Thế Vinh', bithuId: 'bithu_12_2', totalStudents: 43, unionMembers: 43, standardScore: 1440, isArchived: false },
+  { id: '12/3', name: 'Lớp 12/3', grade: 12, gvcnName: 'Sava Thị Hòa', gvcnId: 'gvcn_12_3', bithuName: 'Chu Đình Trọng', bithuId: 'bithu_12_3', totalStudents: 42, unionMembers: 42, standardScore: 1440, isArchived: false },
+  { id: '12/4', name: 'Lớp 12/4', grade: 12, gvcnName: 'Lê Nguyên Trưởng', gvcnId: 'gvcn_12_4', bithuName: 'Nguyễn Thị Hoa', bithuId: 'bithu_12_4', totalStudents: 45, unionMembers: 45, standardScore: 1440, isArchived: false },
+  { id: '12/5', name: 'Lớp 12/5', grade: 12, gvcnName: 'Nguyễn Thị Thùy', gvcnId: 'gvcn_12_5', bithuName: 'Đào Xuân Trường', bithuId: 'bithu_12_5', totalStudents: 40, unionMembers: 40, standardScore: 1440, isArchived: false },
+  { id: '12/6', name: 'Lớp 12/6', grade: 12, gvcnName: 'Trần Văn Long', gvcnId: 'gvcn_12_6', bithuName: 'Phùng Hải Đăng', bithuId: 'bithu_12_6', totalStudents: 41, unionMembers: 41, standardScore: 1440, isArchived: false }
 ];
 
 const generateClassStudents = (): Student[] => {
@@ -435,7 +435,7 @@ export const INITIAL_CRITERIA: Criterion[] = [
 ];
 
 export const INITIAL_USERS: User[] = [
-  // 1. Admin
+  // 1. Ban Giám Hiệu & BCH Đoàn Trường (Admin)
   {
     id: 'admin',
     username: 'admin',
@@ -447,8 +447,19 @@ export const INITIAL_USERS: User[] = [
     phone: '0912.345.678',
     isActive: true
   },
+  {
+    id: 'admin_diu',
+    username: 'admin_diu',
+    name: 'B nướch Dịu',
+    role: 'admin',
+    roleTitle: 'Phó Bí thư Đoàn Trường',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    email: 'diu.bn@thpt-quangtrung-donggiang.edu.vn',
+    phone: '0912.999.888',
+    isActive: true
+  },
 
-  // 2. Cờ Đỏ
+  // 2. Ban Cờ Đỏ
   {
     id: 'codo_nam',
     username: 'codo_nam',
@@ -461,43 +472,99 @@ export const INITIAL_USERS: User[] = [
     phone: '0988.112.233',
     isActive: true
   },
-
-  // 3. GVCN
   {
-    id: 'gvcn_10_1',
-    username: 'gvcn_10_1',
-    name: 'Thầy Nguyễn Văn Thành',
-    role: 'manager',
-    roleTitle: 'Giáo viên Chủ nhiệm Lớp 10/1',
+    id: 'codo_hai',
+    username: 'codo_hai',
+    name: 'Phạm Đức Hải',
+    role: 'auditor',
+    roleTitle: 'Cán bộ Cờ Đỏ (Trực Khối 11)',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    classId: '10/1',
-    phone: '0903.123.456',
-    email: 'thanh.nv@thpt-quangtrung-donggiang.edu.vn',
+    classId: '12/1',
+    assignedZone: 'Khối 11',
+    phone: '0988.223.344',
     isActive: true
   },
   {
-    id: 'gvcn_11_5',
-    username: 'gvcn_11_5',
-    name: 'Thầy Đinh Ngọc Tú',
-    role: 'manager',
-    roleTitle: 'Giáo viên Chủ nhiệm Lớp 11/5',
+    id: 'codo_linh',
+    username: 'codo_linh',
+    name: 'Trần Thùy Linh',
+    role: 'auditor',
+    roleTitle: 'Cán bộ Cờ Đỏ (Trực Khối 12)',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    classId: '10/3',
+    assignedZone: 'Khối 12',
+    phone: '0988.334.455',
+    isActive: true
+  },
+  {
+    id: 'codo_dung',
+    username: 'codo_dung',
+    name: 'Lê Hoàng Dũng',
+    role: 'auditor',
+    roleTitle: 'Cán bộ Cờ Đỏ (Trực Cổng trường & Nhà xe)',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    classId: '11/5',
-    phone: '0904.567.890',
-    email: 'tu.dn@thpt-quangtrung-donggiang.edu.vn',
+    classId: '11/4',
+    assignedZone: 'Cổng trường & Nhà xe',
+    phone: '0988.445.566',
+    isActive: true
+  },
+  {
+    id: 'codo_mai',
+    username: 'codo_mai',
+    name: 'Vũ Ngọc Mai',
+    role: 'auditor',
+    roleTitle: 'Cán bộ Cờ Đỏ (Trực Khu vực Sân trường)',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
+    classId: '12/5',
+    assignedZone: 'Khu vực Sân trường',
+    phone: '0988.556.677',
+    isActive: true
+  },
+  {
+    id: 'codo_quang',
+    username: 'codo_quang',
+    name: 'Hoàng Minh Quang',
+    role: 'auditor',
+    roleTitle: 'Cán bộ Cờ Đỏ (Trực Khu Căn tin & Nhà thi đấu)',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    classId: '10/5',
+    assignedZone: 'Khu Căn tin & Nhà thi đấu',
+    phone: '0966.333.111',
     isActive: true
   },
 
-  // 4. Bí thư chi đoàn
+  // 3. Giáo Viên Chủ Nhiệm (18 Lớp)
+  { id: 'gvcn_10_1', username: 'gvcn_10_1', name: 'Rapát Thị Mận', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 10/1', classId: '10/1', phone: '0903.123.456', isActive: true },
+  { id: 'gvcn_10_2', username: 'gvcn_10_2', name: 'ALăng Thị Moáy', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 10/2', classId: '10/2', phone: '0903.123.457', isActive: true },
+  { id: 'gvcn_10_3', username: 'gvcn_10_3', name: 'Nguyễn Văn Tiểu', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 10/3', classId: '10/3', phone: '0903.123.458', isActive: true },
+  { id: 'gvcn_10_4', username: 'gvcn_10_4', name: 'Bùi Ngọc Giao', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 10/4', classId: '10/4', phone: '0903.123.459', isActive: true },
+  { id: 'gvcn_10_5', username: 'gvcn_10_5', name: 'Pơloong Thị Lý', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 10/5', classId: '10/5', phone: '0903.123.460', isActive: true },
+  { id: 'gvcn_10_6', username: 'gvcn_10_6', name: 'Đinh Thị Thu', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 10/6', classId: '10/6', phone: '0903.123.461', isActive: true },
+
+  { id: 'gvcn_11_1', username: 'gvcn_11_1', name: 'Phát Xuân Quý', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 11/1', classId: '11/1', phone: '0904.123.456', isActive: true },
+  { id: 'gvcn_11_2', username: 'gvcn_11_2', name: 'Phạm Thanh Phương', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 11/2', classId: '11/2', phone: '0904.123.457', isActive: true },
+  { id: 'gvcn_11_3', username: 'gvcn_11_3', name: 'Alăng Thị Đặng', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 11/3', classId: '11/3', phone: '0904.123.458', isActive: true },
+  { id: 'gvcn_11_4', username: 'gvcn_11_4', name: 'Blúp Thị Viết', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 11/4', classId: '11/4', phone: '0904.123.459', isActive: true },
+  { id: 'gvcn_11_5', username: 'gvcn_11_5', name: 'Lê Quang Hét', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 11/5', classId: '11/5', phone: '0904.123.460', isActive: true },
+  { id: 'gvcn_11_6', username: 'gvcn_11_6', name: 'Zơrâm Thị Thủy', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 11/6', classId: '11/6', phone: '0904.123.461', isActive: true },
+
+  { id: 'gvcn_12_1', username: 'gvcn_12_1', name: 'Zơrâm Thị Thủy', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 12/1', classId: '12/1', phone: '0905.123.456', isActive: true },
+  { id: 'gvcn_12_2', username: 'gvcn_12_2', name: 'Thông Thị Bông', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 12/2', classId: '12/2', phone: '0905.123.457', isActive: true },
+  { id: 'gvcn_12_3', username: 'gvcn_12_3', name: 'Sava Thị Hòa', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 12/3', classId: '12/3', phone: '0905.123.458', isActive: true },
+  { id: 'gvcn_12_4', username: 'gvcn_12_4', name: 'Lê Nguyên Trưởng', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 12/4', classId: '12/4', phone: '0905.123.459', isActive: true },
+  { id: 'gvcn_12_5', username: 'gvcn_12_5', name: 'Nguyễn Thị Thùy', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 12/5', classId: '12/5', phone: '0905.123.460', isActive: true },
+  { id: 'gvcn_12_6', username: 'gvcn_12_6', name: 'Trần Văn Long', role: 'manager', roleTitle: 'Giáo viên Chủ nhiệm Lớp 12/6', classId: '12/6', phone: '0905.123.461', isActive: true },
+
+  // 4. Bí thư Chi đoàn
   {
     id: 'bithu_10_1',
     username: 'bithu_10_1',
-    name: 'Trần Thị Thu Thảo',
+    name: 'Nguyễn Văn An',
     role: 'youth_secretary',
     roleTitle: 'Bí thư Chi đoàn 10/1',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     classId: '10/1',
-    phone: '0977.334.455',
+    phone: '0912.111.222',
     isActive: true,
     points: 120,
     rankTitle: 'Đoàn viên Xuất sắc',
@@ -517,10 +584,22 @@ export const INITIAL_USERS: User[] = [
     points: 215,
     rankTitle: 'Cán bộ Đoàn Tiêu biểu',
     joinedDate: '26/03/2022',
-    studentId: 'HS20221204'
+    studentId: 'HS20221231'
   },
 
   // 5. Học sinh / Đoàn viên
+  {
+    id: 'hs_10_1',
+    username: 'hs_10_1',
+    name: 'Trần Thị Bích',
+    role: 'user',
+    roleTitle: 'Đoàn viên - Lớp 10/1',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    classId: '10/1',
+    studentId: 'HS20241002',
+    phone: '0912.333.444',
+    isActive: true
+  },
   {
     id: 'doanvien_minh',
     username: 'doanvien_minh',
@@ -534,7 +613,7 @@ export const INITIAL_USERS: User[] = [
     points: 85,
     rankTitle: 'Đoàn viên Tích cực',
     joinedDate: '19/05/2024',
-    studentId: 'HS20241019'
+    studentId: 'HS20241001'
   },
   {
     id: 'doanvien_hoa',
@@ -549,7 +628,7 @@ export const INITIAL_USERS: User[] = [
     points: 160,
     rankTitle: 'Đoàn viên Ưu tú',
     joinedDate: '26/03/2023',
-    studentId: 'HS20221215'
+    studentId: 'HS20221232'
   }
 ];
 

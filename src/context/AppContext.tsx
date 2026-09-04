@@ -47,7 +47,7 @@ import {
   INITIAL_ACADEMIC_YEARS
 } from '../data/initialData';
 import { SupabaseService } from '../services/supabaseService';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { isSupabaseConfigured, getSupabaseClient } from '../lib/supabase';
 
 interface AppContextType {
   currentUser: User | null;
@@ -347,50 +347,110 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [activeWeek, weeksConfig]);
 
-  // Auto-sync with Supabase Cloud on startup
-  useEffect(() => {
-    if (isSupabaseConfigured()) {
-      SupabaseService.loadAllDataFromSupabase().then(cloudData => {
-        if (cloudData) {
-          if (cloudData.classes && cloudData.classes.length > 0) setClasses(cloudData.classes);
-          if (cloudData.criteria && cloudData.criteria.length > 0) setCriteria(cloudData.criteria);
-          if (cloudData.students && cloudData.students.length > 0) setStudents(sanitizeStudentList(cloudData.students));
-          if (cloudData.violations) setViolations(cloudData.violations);
-          if (cloudData.news && cloudData.news.length > 0) setNews(cloudData.news);
-          if (cloudData.notices && cloudData.notices.length > 0) setNotices(cloudData.notices);
-          if (cloudData.schoolSettings) setSchoolSettings(cloudData.schoolSettings);
-          if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(cloudData.activitySlides);
-          if (cloudData.weeksConfig && cloudData.weeksConfig.length > 0) {
-            setWeeksConfig(cloudData.weeksConfig);
-            const currentWeek = cloudData.weeksConfig.find(w => w.isCurrent);
-            if (currentWeek) {
-              setActiveWeekState(currentWeek.weekNumber);
-              setIsWeekLocked(Boolean(currentWeek.isLocked));
-            }
-          }
-          if (cloudData.users && cloudData.users.length > 0) {
-            setUsers(cloudData.users);
-            // Cập nhật tài khoản hiện tại với thông tin mới nhất từ Cloud (họ tên, phân quyền, ảnh đại diện)
-            setCurrentUser(prevUser => {
-              if (!prevUser) return null;
-              const matched = cloudData.users!.find(u => u.id === prevUser.id || u.username.toLowerCase() === prevUser.username.toLowerCase());
-              return matched ? { ...prevUser, ...matched } : prevUser;
-            });
-          }
-          if (cloudData.duties && cloudData.duties.length > 0) {
-            setDuties(cloudData.duties);
-          }
-          console.log('✅ Đã đồng bộ toàn bộ dữ liệu mới nhất từ Supabase Cloud!');
+  // Hàm đồng bộ toàn diện tất cả bảng dữ liệu từ Supabase Cloud
+  const refreshDataFromCloud = async () => {
+    if (!isSupabaseConfigured()) return;
+    try {
+      const cloudData = await SupabaseService.loadAllDataFromSupabase();
+      if (!cloudData) return;
+
+      if (cloudData.classes && cloudData.classes.length > 0) setClasses(cloudData.classes);
+      if (cloudData.criteria && cloudData.criteria.length > 0) setCriteria(cloudData.criteria);
+      if (cloudData.students && cloudData.students.length > 0) setStudents(sanitizeStudentList(cloudData.students));
+      if (cloudData.violations) setViolations(cloudData.violations);
+      if (cloudData.news && cloudData.news.length > 0) setNews(cloudData.news);
+      if (cloudData.notices && cloudData.notices.length > 0) setNotices(cloudData.notices);
+      if (cloudData.schoolSettings) setSchoolSettings(cloudData.schoolSettings);
+      if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(cloudData.activitySlides);
+      if (cloudData.weeksConfig && cloudData.weeksConfig.length > 0) {
+        setWeeksConfig(cloudData.weeksConfig);
+        const currentWeek = cloudData.weeksConfig.find(w => w.isCurrent);
+        if (currentWeek) {
+          setActiveWeekState(currentWeek.weekNumber);
+          setIsWeekLocked(Boolean(currentWeek.isLocked));
         }
-      }).catch(err => {
-        console.warn('Không thể nạp dữ liệu từ Cloud, tiếp tục với LocalStorage:', err);
-      });
+      }
+      if (cloudData.users && cloudData.users.length > 0) {
+        setUsers(cloudData.users);
+        // Cập nhật tài khoản hiện tại với thông tin mới nhất từ Cloud
+        setCurrentUser(prevUser => {
+          if (!prevUser) return null;
+          const matched = cloudData.users!.find(u => u.id === prevUser.id || u.username.toLowerCase() === prevUser.username.toLowerCase());
+          return matched ? { ...prevUser, ...matched } : prevUser;
+        });
+      }
+      if (cloudData.duties && cloudData.duties.length > 0) {
+        setDuties(cloudData.duties);
+      }
+      if (cloudData.academicYears && cloudData.academicYears.length > 0) {
+        setAcademicYears(cloudData.academicYears);
+      }
+      if (cloudData.feeLocks) {
+        setFeeLocks(cloudData.feeLocks);
+      }
+      if (cloudData.auditLogs && cloudData.auditLogs.length > 0) {
+        setAuditLogs(cloudData.auditLogs);
+      }
+      if (cloudData.activityReports && cloudData.activityReports.length > 0) {
+        setActivityReports(cloudData.activityReports);
+      }
+      console.log('✅ [Multi-Device Sync] Đồng bộ dữ liệu thành công từ Supabase Cloud!');
+    } catch (err) {
+      console.warn('Lỗi khi đồng bộ từ Supabase Cloud:', err);
     }
+  };
+
+  // Tự động kích hoạt Realtime Subscription + Event Listeners + Polling để đồng bộ tức thì đa thiết bị
+  useEffect(() => {
+    // 1. Đồng bộ dữ liệu ngay khi khởi động
+    refreshDataFromCloud();
+
+    // 2. Lắng nghe thay đổi Realtime từ Supabase (Websocket postgres_changes)
+    const client = getSupabaseClient();
+    let channel: any = null;
+    if (client && isSupabaseConfigured()) {
+      try {
+        channel = client
+          .channel('public:db-sync-all-devices')
+          .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+            console.log('⚡ [Realtime] Nhận tín hiệu thay đổi dữ liệu từ thiết bị khác, đang đồng bộ tức thì...');
+            refreshDataFromCloud();
+          })
+          .subscribe();
+      } catch (err) {
+        console.warn('Không thể khởi tạo Realtime Channel:', err);
+      }
+    }
+
+    // 3. Tự động đồng bộ khi người dùng mở lại tab hoặc chuyển sang ứng dụng trên điện thoại
+    const handleVisibilityOrFocus = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refreshDataFromCloud();
+      }
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    window.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+    // 4. Định kỳ đồng bộ ngầm mỗi 20 giây để dữ liệu máy tính & điện thoại luôn khớp tuyệt đối
+    const pollInterval = setInterval(() => {
+      refreshDataFromCloud();
+    }, 20000);
+
+    return () => {
+      if (channel && client) {
+        try {
+          client.removeChannel(channel);
+        } catch {}
+      }
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      clearInterval(pollInterval);
+    };
   }, []);
 
   const addLog = (action: string, details: string) => {
     const newLog: AuditLog = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       timestamp: new Date().toLocaleString('vi-VN'),
       userId: currentUser?.id || 'anonymous',
       userName: currentUser?.name || 'Khách truy cập',
@@ -400,6 +460,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ipAddress: '192.168.1.50'
     };
     setAuditLogs(prev => [newLog, ...prev]);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveAuditLog(newLog);
+    }
   };
 
   // Auth
@@ -467,13 +530,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Weeks Configuration
   const addWeek = (week: WeekConfig) => {
     setWeeksConfig(prev => [...prev, week]);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveSingleWeek(week);
+    }
     addLog('Tạo tuần học mới', `Thêm ${week.title} (${week.startDate} đến ${week.endDate})`);
   };
 
   const updateWeek = (weekNum: number, updates: Partial<WeekConfig>) => {
-    setWeeksConfig(prev => prev.map(w => w.weekNumber === weekNum ? { ...w, ...updates } : w));
+    let updatedObj: WeekConfig | undefined;
+    setWeeksConfig(prev => prev.map(w => {
+      if (w.weekNumber === weekNum) {
+        updatedObj = { ...w, ...updates };
+        return updatedObj;
+      }
+      return w;
+    }));
     if (updates.isLocked !== undefined && weekNum === activeWeek) {
       setIsWeekLocked(updates.isLocked);
+    }
+    if (isSupabaseConfigured() && updatedObj) {
+      SupabaseService.saveSingleWeek(updatedObj);
     }
     addLog('Cập nhật tuần học', `Cập nhật cấu hình Tuần ${weekNum}`);
   };
@@ -484,6 +560,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (targetWeek.isCurrent) return { success: false, message: 'Không thể xóa Tuần đang được chọn làm Tuần hiện tại!' };
     
     setWeeksConfig(prev => prev.filter(w => w.weekNumber !== weekNum));
+    if (isSupabaseConfigured()) {
+      SupabaseService.deleteWeek(weekNum);
+    }
     addLog('Xóa tuần học', `Xóa cấu hình ${targetWeek.title}`);
     return { success: true, message: `Đã xóa ${targetWeek.title} thành công!` };
   };
@@ -1375,30 +1454,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const assignGvcnToClass = (classId: string, gvcnId: string) => {
     const gvcn = users.find(u => u.id === gvcnId);
     if (!gvcn) return;
+    let targetClass: ClassInfo | undefined;
     setClasses(prev => prev.map(c => {
       if (c.id === classId) {
-        return {
+        targetClass = {
           ...c,
           gvcnId: gvcn.id,
           gvcnName: gvcn.name
         };
+        return targetClass;
       }
       return c;
     }));
+    if (isSupabaseConfigured() && targetClass) {
+      SupabaseService.saveClass(targetClass);
+    }
     addLog('Phân công GVCN', `Phân công thầy/cô ${gvcn.name} phụ trách lớp ${classId}`);
   };
 
   const removeGvcnFromClass = (classId: string) => {
+    let targetClass: ClassInfo | undefined;
     setClasses(prev => prev.map(c => {
       if (c.id === classId) {
-        return {
+        targetClass = {
           ...c,
           gvcnId: '',
           gvcnName: 'Chưa phân công'
         };
+        return targetClass;
       }
       return c;
     }));
+    if (isSupabaseConfigured() && targetClass) {
+      SupabaseService.saveClass(targetClass);
+    }
     addLog('Gỡ phân công GVCN', `Gỡ giáo viên chủ nhiệm của lớp ${classId}`);
   };
 
@@ -1739,8 +1828,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Union Fee Locks & Batch Operations
   const toggleFeeLock = (classId: string, month: string) => {
     const key = month === 'ALL_YEAR' ? `${classId}_ALL_YEAR` : `${classId}_${month}`;
+    let nextLocked = false;
     setFeeLocks(prev => {
-      const nextLocked = !prev[key];
+      nextLocked = !prev[key];
       const updated = {
         ...prev,
         [key]: nextLocked
@@ -1752,6 +1842,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return updated;
     });
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveFeeLock(key, nextLocked);
+    }
     addLog(
       'Khóa/Mở sổ đoàn phí',
       `Lớp ${classId}: ${month === 'ALL_YEAR' ? 'Toàn bộ năm học' : month}`
@@ -1763,19 +1856,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const batchUpdateUnionFee = (studentIds: string[], month: string, status: 'paid' | 'unpaid') => {
-    setStudents(prev => prev.map(st => {
-      if (studentIds.includes(st.id) && st.isUnionMember) {
-        return {
-          ...st,
-          monthlyUnionFees: {
-            ...(st.monthlyUnionFees || {}),
-            [month]: status
-          },
-          unionFeeStatus: status
-        };
-      }
-      return st;
-    }));
+    const updatedStudents: Student[] = [];
+    setStudents(prev => {
+      return prev.map(st => {
+        if (studentIds.includes(st.id) && st.isUnionMember) {
+          const updated: Student = {
+            ...st,
+            monthlyUnionFees: {
+              ...(st.monthlyUnionFees || {}),
+              [month]: status
+            },
+            unionFeeStatus: status
+          };
+          updatedStudents.push(updated);
+          return updated;
+        }
+        return st;
+      });
+    });
+    if (isSupabaseConfigured() && updatedStudents.length > 0) {
+      SupabaseService.saveStudentsBatch(updatedStudents);
+    }
   };
 
   const payYearlyFee = (studentId: string, status: 'paid' | 'unpaid') => {
@@ -1785,16 +1886,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updated[m] = status;
     });
 
+    let updatedStudent: Student | null = null;
     setStudents(prev => prev.map(st => {
       if (st.id === studentId) {
-        return {
+        updatedStudent = {
           ...st,
           monthlyUnionFees: updated,
           unionFeeStatus: status
         };
+        return updatedStudent;
       }
       return st;
     }));
+    if (isSupabaseConfigured() && updatedStudent) {
+      SupabaseService.saveStudent(updatedStudent);
+    }
   };
 
   // Activity Reports from Youth Secretaries (Báo cáo tham gia phong trào)
@@ -1806,6 +1912,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'submitted'
     };
     setActivityReports(prev => [newReport, ...prev]);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveActivityReport(newReport);
+    }
     addLog('Báo cáo phong trào', `Bí thư Chi đoàn ${reportData.className} gửi danh sách ${reportData.participantCount} học sinh tham gia "${reportData.activityTitle}"`);
 
     // Realtime notification to Admin
@@ -1821,15 +1930,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteActivityReport = (id: string) => {
     const target = activityReports.find(r => r.id === id);
     setActivityReports(prev => prev.filter(r => r.id !== id));
+    if (isSupabaseConfigured()) {
+      SupabaseService.deleteActivityReport(id);
+    }
     addLog('Xóa báo cáo phong trào', `Xóa báo cáo "${target?.activityTitle || id}" của lớp ${target?.className || ''}`);
   };
 
   const verifyActivityReport = (id: string, feedback?: string) => {
-    setActivityReports(prev => prev.map(r => r.id === id ? {
-      ...r,
-      status: 'verified',
-      adminFeedback: feedback || 'Đoàn trường đã ghi nhận và xác nhận danh sách tham gia.'
-    } : r));
+    let updatedReport: ActivityReport | undefined;
+    setActivityReports(prev => prev.map(r => {
+      if (r.id === id) {
+        updatedReport = {
+          ...r,
+          status: 'verified',
+          adminFeedback: feedback || 'Đoàn trường đã ghi nhận và xác nhận danh sách tham gia.'
+        };
+        return updatedReport;
+      }
+      return r;
+    }));
+    if (isSupabaseConfigured() && updatedReport) {
+      SupabaseService.saveActivityReport(updatedReport);
+    }
     const target = activityReports.find(r => r.id === id);
     addLog('Duyệt báo cáo phong trào', `Đoàn trường duyệt báo cáo "${target?.activityTitle}" của Chi đoàn ${target?.className}`);
     if (target) {
@@ -2053,6 +2175,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `year_${Date.now()}`
     };
     setAcademicYears(prev => [...prev, newYear]);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveAcademicYear(newYear);
+    }
     addLog('Tạo Năm Học Mới', `Admin khởi tạo ${newYear.name}`);
     return newYear;
   };
@@ -2085,7 +2210,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let graduatedCount = 0;
       let promotedCount = 0;
 
-      setStudents(prev => prev.map(s => {
+      const updatedStudentsList = students.map(s => {
         // If in graduating Grade 12 classes or already Grade 12
         if (payload.graduatedGrade12ClassIds.includes(s.classId) || s.grade === 12) {
           graduatedCount++;
@@ -2110,10 +2235,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         return s;
-      }));
+      });
+      setStudents(updatedStudentsList);
 
       // 3. Update Classes configuration for the new year
-      setClasses(prev => prev.map(c => {
+      const updatedClassesList = classes.map(c => {
         const assignment = payload.gvcnAssignments[c.id];
         return {
           ...c,
@@ -2122,7 +2248,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           gvcnId: assignment ? assignment.gvcnId : c.gvcnId,
           academicYearId: payload.newYearId
         };
-      }));
+      });
+      setClasses(updatedClassesList);
 
       // 4. Update Auditor members - remove graduated Grade 12 auditors
       setAuditors(prev => prev.filter(a => {
@@ -2147,7 +2274,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveWeekState(1);
       setIsWeekLocked(false);
 
-      // 6. Send broadcast notification
+      // 6. Persist everything to Supabase Cloud
+      if (isSupabaseConfigured()) {
+        updatedYears.forEach(y => SupabaseService.saveAcademicYear(y));
+        SupabaseService.saveStudentsBatch(updatedStudentsList);
+        SupabaseService.saveWeeksConfig(newWeeksList);
+      }
+
+      // 7. Send broadcast notification
       sendNotification({
         targetRole: 'all',
         targetClassId: 'ALL',

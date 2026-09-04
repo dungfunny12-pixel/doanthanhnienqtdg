@@ -11,7 +11,10 @@ import {
   User, 
   SchoolSettings,
   ActivitySlide,
-  WeekConfig
+  WeekConfig,
+  AcademicYear,
+  AuditLog,
+  ActivityReport
 } from '../types';
 
 /**
@@ -33,6 +36,10 @@ export const SupabaseService = {
     schoolSettings?: SchoolSettings;
     activitySlides?: ActivitySlide[];
     weeksConfig?: WeekConfig[];
+    academicYears?: AcademicYear[];
+    feeLocks?: Record<string, boolean>;
+    auditLogs?: AuditLog[];
+    activityReports?: ActivityReport[];
   } | null> {
     const client = getSupabaseClient();
     if (!client || !isSupabaseConfigured()) return null;
@@ -105,6 +112,30 @@ export const SupabaseService = {
         .from('duty_schedule')
         .select('*');
 
+      // 12. Academic Years
+      const { data: rawYears } = await client
+        .from('academic_years')
+        .select('*')
+        .order('year_id', { ascending: false });
+
+      // 13. Fee Locks
+      const { data: rawFeeLocks } = await client
+        .from('fee_locks')
+        .select('*');
+
+      // 14. Audit Logs
+      const { data: rawLogs } = await client
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      // 15. Activity Reports
+      const { data: rawReports } = await client
+        .from('activity_reports')
+        .select('*')
+        .eq('is_deleted', false);
+
       if (classErr) {
         console.warn('Không thể tải dữ liệu từ Supabase, sử dụng dữ liệu cục bộ:', classErr.message);
         return null;
@@ -122,7 +153,7 @@ export const SupabaseService = {
         unionMembers: c.union_members_count || 0,
         standardScore: Number(c.standard_score) || 1440,
         isArchived: c.is_archived || false,
-        academicYearId: c.academic_year || '2025_2026'
+        academicYearId: c.academic_year || '2026_2027'
       })).sort((a, b) => {
         if (a.grade !== b.grade) return a.grade - b.grade;
         const numA = parseInt(a.id.split('/')[1] || '0', 10);
@@ -176,22 +207,22 @@ export const SupabaseService = {
         classId: v.class_id,
         className: v.class_name || `Lớp ${v.class_id}`,
         day: v.day,
-        date: v.created_at ? v.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+        date: v.date_recorded || (v.created_at ? v.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
         weekNumber: v.week_number,
-        criterionId: v.criterion_id,
+        criterionId: v.criterion_id || v.criteria_code,
         criterionName: v.criterion_name || 'Vi phạm nề nếp',
         groupName: v.criterion_group || 'Nề nếp & Tác phong',
         quantity: Number(v.quantity) || 1,
-        pointsDeducted: Number(v.score_deducted) || 10,
+        pointsDeducted: Number(v.score_deducted) || 0,
         bonusPoints: Number(v.bonus_points) || 0,
-        type: v.bonus_points > 0 ? 'bonus' : 'deduction',
+        type: Number(v.bonus_points) > 0 ? 'bonus' : 'deduction',
         studentNames: v.student_names || [],
         note: v.note || '',
         proofImages: v.proof_images || [],
         reportedBy: {
-          id: v.reporter_id || 'system',
+          id: v.reporter_id || v.reported_by_id || 'system',
           name: v.reported_by_name || 'Ban Cờ Đỏ',
-          role: 'auditor'
+          role: v.reported_by_role || 'auditor'
         },
         reportedAt: v.created_at || new Date().toISOString(),
         status: v.status || 'pending',
@@ -199,7 +230,7 @@ export const SupabaseService = {
           reason: v.appeal_reason,
           proofImages: v.appeal_proofs || [],
           appealedBy: 'Bí thư / GVCN',
-          appealedAt: v.appealed_at || v.created_at || new Date().toISOString(),
+          appealedAt: v.appeal_created_at || v.created_at || new Date().toISOString(),
           adminResponse: v.admin_response
         } : undefined,
         locked: v.is_locked || false
@@ -316,6 +347,58 @@ export const SupabaseService = {
           }))
         : undefined;
 
+      const academicYears: AcademicYear[] | undefined = (rawYears && rawYears.length > 0)
+        ? rawYears.map(y => ({
+            id: y.year_id,
+            name: y.name,
+            startDate: y.start_date || '2026-09-07',
+            endDate: y.end_date || '2027-05-31',
+            isCurrent: Boolean(y.is_current),
+            isFrozen: Boolean(y.is_archived),
+            createdAt: y.created_at || new Date().toISOString()
+          }))
+        : undefined;
+
+      const feeLocks: Record<string, boolean> | undefined = (rawFeeLocks && rawFeeLocks.length > 0)
+        ? rawFeeLocks.reduce((acc: Record<string, boolean>, f: any) => {
+            acc[f.class_id] = Boolean(f.is_locked);
+            return acc;
+          }, {} as Record<string, boolean>)
+        : undefined;
+
+      const auditLogs: AuditLog[] | undefined = (rawLogs && rawLogs.length > 0)
+        ? rawLogs.map(l => ({
+            id: l.log_id,
+            timestamp: l.timestamp || new Date(l.created_at).toLocaleString('vi-VN'),
+            userId: l.user_id || 'system',
+            userName: l.user_name || 'Hệ thống',
+            userRole: (l.user_role || 'user') as any,
+            action: l.action,
+            details: l.details || '',
+            ipAddress: l.ip_address || '192.168.1.50'
+          }))
+        : undefined;
+
+      const activityReports: ActivityReport[] | undefined = (rawReports && rawReports.length > 0)
+        ? rawReports.map(r => ({
+            id: r.report_id || r.id,
+            activityId: r.activity_id || undefined,
+            activityTitle: r.activity_title || '',
+            activityType: r.activity_type || 'phong_trao',
+            classId: r.class_id || '',
+            className: r.class_name || '',
+            secretaryName: r.secretary_name || '',
+            reportedAt: r.created_at || new Date().toISOString(),
+            participantCount: r.participant_count || 0,
+            participants: r.participants || [],
+            nonParticipants: r.non_participants || [],
+            status: r.status || 'submitted',
+            adminFeedback: r.admin_feedback || undefined,
+            proofImages: r.proof_images || [],
+            academicYearId: r.academic_year || '2026_2027'
+          }))
+        : undefined;
+
       return {
         classes,
         criteria,
@@ -327,7 +410,11 @@ export const SupabaseService = {
         activitySlides,
         weeksConfig,
         users,
-        duties
+        duties,
+        academicYears,
+        feeLocks,
+        auditLogs,
+        activityReports
       };
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu từ Supabase:', err);
@@ -922,6 +1009,21 @@ export const SupabaseService = {
   },
 
   /**
+   * Xóa 1 tuần học khỏi Supabase
+   */
+  async deleteWeek(weekNumber: number): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('weeks').delete().eq('week_number', weekNumber);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa tuần:', err);
+      return false;
+    }
+  },
+
+  /**
    * Lưu toàn bộ 35 tuần lên Supabase Cloud
    */
   async saveWeeksConfig(weeks: WeekConfig[]): Promise<boolean> {
@@ -1153,6 +1255,120 @@ export const SupabaseService = {
       return true;
     } catch (err) {
       console.warn('Lỗi xóa duty:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu trạng thái khóa đoàn phí theo lớp
+   */
+  async saveFeeLock(classId: string, isLocked: boolean): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('fee_locks').upsert({
+        class_id: classId,
+        is_locked: isLocked,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'class_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu fee_lock:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu năm học lên Supabase Cloud
+   */
+  async saveAcademicYear(year: AcademicYear): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('academic_years').upsert({
+        year_id: year.id,
+        name: year.name,
+        start_date: year.startDate,
+        end_date: year.endDate,
+        is_current: year.isCurrent,
+        is_archived: year.isFrozen,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'year_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu academic_year:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu nhật ký hoạt động / kiểm toán lên Supabase Cloud
+   */
+  async saveAuditLog(log: AuditLog): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('audit_logs').upsert({
+        log_id: log.id,
+        user_id: log.userId,
+        user_name: log.userName,
+        user_role: log.userRole,
+        action: log.action,
+        details: log.details,
+        ip_address: log.ipAddress || null,
+        timestamp: log.timestamp || new Date().toISOString(),
+        created_at: new Date().toISOString()
+      }, { onConflict: 'log_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu audit_log:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu báo cáo học sinh tham gia phong trào lên Supabase Cloud
+   */
+  async saveActivityReport(report: ActivityReport): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('activity_reports').upsert({
+        report_id: report.id,
+        activity_id: report.activityId || null,
+        activity_title: report.activityTitle,
+        activity_type: report.activityType,
+        class_id: report.classId,
+        class_name: report.className,
+        secretary_name: report.secretaryName,
+        participant_count: report.participantCount,
+        participants: report.participants,
+        non_participants: report.nonParticipants || [],
+        status: report.status,
+        admin_feedback: report.adminFeedback || null,
+        proof_images: report.proofImages || [],
+        academic_year: report.academicYearId || '2026_2027',
+        is_deleted: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'report_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu activity_report:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa báo cáo phong trào trên Supabase Cloud
+   */
+  async deleteActivityReport(id: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('activity_reports').update({ is_deleted: true, updated_at: new Date().toISOString() }).eq('report_id', id);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa activity_report:', err);
       return false;
     }
   }
