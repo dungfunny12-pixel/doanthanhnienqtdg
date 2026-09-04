@@ -519,11 +519,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // School Settings
   const updateSchoolSettings = (updates: Partial<SchoolSettings>) => {
-    const updated = { ...schoolSettings, ...updates };
-    setSchoolSettings(updated);
-    if (isSupabaseConfigured()) {
-      SupabaseService.saveSchoolSettings(updated);
-    }
+    setSchoolSettings(prev => {
+      const updated = { ...prev, ...updates };
+      try {
+        localStorage.setItem(`${LOCAL_STORAGE_KEY}_schoolSettings`, JSON.stringify(updated));
+      } catch {}
+      if (isSupabaseConfigured()) {
+        SupabaseService.saveSchoolSettings(updated).catch(err => {
+          console.warn('Lỗi khi lưu schoolSettings lên Supabase:', err);
+        });
+      }
+      return updated;
+    });
     addLog('Cập nhật cài đặt trường', 'Thay đổi thông tin nhận diện, tên trường hoặc màu sắc giao diện');
   };
 

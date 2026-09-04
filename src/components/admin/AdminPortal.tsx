@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
   Table,
@@ -1259,6 +1259,12 @@ export const AdminPortal: React.FC = () => {
   const [settingsForm, setSettingsForm] = useState(schoolSettings);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
+  useEffect(() => {
+    if (schoolSettings) {
+      setSettingsForm(schoolSettings);
+    }
+  }, [schoolSettings]);
+
   // User Management Modal
   const [isUserModalOpen, setIsUserModalOpen] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -2220,8 +2226,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
       if (isSupabaseConfigured()) {
         const publicUrl = await SupabaseService.uploadImage(file, 'media');
         if (publicUrl) {
-          setSettingsForm(prev => ({ ...prev, logoUrl: publicUrl }));
-          updateSchoolSettings({ ...settingsForm, logoUrl: publicUrl });
+          setSettingsForm(prev => {
+            const next = { ...prev, logoUrl: publicUrl };
+            updateSchoolSettings(next);
+            return next;
+          });
           alert('✅ Đã tải Logo trường lên Supabase Storage và lưu cấu hình thành công!');
           return;
         }
@@ -2230,8 +2239,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
       reader.onload = (event) => {
         if (event.target?.result) {
           const res = event.target.result as string;
-          setSettingsForm(prev => ({ ...prev, logoUrl: res }));
-          updateSchoolSettings({ ...settingsForm, logoUrl: res });
+          setSettingsForm(prev => {
+            const next = { ...prev, logoUrl: res };
+            updateSchoolSettings(next);
+            return next;
+          });
         }
       };
       reader.readAsDataURL(file);
@@ -2252,8 +2264,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
       if (isSupabaseConfigured()) {
         const publicUrl = await SupabaseService.uploadImage(file, 'media');
         if (publicUrl) {
-          setSettingsForm(prev => ({ ...prev, youthUnionLogoUrl: publicUrl }));
-          updateSchoolSettings({ ...settingsForm, youthUnionLogoUrl: publicUrl });
+          setSettingsForm(prev => {
+            const next = { ...prev, youthUnionLogoUrl: publicUrl };
+            updateSchoolSettings(next);
+            return next;
+          });
           alert('✅ Đã tải Huy hiệu Đoàn lên Supabase Storage và lưu cấu hình thành công!');
           return;
         }
@@ -2262,8 +2277,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
       reader.onload = (event) => {
         if (event.target?.result) {
           const res = event.target.result as string;
-          setSettingsForm(prev => ({ ...prev, youthUnionLogoUrl: res }));
-          updateSchoolSettings({ ...settingsForm, youthUnionLogoUrl: res });
+          setSettingsForm(prev => {
+            const next = { ...prev, youthUnionLogoUrl: res };
+            updateSchoolSettings(next);
+            return next;
+          });
         }
       };
       reader.readAsDataURL(file);
@@ -2284,8 +2302,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
       if (isSupabaseConfigured()) {
         const publicUrl = await SupabaseService.uploadImage(file, 'media');
         if (publicUrl) {
-          setSettingsForm(prev => ({ ...prev, bannerTopImage: publicUrl }));
-          updateSchoolSettings({ ...settingsForm, bannerTopImage: publicUrl });
+          setSettingsForm(prev => {
+            const next = { ...prev, bannerTopImage: publicUrl };
+            updateSchoolSettings(next);
+            return next;
+          });
           alert('✅ Đã tải Banner Đầu Trang lên Supabase Storage và lưu cấu hình thành công!');
           return;
         }
@@ -2294,8 +2315,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
       reader.onload = (event) => {
         if (event.target?.result) {
           const res = event.target.result as string;
-          setSettingsForm(prev => ({ ...prev, bannerTopImage: res }));
-          updateSchoolSettings({ ...settingsForm, bannerTopImage: res });
+          setSettingsForm(prev => {
+            const next = { ...prev, bannerTopImage: res };
+            updateSchoolSettings(next);
+            return next;
+          });
         }
       };
       reader.readAsDataURL(file);
@@ -2316,8 +2340,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
       if (isSupabaseConfigured()) {
         const publicUrl = await SupabaseService.uploadImage(file, 'media');
         if (publicUrl) {
-          setSettingsForm(prev => ({ ...prev, footerBannerImage: publicUrl }));
-          updateSchoolSettings({ ...settingsForm, footerBannerImage: publicUrl });
+          setSettingsForm(prev => {
+            const next = { ...prev, footerBannerImage: publicUrl };
+            updateSchoolSettings(next);
+            return next;
+          });
           alert('✅ Đã tải Banner Chân Trang lên Supabase Storage và lưu cấu hình thành công!');
           return;
         }
@@ -2326,8 +2353,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
       reader.onload = (event) => {
         if (event.target?.result) {
           const res = event.target.result as string;
-          setSettingsForm(prev => ({ ...prev, footerBannerImage: res }));
-          updateSchoolSettings({ ...settingsForm, footerBannerImage: res });
+          setSettingsForm(prev => {
+            const next = { ...prev, footerBannerImage: res };
+            updateSchoolSettings(next);
+            return next;
+          });
         }
       };
       reader.readAsDataURL(file);

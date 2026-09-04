@@ -558,9 +558,6 @@ export const SupabaseService = {
         youth_union_logo_url: youthUnionLogoUrl,
         banner_top_image: bannerTopImage,
         footer_banner_image: footerBannerImage,
-        semester_1_end_week: settings.semester1EndWeek || 18,
-        semester_1_name: settings.semester1Name || 'Học Kỳ 1',
-        semester_2_name: settings.semester2Name || 'Học Kỳ 2',
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
       return true;
