@@ -94,7 +94,7 @@ export const SupabaseService = {
         client.from('academic_years').select('*').order('created_at', { ascending: false }),
         client.from('fee_locks').select('*'),
         client.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100),
-        client.from('activity_reports').select('*').eq('is_deleted', false),
+        client.from('activity_reports').select('*'),
         client.from('youth_events').select('*'),
         client.from('document_folders').select('*'),
         client.from('document_files').select('*'),
