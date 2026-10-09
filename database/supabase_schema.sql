@@ -776,16 +776,16 @@ CREATE POLICY "Allow web client all on weeks" ON public.weeks FOR ALL USING (tru
 -- 1. View Bảng điểm Thi đua Tuần có STT
 CREATE OR REPLACE VIEW public.view_weekly_leaderboard_stt AS
 SELECT 
-    ROW_NUMBER() OVER (PARTITION BY week_number ORDER BY final_score DESC, total_deduction ASC, class_id ASC) AS stt,
+    ROW_NUMBER() OVER (PARTITION BY wfs.week_number ORDER BY wfs.final_score DESC, wfs.total_deductions ASC, wfs.class_id ASC) AS stt,
     wfs.week_number,
     wfs.class_id,
     c.class_name,
     c.grade,
     wfs.final_score,
-    wfs.total_deduction,
-    wfs.rank_position,
+    wfs.total_deductions,
+    wfs.rank_overall AS rank_position,
     wfs.is_locked,
-    wfs.created_at
+    wfs.snapshotted_at AS created_at
 FROM public.weekly_final_scores wfs
 JOIN public.classes c ON c.class_id = wfs.class_id
 WHERE c.is_deleted = false;
@@ -793,7 +793,7 @@ WHERE c.is_deleted = false;
 -- 2. View Danh sách Học sinh & Đoàn viên lớp theo thứ tự A-Z có STT
 CREATE OR REPLACE VIEW public.view_class_students_stt AS
 SELECT 
-    ROW_NUMBER() OVER (PARTITION BY s.class_id ORDER BY s.full_name COLLATE "vi-VN-x-icu" ASC, s.student_code ASC) AS stt,
+    ROW_NUMBER() OVER (PARTITION BY s.class_id ORDER BY s.full_name ASC, s.student_code ASC) AS stt,
     s.student_id,
     s.student_code,
     s.full_name,
@@ -812,21 +812,21 @@ WHERE s.is_deleted = false AND c.is_deleted = false;
 -- 3. View Tổng hợp Vi phạm Nề nếp có STT
 CREATE OR REPLACE VIEW public.view_violations_stt AS
 SELECT 
-    ROW_NUMBER() OVER (PARTITION BY v.week_number ORDER BY v.day_of_week ASC, v.created_at ASC) AS stt,
+    ROW_NUMBER() OVER (PARTITION BY v.week_number ORDER BY v.day ASC, v.created_at ASC) AS stt,
     v.violation_id,
     v.week_number,
-    v.day_of_week,
+    v.day AS day_of_week,
     v.class_id,
     c.class_name,
-    v.criterion_id,
+    v.criteria_code AS criterion_id,
     cr.title AS criterion_title,
     cr.group_name,
     v.quantity,
-    v.points_deducted,
+    v.points_applied AS points_deducted,
     v.status,
-    v.student_name,
+    array_to_string(v.student_names, ', ') AS student_name,
     v.created_at
 FROM public.violations v
 JOIN public.classes c ON c.class_id = v.class_id
-JOIN public.criteria cr ON cr.criterion_id = v.criterion_id
+JOIN public.criteria cr ON cr.criteria_code = v.criteria_code
 WHERE v.is_deleted = false;
