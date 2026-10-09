@@ -10,32 +10,22 @@ export interface SupabaseConfig {
 const DEFAULT_SUPABASE_URL = 'https://bqrozmqorvxpwjfmgkfk.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_7Z1DuZXAl9jtDFgGbZJEVg_FJnZbI_l';
 
-/**
- * Lấy cấu hình Supabase từ localStorage, biến môi trường .env (VITE_*) hoặc giá trị mặc định của dự án
- */
-export const getSupabaseConfig = (): SupabaseConfig => {
+// Purge any stale localStorage config unconditionally
+if (typeof window !== 'undefined' && window.localStorage) {
   try {
     const local = localStorage.getItem(STORAGE_KEY_CONFIG);
-    if (local) {
-      const parsed = JSON.parse(local);
-      if (parsed.url && parsed.anonKey) {
-        const cleanUrl = parsed.url.trim();
-        const cleanKey = parsed.anonKey.trim();
-        // Tự động dọn dẹp URL máy chủ cũ không còn tồn tại
-        if (cleanUrl.includes('mvkvfvxfcqxdabxumroz')) {
-          localStorage.removeItem(STORAGE_KEY_CONFIG);
-        } else {
-          return {
-            url: cleanUrl,
-            anonKey: cleanKey
-          };
-        }
-      }
+    if (local && (local.includes('mvkvfvxfcqxdabxumroz') || !local.includes('bqrozmqorvxpwjfmgkfk'))) {
+      localStorage.removeItem(STORAGE_KEY_CONFIG);
     }
   } catch {
-    // fallback
+    // ignore
   }
+}
 
+/**
+ * Lấy cấu hình Supabase chuẩn hóa tự động cho toàn hệ thống
+ */
+export const getSupabaseConfig = (): SupabaseConfig => {
   const envUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || '').trim();
   const envKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '').trim();
 
@@ -46,13 +36,13 @@ export const getSupabaseConfig = (): SupabaseConfig => {
 };
 
 /**
- * Lưu cấu hình Supabase trực tiếp từ UI
+ * Lưu cấu hình Supabase
  */
 export const saveSupabaseConfig = (url: string, anonKey: string): void => {
   const cleanUrl = url.trim();
   const cleanKey = anonKey.trim();
   
-  if (!cleanUrl && !cleanKey) {
+  if (!cleanUrl || !cleanKey || cleanUrl === DEFAULT_SUPABASE_URL) {
     localStorage.removeItem(STORAGE_KEY_CONFIG);
   } else {
     localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify({ url: cleanUrl, anonKey: cleanKey }));

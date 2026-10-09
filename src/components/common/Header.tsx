@@ -18,8 +18,6 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { ChangePasswordModal } from './ChangePasswordModal';
-import { SupabaseConfigModal } from './SupabaseConfigModal';
-import { isSupabaseConfigured } from '../../lib/supabase';
 
 export const Header: React.FC = () => {
   const { 
@@ -48,7 +46,6 @@ export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
 
   // Filter notifications strictly relevant to current logged-in user role & class authorization
   const userNotifications = notifications.filter(n => {
@@ -259,25 +256,15 @@ export const Header: React.FC = () => {
             </div>
 
             {/* Auto Cloud Sync Live Indicator */}
-            <div
-              title="Hệ thống tự động đồng bộ thời gian thực 2 chiều với Supabase Cloud cho tất cả các máy tính và điện thoại"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/80 border border-emerald-900/40 text-[11px] font-bold text-emerald-300 select-none shadow-sm shrink-0"
+            <button
+              type="button"
+              onClick={() => refreshDataFromCloud()}
+              title="Hệ thống tự động đồng bộ thời gian thực 2 chiều với Supabase Cloud. Bấm để làm mới ngay!"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 border border-emerald-900/40 text-[11px] font-bold text-emerald-300 transition-colors shadow-sm shrink-0"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="hidden md:inline">Đồng Bộ Tự Động</span>
-            </div>
-
-            {/* Cloud Config Modal (Admin only gear/db access) */}
-            {currentUser?.role === 'admin' && (
-              <button
-                type="button"
-                onClick={() => setIsSupabaseModalOpen(true)}
-                title="Cài đặt kết nối Supabase Cloud"
-                className="p-1.5 sm:p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-all shrink-0"
-              >
-                <Database className="w-3.5 h-3.5" />
-              </button>
-            )}
+              <span className={`w-2 h-2 rounded-full ${isSyncingCloud ? 'bg-amber-400 animate-spin' : 'bg-emerald-400 animate-pulse'}`} />
+              <span className="hidden md:inline">{isSyncingCloud ? 'Đang Tải...' : 'Đồng Bộ Tự Động'}</span>
+            </button>
 
             {/* Notification Bell (Visible everywhere) */}
             <div className="relative shrink-0">
@@ -584,15 +571,10 @@ export const Header: React.FC = () => {
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCloud ? 'animate-spin text-amber-400' : ''}`} />
               <span>{isSyncingCloud ? 'Đang đồng bộ...' : 'Đồng bộ lại Cloud'}</span>
             </button>
-            {currentUser?.role === 'admin' && (
-              <button
-                type="button"
-                onClick={() => { setIsSupabaseModalOpen(true); setIsMobileMenuOpen(false); }}
-                className="text-amber-400 hover:underline font-bold"
-              >
-                Cấu hình DB
-              </button>
-            )}
+            <span className="text-emerald-400 flex items-center gap-1 font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Đồng bộ tự động
+            </span>
           </div>
 
         </div>
@@ -602,12 +584,6 @@ export const Header: React.FC = () => {
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
-      />
-
-      {/* Supabase Cloud Database Configuration & Sync Modal */}
-      <SupabaseConfigModal
-        isOpen={isSupabaseModalOpen}
-        onClose={() => setIsSupabaseModalOpen(false)}
       />
 
     </header>
