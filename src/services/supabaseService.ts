@@ -2104,5 +2104,136 @@ export const SupabaseService = {
       console.warn('Lỗi lưu media_asset lên Supabase:', err);
       return false;
     }
+  },
+
+  /**
+   * Lưu cài đặt trường & ảnh nhận diện lên Supabase Cloud
+   */
+  async saveSchoolSettings(s: SchoolSettings): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      let bannerTop = s.bannerTopImage;
+      let footerBanner = s.footerBannerImage;
+      let logo = s.logoUrl;
+      let youthUnionLogo = s.youthUnionLogoUrl;
+
+      if (bannerTop && bannerTop.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(bannerTop, 'media');
+        if (uploaded) bannerTop = uploaded;
+      }
+      if (footerBanner && footerBanner.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(footerBanner, 'media');
+        if (uploaded) footerBanner = uploaded;
+      }
+      if (logo && logo.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(logo, 'media');
+        if (uploaded) logo = uploaded;
+      }
+      if (youthUnionLogo && youthUnionLogo.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(youthUnionLogo, 'media');
+        if (uploaded) youthUnionLogo = uploaded;
+      }
+
+      const { error } = await client.from('school_settings').upsert({
+        id: 'current',
+        school_name: s.schoolName,
+        youth_union_name: s.youthUnionName,
+        slogan: s.slogan,
+        address: s.address,
+        email: s.email,
+        phone: s.phone,
+        theme_color: s.themeColor,
+        logo_url: logo,
+        youth_union_logo_url: youthUnionLogo,
+        banner_top_image: bannerTop,
+        footer_banner_image: footerBanner,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+
+      if (error) {
+        console.warn('Lỗi lưu school_settings lên Supabase:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn('Lỗi ngoại lệ lưu school_settings:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu thông tin lớp học lên Supabase Cloud
+   */
+  async saveClass(c: ClassInfo): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('classes').upsert({
+        class_id: c.id,
+        class_name: c.name,
+        grade: c.grade,
+        gvcn_name: c.gvcnName,
+        gvcn_id: c.gvcnId || null,
+        bithu_name: c.bithuName,
+        bithu_id: c.bithuId || null,
+        total_students: c.totalStudents,
+        union_members_count: c.unionMembers,
+        standard_score: c.standardScore,
+        is_archived: c.isArchived || false,
+        academic_year: c.academicYearId || '2026_2027',
+        is_deleted: false
+      }, { onConflict: 'class_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu class:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu slide ảnh hoạt động lên Supabase Cloud
+   */
+  async saveActivitySlide(sl: ActivitySlide): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      let imgUrl = sl.imageUrl;
+      if (imgUrl && imgUrl.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(imgUrl, 'media');
+        if (uploaded) imgUrl = uploaded;
+      }
+      await client.from('activity_slides').upsert({
+        slide_id: sl.id,
+        title: sl.title,
+        subtitle: sl.subtitle,
+        image_url: imgUrl,
+        date: sl.date,
+        tag: sl.tag,
+        is_active: sl.isActive,
+        order_num: sl.order,
+        is_deleted: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'slide_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu slide:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa slide ảnh hoạt động trên Supabase Cloud
+   */
+  async deleteActivitySlide(slideId: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('activity_slides').update({ is_deleted: true }).eq('slide_id', slideId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa slide:', err);
+      return false;
+    }
   }
 };

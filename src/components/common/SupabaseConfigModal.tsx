@@ -129,27 +129,27 @@ export const SupabaseConfigModal: React.FC<SupabaseConfigModalProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="glass-modal max-w-2xl w-full rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto">
+      <div className="glass-modal relative my-auto max-w-2xl w-full rounded-3xl p-5 sm:p-6 border border-slate-700 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3 sm:pb-4 sticky -top-5 sm:-top-6 bg-slate-900/95 backdrop-blur-md pt-1 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-glow">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-glow shrink-0">
               <Database className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white flex items-center gap-2">
-                Kết Nối Supabase Cloud Database (PostgreSQL)
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                Cấu Hình Supabase Cloud Database
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400">
                 Đồng bộ dữ liệu trực tuyến thời gian thực giữa nhiều máy và điện thoại
               </p>
             </div>
           </div>
           <button 
             onClick={onClose} 
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
