@@ -7,8 +7,8 @@ export interface SupabaseConfig {
   anonKey: string;
 }
 
-const DEFAULT_SUPABASE_URL = 'https://mvkvfvxfcqxdabxumroz.supabase.co';
-const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_JHxZA1XrVxq1qZQQF_0HlQ_W1GiYlw-';
+const DEFAULT_SUPABASE_URL = 'https://bqrozmqorvxpwjfmgkfk.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_7Z1DuZXAl9jtDFgGbZJEVg_FJnZbI_l';
 
 /**
  * Lấy cấu hình Supabase từ localStorage, biến môi trường .env (VITE_*) hoặc giá trị mặc định của dự án
