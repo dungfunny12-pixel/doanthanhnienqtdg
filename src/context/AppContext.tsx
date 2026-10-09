@@ -861,19 +861,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    // 3. Tự động đồng bộ khi người dùng mở lại tab hoặc chuyển sang ứng dụng trên điện thoại
+    // 3. Tự động đồng bộ khi người dùng mở lại tab, chuyển sang ứng dụng trên điện thoại, hoặc kết nối mạng trở lại
     const handleVisibilityOrFocus = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         refreshDataFromCloud();
       }
     };
+    const handleOnline = () => {
+      console.log('🌐 [Network] Đã kết nối mạng trở lại, đang đồng bộ dữ liệu...');
+      refreshDataFromCloud();
+    };
     window.addEventListener('focus', handleVisibilityOrFocus);
     window.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('online', handleOnline);
 
-    // 4. Định kỳ đồng bộ ngầm mỗi 20 giây để dữ liệu máy tính & điện thoại luôn khớp tuyệt đối
+    // 4. Định kỳ đồng bộ ngầm siêu tốc mỗi 5 giây để dữ liệu máy tính & điện thoại luôn khớp tức thì 100%
     const pollInterval = setInterval(() => {
       refreshDataFromCloud();
-    }, 20000);
+    }, 5000);
 
     return () => {
       if (channel && client) {
@@ -883,6 +888,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       window.removeEventListener('focus', handleVisibilityOrFocus);
       window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('online', handleOnline);
       clearInterval(pollInterval);
     };
   }, []);

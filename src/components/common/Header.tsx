@@ -258,27 +258,24 @@ export const Header: React.FC = () => {
               </select>
             </div>
 
-            {/* Quick Cloud Sync Button */}
-            <button
-              type="button"
-              onClick={() => refreshDataFromCloud()}
-              disabled={isSyncingCloud}
-              title={isSyncingCloud ? 'Đang đồng bộ dữ liệu từ Cloud...' : 'Bấm để đồng bộ tức thì dữ liệu mới nhất giữa điện thoại và máy tính'}
-              className="p-1.5 sm:p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 border border-slate-700 transition-all relative shrink-0 disabled:opacity-50"
+            {/* Auto Cloud Sync Live Indicator */}
+            <div
+              title="Hệ thống tự động đồng bộ thời gian thực 2 chiều với Supabase Cloud cho tất cả các máy tính và điện thoại"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/80 border border-emerald-900/40 text-[11px] font-bold text-emerald-300 select-none shadow-sm shrink-0"
             >
-              <RefreshCw className={`w-4 h-4 text-emerald-400 ${isSyncingCloud ? 'animate-spin text-amber-400' : ''}`} />
-            </button>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="hidden md:inline">Đồng Bộ Tự Động</span>
+            </div>
 
-            {/* Cloud DB & 1-Click Sync (Admin only) */}
+            {/* Cloud Config Modal (Admin only gear/db access) */}
             {currentUser?.role === 'admin' && (
               <button
                 type="button"
                 onClick={() => setIsSupabaseModalOpen(true)}
-                title="Cấu hình Supabase Cloud & Đẩy toàn bộ dữ liệu Local lên Web Online"
-                className="hidden sm:flex p-1.5 sm:p-2 rounded-xl bg-slate-800/90 hover:bg-emerald-950/80 text-slate-300 hover:text-emerald-400 border border-slate-700 hover:border-emerald-700 transition-all items-center gap-1 text-xs font-bold shrink-0 shadow-sm"
+                title="Cài đặt kết nối Supabase Cloud"
+                className="p-1.5 sm:p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-all shrink-0"
               >
-                <Database className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden xl:inline text-[11px] text-emerald-300">Đồng Bộ Cloud</span>
+                <Database className="w-3.5 h-3.5" />
               </button>
             )}
 

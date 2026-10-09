@@ -5955,30 +5955,13 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         </button>
 
                         {/* Cloud Sync Button */}
-                        <button
-                          type="button"
-                          disabled={isSyncingCloud}
-                          onClick={async () => {
-                            setIsSyncingCloud(true);
-                            try {
-                              const res = await syncWeeksToCloud();
-                              if (res.success) {
-                                alert(`✅ ${res.message}`);
-                              } else {
-                                alert(`⚠️ ${res.message}`);
-                              }
-                            } catch (err: any) {
-                              alert(`❌ Lỗi đồng bộ: ${err?.message || 'Không thể kết nối'}`);
-                            } finally {
-                              setIsSyncingCloud(false);
-                            }
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 disabled:opacity-50"
-                          title="Đồng bộ 35 tuần và cấu hình học kỳ lên Supabase Cloud trực tiếp để chạy online"
+                        <div
+                          className="px-3 py-1.5 rounded-xl bg-emerald-950/70 border border-emerald-800/60 text-emerald-300 font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                          title="Mọi thay đổi về cấu hình tuần học và học kỳ đều được tự động lưu lên Supabase Cloud"
                         >
-                          <Cloud className={`w-3.5 h-3.5 text-emerald-400 ${isSyncingCloud ? 'animate-spin' : ''}`} />
-                          <span>{isSyncingCloud ? 'Đang đồng bộ...' : '☁️ Đồng Bộ Cloud'}</span>
-                        </button>
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>Tự động lưu Cloud</span>
+                        </div>
 
                         {/* Reset / Force Sync 35 Weeks */}
                         <button
