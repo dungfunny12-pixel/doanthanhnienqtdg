@@ -19,10 +19,17 @@ export const getSupabaseConfig = (): SupabaseConfig => {
     if (local) {
       const parsed = JSON.parse(local);
       if (parsed.url && parsed.anonKey) {
-        return {
-          url: parsed.url.trim(),
-          anonKey: parsed.anonKey.trim()
-        };
+        const cleanUrl = parsed.url.trim();
+        const cleanKey = parsed.anonKey.trim();
+        // Tự động dọn dẹp URL máy chủ cũ không còn tồn tại
+        if (cleanUrl.includes('mvkvfvxfcqxdabxumroz')) {
+          localStorage.removeItem(STORAGE_KEY_CONFIG);
+        } else {
+          return {
+            url: cleanUrl,
+            anonKey: cleanKey
+          };
+        }
       }
     }
   } catch {
