@@ -793,9 +793,9 @@ WHERE c.is_deleted = false;
 -- 2. View Danh sách Học sinh & Đoàn viên lớp theo thứ tự A-Z có STT
 CREATE OR REPLACE VIEW public.view_class_students_stt AS
 SELECT 
-    ROW_NUMBER() OVER (PARTITION BY s.class_id ORDER BY s.full_name ASC, s.student_code ASC) AS stt,
+    ROW_NUMBER() OVER (PARTITION BY s.class_id ORDER BY s.full_name ASC, s.student_id ASC) AS stt,
     s.student_id,
-    s.student_code,
+    s.student_id AS student_code,
     s.full_name,
     s.class_id,
     c.class_name,
