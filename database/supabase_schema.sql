@@ -819,7 +819,7 @@ SELECT
     v.class_id,
     c.class_name,
     v.criteria_code AS criterion_id,
-    cr.title AS criterion_title,
+    cr.name AS criterion_title,
     cr.group_name,
     v.quantity,
     v.points_applied AS points_deducted,
