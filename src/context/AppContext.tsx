@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { 
   User, 
   ClassInfo, 
@@ -448,9 +448,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Hàm lưu LocalStorage an toàn từng key độc lập (Tránh việc 1 key đầy dung lượng làm hỏng toàn bộ các key khác)
   const safeSaveLocalStorage = (key: string, value: any) => {
     try {
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_${key}`, JSON.stringify(value));
-    } catch (err) {
-      console.warn(`[LocalStorage] Lỗi lưu trữ key "${key}":`, err);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(`${LOCAL_STORAGE_KEY}_${key}`, JSON.stringify(value));
+      }
+    } catch {
+      // Gracefully handle QuotaExceededError in Safari Private mode
     }
   };
 
@@ -486,6 +488,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentUser, activeWeek, isWeekLocked, schoolSettings, activitySlides, academicYears, selectedAcademicYearId, weeksConfig, classes, students, criteria, violations, duties, zones, auditors, events, news, notices, users, feeLocks, activityReports, auditLogs, notifications, mediaFolders, mediaAssets, documentFolders, documentFiles]);
 
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
+  const hasCloudSyncedRef = useRef<boolean>(false);
+  const isFetchingCloudRef = useRef<boolean>(false);
 
   // Tự động khôi phục & đồng bộ hai chiều từ IndexedDB (vượt qua giới hạn 5MB, đảm bảo F5 luôn còn ảnh, bài viết, sự kiện & toàn bộ dữ liệu)
   useEffect(() => {
@@ -549,6 +553,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ]);
 
         if (!isMounted) return;
+
+        // Nếu dữ liệu Cloud đã được đồng bộ về trước, KHÔNG ghi đè dữ liệu cũ từ IndexedDB
+        if (hasCloudSyncedRef.current) {
+          setIsHydrated(true);
+          return;
+        }
 
         // 1. Media Folders
         if (dbFolders && dbFolders.length > 0) {
@@ -778,29 +788,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Hàm đồng bộ toàn diện tất cả bảng dữ liệu từ Supabase Cloud với thuật toán gộp thông minh (Smart Merge)
   const refreshDataFromCloud = async () => {
     if (!isSupabaseConfigured()) return;
+    if (isFetchingCloudRef.current) return;
+    isFetchingCloudRef.current = true;
     setIsSyncingCloud(true);
     try {
       const cloudData = await SupabaseService.loadAllDataFromSupabase();
       if (!cloudData) {
         setIsSyncingCloud(false);
+        isFetchingCloudRef.current = false;
         return;
       }
 
-      if (cloudData.classes && cloudData.classes.length > 0) setClasses(cloudData.classes);
-      if (cloudData.criteria && cloudData.criteria.length > 0) setCriteria(cloudData.criteria);
-      if (cloudData.students && cloudData.students.length > 0) setStudents(sanitizeStudentList(cloudData.students));
-      if (cloudData.violations !== undefined) setViolations(cloudData.violations);
-      if (cloudData.news && cloudData.news.length > 0) setNews(cloudData.news);
-      if (cloudData.notices !== undefined) setNotices(cloudData.notices);
-      if (cloudData.schoolSettings) setSchoolSettings(sanitizeSchoolSettings(cloudData.schoolSettings));
-      if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(cloudData.activitySlides);
-      if (cloudData.events !== undefined) setEvents(cloudData.events);
-      if (cloudData.documentFolders && cloudData.documentFolders.length > 0) setDocumentFolders(cloudData.documentFolders);
-      if (cloudData.documentFiles !== undefined) setDocumentFiles(cloudData.documentFiles);
-      if (cloudData.mediaFolders && cloudData.mediaFolders.length > 0) setMediaFolders(sanitizeMediaFolders(cloudData.mediaFolders));
-      if (cloudData.mediaAssets !== undefined) setMediaAssets(sanitizeMediaAssets(cloudData.mediaAssets));
+      hasCloudSyncedRef.current = true;
+
+      if (cloudData.classes && cloudData.classes.length > 0) {
+        setClasses(cloudData.classes);
+        setIndexedDBKV('app_classes', cloudData.classes);
+      }
+      if (cloudData.criteria && cloudData.criteria.length > 0) {
+        setCriteria(cloudData.criteria);
+        setIndexedDBKV('app_criteria', cloudData.criteria);
+      }
+      if (cloudData.students && cloudData.students.length > 0) {
+        const cleanStudents = sanitizeStudentList(cloudData.students);
+        setStudents(cleanStudents);
+        setIndexedDBKV('app_students', cleanStudents);
+      }
+      if (cloudData.violations !== undefined) {
+        setViolations(cloudData.violations);
+        setIndexedDBKV('app_violations', cloudData.violations);
+      }
+      if (cloudData.news && cloudData.news.length > 0) {
+        setNews(cloudData.news);
+        setIndexedDBKV('app_news', cloudData.news);
+      }
+      if (cloudData.notices !== undefined) {
+        setNotices(cloudData.notices);
+        setIndexedDBKV('app_notices', cloudData.notices);
+      }
+      if (cloudData.schoolSettings) {
+        const cleanSettings = sanitizeSchoolSettings(cloudData.schoolSettings);
+        setSchoolSettings(cleanSettings);
+        setIndexedDBKV('app_school_settings', cleanSettings);
+      }
+      if (cloudData.activitySlides && cloudData.activitySlides.length > 0) {
+        setActivitySlides(cloudData.activitySlides);
+        setIndexedDBKV('app_activity_slides', cloudData.activitySlides);
+      }
+      if (cloudData.events !== undefined) {
+        setEvents(cloudData.events);
+        setIndexedDBKV('app_events', cloudData.events);
+      }
+      if (cloudData.documentFolders && cloudData.documentFolders.length > 0) {
+        setDocumentFolders(cloudData.documentFolders);
+        saveIndexedDBBatch(STORES.DOCUMENT_FOLDERS, cloudData.documentFolders);
+      }
+      if (cloudData.documentFiles !== undefined) {
+        setDocumentFiles(cloudData.documentFiles);
+        saveIndexedDBBatch(STORES.DOCUMENT_FILES, cloudData.documentFiles);
+      }
+      if (cloudData.mediaFolders && cloudData.mediaFolders.length > 0) {
+        const cleanMediaFolders = sanitizeMediaFolders(cloudData.mediaFolders);
+        setMediaFolders(cleanMediaFolders);
+        saveIndexedDBBatch(STORES.MEDIA_FOLDERS, cleanMediaFolders);
+      }
+      if (cloudData.mediaAssets !== undefined) {
+        const cleanAssets = sanitizeMediaAssets(cloudData.mediaAssets);
+        setMediaAssets(cleanAssets);
+        saveIndexedDBBatch(STORES.MEDIA_ASSETS, cleanAssets);
+      }
       if (cloudData.weeksConfig && cloudData.weeksConfig.length > 0) {
         setWeeksConfig(cloudData.weeksConfig);
+        setIndexedDBKV('app_weeks_config', cloudData.weeksConfig);
         const currentWeek = cloudData.weeksConfig.find(w => w.isCurrent);
         if (currentWeek) {
           setActiveWeekState(currentWeek.weekNumber);
@@ -809,6 +868,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (cloudData.users && cloudData.users.length > 0) {
         setUsers(cloudData.users);
+        setIndexedDBKV('app_users', cloudData.users);
         // Cập nhật tài khoản hiện tại với thông tin mới nhất từ Cloud
         setCurrentUser(prevUser => {
           if (!prevUser) return null;
@@ -818,24 +878,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (cloudData.duties && cloudData.duties.length > 0) {
         setDuties(cloudData.duties);
+        setIndexedDBKV('app_duties', cloudData.duties);
       }
       if (cloudData.academicYears && cloudData.academicYears.length > 0) {
         setAcademicYears(cloudData.academicYears);
+        setIndexedDBKV('app_academic_years', cloudData.academicYears);
       }
       if (cloudData.feeLocks) {
         setFeeLocks(cloudData.feeLocks);
+        setIndexedDBKV('app_fee_locks', cloudData.feeLocks);
       }
       if (cloudData.auditLogs && cloudData.auditLogs.length > 0) {
         setAuditLogs(cloudData.auditLogs);
+        setIndexedDBKV('app_audit_logs', cloudData.auditLogs);
       }
       if (cloudData.activityReports !== undefined) {
         setActivityReports(cloudData.activityReports);
+        setIndexedDBKV('app_activity_reports', cloudData.activityReports);
       }
+      setIsHydrated(true);
       console.log('✅ [Multi-Device Sync] Đồng bộ dữ liệu thành công từ Supabase Cloud!');
     } catch (err) {
       console.warn('Lỗi khi đồng bộ từ Supabase Cloud:', err);
     } finally {
       setIsSyncingCloud(false);
+      isFetchingCloudRef.current = false;
     }
   };
 
