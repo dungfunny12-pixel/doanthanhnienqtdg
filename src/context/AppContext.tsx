@@ -792,12 +792,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (cloudData.violations !== undefined) setViolations(cloudData.violations);
       if (cloudData.news && cloudData.news.length > 0) setNews(cloudData.news);
       if (cloudData.notices !== undefined) setNotices(cloudData.notices);
-      if (cloudData.schoolSettings) setSchoolSettings(cloudData.schoolSettings);
+      if (cloudData.schoolSettings) setSchoolSettings(sanitizeSchoolSettings(cloudData.schoolSettings));
       if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(cloudData.activitySlides);
       if (cloudData.events !== undefined) setEvents(cloudData.events);
       if (cloudData.documentFolders && cloudData.documentFolders.length > 0) setDocumentFolders(cloudData.documentFolders);
       if (cloudData.documentFiles !== undefined) setDocumentFiles(cloudData.documentFiles);
-      if (cloudData.mediaFolders && cloudData.mediaFolders.length > 0) setMediaFolders(cloudData.mediaFolders);
+      if (cloudData.mediaFolders && cloudData.mediaFolders.length > 0) setMediaFolders(sanitizeMediaFolders(cloudData.mediaFolders));
       if (cloudData.mediaAssets !== undefined) setMediaAssets(sanitizeMediaAssets(cloudData.mediaAssets));
       if (cloudData.weeksConfig && cloudData.weeksConfig.length > 0) {
         setWeeksConfig(cloudData.weeksConfig);

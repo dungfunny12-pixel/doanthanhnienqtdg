@@ -56,134 +56,74 @@ export const SupabaseService = {
     if (!client || !isSupabaseConfigured()) return null;
 
     try {
-      // 1. Classes
-      const { data: rawClasses, error: classErr } = await client
-        .from('classes')
-        .select('*')
-        .eq('is_deleted', false);
+      // Load all 20 tables in parallel in a single batch
+      const [
+        classesRes,
+        criteriaRes,
+        studentsRes,
+        violationsRes,
+        newsRes,
+        noticesRes,
+        settingsRes,
+        slidesRes,
+        weeksRes,
+        usersRes,
+        dutiesRes,
+        yearsRes,
+        feeLocksRes,
+        logsRes,
+        reportsRes,
+        eventsRes,
+        docFoldersRes,
+        docFilesRes,
+        mediaAssetsRes,
+        mediaFoldersRes
+      ] = await Promise.all([
+        client.from('classes').select('*').eq('is_deleted', false),
+        client.from('criteria').select('*').eq('is_deleted', false),
+        client.from('students').select('*').eq('is_deleted', false),
+        client.from('violations').select('*').eq('is_deleted', false),
+        client.from('news').select('*').eq('is_deleted', false),
+        client.from('task_notices').select('*').eq('is_deleted', false),
+        client.from('school_settings').select('*').eq('id', 'current').maybeSingle(),
+        client.from('activity_slides').select('*').eq('is_deleted', false).order('order_num', { ascending: true }),
+        client.from('weeks').select('*').order('week_number', { ascending: true }),
+        client.from('users').select('*').eq('is_deleted', false),
+        client.from('duty_schedule').select('*'),
+        client.from('academic_years').select('*').order('year_id', { ascending: false }),
+        client.from('fee_locks').select('*'),
+        client.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100),
+        client.from('activity_reports').select('*').eq('is_deleted', false),
+        client.from('youth_events').select('*'),
+        client.from('document_folders').select('*'),
+        client.from('document_files').select('*'),
+        client.from('media_assets').select('*'),
+        client.from('media_folders').select('*')
+      ]);
 
-      // 2. Criteria
-      const { data: rawCriteria } = await client
-        .from('criteria')
-        .select('*')
-        .eq('is_deleted', false);
+      const rawClasses = classesRes.data || [];
+      const rawCriteria = criteriaRes.data || [];
+      const rawStudents = studentsRes.data || [];
+      const rawViolations = violationsRes.data || [];
+      const rawNews = newsRes.data || [];
+      const rawNotices = noticesRes.data || [];
+      const rawSettings = settingsRes.data;
+      const rawSlides = slidesRes.data || [];
+      const rawWeeks = weeksRes.data || [];
+      const rawUsers = usersRes.data || [];
+      const rawDuties = dutiesRes.data || [];
+      const rawYears = yearsRes.data || [];
+      const rawFeeLocks = feeLocksRes.data || [];
+      const rawLogs = logsRes.data || [];
+      const rawReports = reportsRes.data || [];
+      const rawEvents = eventsRes.data || [];
+      const rawFolders = docFoldersRes.data || [];
+      const rawFiles = docFilesRes.data || [];
+      const rawMedia = mediaAssetsRes.data || [];
+      const rawMediaFolders = mediaFoldersRes.data || [];
 
-      // 3. Students
-      const { data: rawStudents } = await client
-        .from('students')
-        .select('*')
-        .eq('is_deleted', false);
-
-      // 4. Violations
-      const { data: rawViolations } = await client
-        .from('violations')
-        .select('*')
-        .eq('is_deleted', false);
-
-      // 5. News
-      const { data: rawNews } = await client
-        .from('news')
-        .select('*')
-        .eq('is_deleted', false);
-
-      // 6. Notices
-      const { data: rawNotices } = await client
-        .from('task_notices')
-        .select('*')
-        .eq('is_deleted', false);
-
-      // 7. School Settings
-      const { data: rawSettings } = await client
-        .from('school_settings')
-        .select('*')
-        .eq('id', 'current')
-        .maybeSingle();
-
-      // 8. Activity Slides
-      const { data: rawSlides } = await client
-        .from('activity_slides')
-        .select('*')
-        .eq('is_deleted', false)
-        .order('order_num', { ascending: true });
-
-      // 9. Weeks Configuration
-      const { data: rawWeeks } = await client
-        .from('weeks')
-        .select('*')
-        .order('week_number', { ascending: true });
-
-      // 10. Users
-      const { data: rawUsers } = await client
-        .from('users')
-        .select('*')
-        .eq('is_deleted', false);
-
-      // 11. Duty Schedule
-      const { data: rawDuties } = await client
-        .from('duty_schedule')
-        .select('*');
-
-      // 12. Academic Years
-      const { data: rawYears } = await client
-        .from('academic_years')
-        .select('*')
-        .order('year_id', { ascending: false });
-
-      // 13. Fee Locks
-      const { data: rawFeeLocks } = await client
-        .from('fee_locks')
-        .select('*');
-
-      // 14. Audit Logs
-      const { data: rawLogs } = await client
-        .from('audit_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      // 15. Activity Reports
-      const { data: rawReports } = await client
-        .from('activity_reports')
-        .select('*')
-        .eq('is_deleted', false);
-
-      // 16. Events
-      let rawEvents: any[] = [];
-      try {
-        const { data } = await client.from('events').select('*').eq('is_deleted', false);
-        if (data) rawEvents = data;
-      } catch {}
-
-      // 17. Document Folders
-      let rawFolders: any[] = [];
-      try {
-        const { data } = await client.from('document_folders').select('*').eq('is_deleted', false);
-        if (data) rawFolders = data;
-      } catch {}
-
-      // 18. Document Files
-      let rawFiles: any[] = [];
-      try {
-        const { data } = await client.from('document_files').select('*').eq('is_deleted', false);
-        if (data) rawFiles = data;
-      } catch {}
-
-      // 19. Media Assets
-      let rawMedia: any[] = [];
-      try {
-        const { data } = await client.from('media_assets').select('*');
-        if (data) rawMedia = data;
-      } catch {}
-
-      // 20. Media Folders / Albums
-      let rawMediaFolders: any[] = [];
-      try {
-        const { data } = await client.from('media_folders').select('*').eq('is_deleted', false);
-        if (data) rawMediaFolders = data;
-      } catch {}
-
-      if (classErr) {
-        console.warn('Không thể tải dữ liệu từ Supabase, sử dụng dữ liệu cục bộ:', classErr.message);
+      if (classesRes.error) {
+        console.warn('Không thể tải dữ liệu lớp học từ Supabase:', classesRes.error.message);
         return null;
       }
 
@@ -1274,9 +1214,11 @@ export const SupabaseService = {
         class_id: violation.classId,
         class_name: violation.className,
         criterion_id: violation.criterionId,
+        criteria_code: violation.criterionId,
         criterion_name: violation.criterionName,
         criterion_group: violation.groupName,
         quantity: violation.quantity || 1,
+        points_applied: violation.type === 'bonus' ? (violation.bonusPoints || violation.pointsDeducted) : violation.pointsDeducted,
         score_deducted: violation.type === 'bonus' ? 0 : violation.pointsDeducted,
         bonus_points: violation.type === 'bonus' ? (violation.bonusPoints || violation.pointsDeducted) : 0,
         student_names: violation.studentNames || [],
