@@ -24,7 +24,12 @@ import {
   AppNotification,
   SemesterClassScore,
   AcademicYear,
-  RolloverPayload
+  RolloverPayload,
+  MediaFolder,
+  MediaItem,
+  MediaCategory,
+  DocumentFolder,
+  DocumentFile
 } from '../types';
 import { 
   INITIAL_CLASSES, 
@@ -37,17 +42,33 @@ import {
   INITIAL_EVENTS, 
   INITIAL_NEWS, 
   INITIAL_NOTICES, 
-  INITIAL_LOGS,
+  INITIAL_LOGS, 
   INITIAL_STUDENTS,
   INITIAL_WEEKS,
   INITIAL_SCHOOL_SETTINGS,
   INITIAL_ACTIVITY_SLIDES,
   INITIAL_ACTIVITY_REPORTS,
   INITIAL_NOTIFICATIONS,
-  INITIAL_ACADEMIC_YEARS
+  INITIAL_ACADEMIC_YEARS,
+  INITIAL_MEDIA_FOLDERS,
+  INITIAL_MEDIA_ASSETS,
+  INITIAL_DOCUMENT_FOLDERS,
+  INITIAL_DOCUMENT_FILES,
+  generateWeekDuties
 } from '../data/initialData';
 import { SupabaseService } from '../services/supabaseService';
 import { isSupabaseConfigured, getSupabaseClient } from '../lib/supabase';
+import { 
+  saveIndexedDBItem, 
+  saveIndexedDBBatch, 
+  getAllIndexedDBItems, 
+  deleteIndexedDBItem, 
+  deleteIndexedDBBatch, 
+  clearIndexedDBStore,
+  setIndexedDBKV,
+  getIndexedDBKV,
+  STORES 
+} from '../utils/indexedDBStorage';
 
 interface AppContextType {
   currentUser: User | null;
@@ -79,6 +100,32 @@ interface AppContextType {
 
   // School Settings Customizer
   updateSchoolSettings: (settings: Partial<SchoolSettings>) => void;
+
+  // Media Assets Library & Folders/Albums Manager
+  mediaFolders: MediaFolder[];
+  mediaAssets: MediaItem[];
+  addMediaFolder: (folder: Omit<MediaFolder, 'id' | 'createdAt' | 'updatedAt'>) => MediaFolder;
+  updateMediaFolder: (id: string, updates: Partial<MediaFolder>) => void;
+  deleteMediaFolder: (id: string) => { success: boolean; message: string };
+  moveMediaToFolder: (mediaId: string, folderId: string) => void;
+  batchMoveMediaToFolder: (mediaIds: string[], folderId: string) => void;
+  addMediaAsset: (file: File | Blob | string, meta?: { title?: string; category?: MediaCategory; folderId?: string; albumId?: string; classId?: string; weekNumber?: number; tags?: string[] }) => Promise<MediaItem | null>;
+  deleteMediaAsset: (id: string) => Promise<boolean>;
+  deleteMediaAssetsBatch: (ids: string[]) => Promise<{ deletedCount: number }>;
+  updateMediaAsset: (id: string, updates: Partial<MediaItem>) => void;
+
+  // Documents & Folders Management (Kho Văn Bản & Biểu Mẫu)
+  documentFolders: DocumentFolder[];
+  documentFiles: DocumentFile[];
+  addDocumentFolder: (folder: Omit<DocumentFolder, 'id' | 'createdAt' | 'updatedAt'>) => DocumentFolder;
+  updateDocumentFolder: (id: string, updates: Partial<DocumentFolder>) => void;
+  deleteDocumentFolder: (id: string) => { success: boolean; message: string };
+  addDocumentFile: (file: Omit<DocumentFile, 'id' | 'downloadsCount' | 'viewsCount' | 'createdAt' | 'updatedAt'>) => DocumentFile;
+  updateDocumentFile: (id: string, updates: Partial<DocumentFile>) => void;
+  deleteDocumentFile: (id: string) => void;
+  incrementDocumentDownloads: (id: string) => void;
+  incrementDocumentViews: (id: string) => void;
+  moveDocumentFile: (fileId: string, targetFolderId: string) => void;
 
   // Activity Slides CRUD
   addActivitySlide: (slide: Omit<ActivitySlide, 'id'>) => void;
@@ -207,6 +254,10 @@ interface AppContextType {
   restoreFullBackup: (backupData: any) => { success: boolean; message: string };
   cleanOldStorageData: (daysToKeep?: number) => { freedCount: number; message: string };
 
+  // Cloud Sync Status & Actions
+  isSyncingCloud: boolean;
+  refreshDataFromCloud: () => Promise<void>;
+
   // Academic Year Management & Rollover
   academicYears: AcademicYear[];
   selectedAcademicYearId: string;
@@ -255,13 +306,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const sanitizeSchoolSettings = (settings: SchoolSettings): SchoolSettings => {
+    const s = { ...settings };
+    if (!s.logoUrl || s.logoUrl.includes('mvkvfvxfcqxdabxumroz.supabase.co')) s.logoUrl = INITIAL_SCHOOL_SETTINGS.logoUrl;
+    if (!s.youthUnionLogoUrl || s.youthUnionLogoUrl.includes('mvkvfvxfcqxdabxumroz.supabase.co')) s.youthUnionLogoUrl = INITIAL_SCHOOL_SETTINGS.youthUnionLogoUrl;
+    if (!s.bannerTopImage || s.bannerTopImage.includes('mvkvfvxfcqxdabxumroz.supabase.co')) s.bannerTopImage = INITIAL_SCHOOL_SETTINGS.bannerTopImage;
+    if (!s.footerBannerImage || s.footerBannerImage.includes('mvkvfvxfcqxdabxumroz.supabase.co')) s.footerBannerImage = INITIAL_SCHOOL_SETTINGS.footerBannerImage;
+    return s;
+  };
+
+  const sanitizeMediaFolders = (folders: MediaFolder[]): MediaFolder[] => {
+    if (!Array.isArray(folders) || folders.length === 0) return INITIAL_MEDIA_FOLDERS;
+    // Tự động dọn dẹp các thư mục rác / thừa của phiên bản cũ (folder-root, folder-hd-2627,...)
+    const hasLegacy = folders.some(f => f.id.startsWith('folder-'));
+    if (hasLegacy) {
+      const userCustomFolders = folders.filter(f => !f.id.startsWith('folder-'));
+      const map = new Map<string, MediaFolder>();
+      INITIAL_MEDIA_FOLDERS.forEach(f => map.set(f.id, f));
+      userCustomFolders.forEach(f => map.set(f.id, f));
+      return Array.from(map.values());
+    }
+    return folders;
+  };
+
+  const sanitizeMediaAssets = (assets: MediaItem[]): MediaItem[] => {
+    if (!Array.isArray(assets)) return INITIAL_MEDIA_ASSETS;
+    return assets.map(item => {
+      let folderId = item.folderId || item.albumId;
+      if (folderId === 'folder-root' || folderId === 'folder-hd-2627' || folderId === 'folder-hanhtrinh' || folderId === 'folder-ket-nap-dang') {
+        folderId = 'album-activities';
+      } else if (folderId === 'folder-brand' || folderId === 'folder-banner' || folderId === 'folder-lien-ket-web' || folderId === 'folder-icon') {
+        folderId = 'album-branding';
+      } else if (folderId === 'folder-chunhatxanh') {
+        folderId = 'album-chunhatxanh';
+      }
+      if (item.url && item.url.includes('mvkvfvxfcqxdabxumroz.supabase.co')) {
+        const fallback = INITIAL_MEDIA_ASSETS.find(i => i.id === item.id);
+        if (fallback) {
+          return { ...item, folderId, albumId: folderId, url: fallback.url, format: fallback.format };
+        }
+      }
+      return { ...item, folderId, albumId: folderId };
+    });
+  };
+
   const [currentUser, setCurrentUser] = useState<User | null>(() => loadStored('currentUser', null));
   const [activeWeek, setActiveWeekState] = useState<number>(() => {
     const stored = loadStored<number>('activeWeek', 1);
     return stored && stored >= 1 && stored <= 35 ? stored : 1;
   });
   const [isWeekLocked, setIsWeekLocked] = useState<boolean>(() => loadStored('isWeekLocked', false));
-  const [schoolSettings, setSchoolSettings] = useState<SchoolSettings>(() => loadStored('schoolSettings', INITIAL_SCHOOL_SETTINGS));
+  const [schoolSettings, setSchoolSettings] = useState<SchoolSettings>(() => sanitizeSchoolSettings(loadStored('schoolSettings', INITIAL_SCHOOL_SETTINGS)));
   const [activitySlides, setActivitySlides] = useState<ActivitySlide[]>(() => loadStored('activitySlides', INITIAL_ACTIVITY_SLIDES));
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>(() => {
     const stored = loadStored<AcademicYear[]>('academicYears', INITIAL_ACADEMIC_YEARS);
@@ -281,53 +376,384 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return stored;
   });
-  const [classes, setClasses] = useState<ClassInfo[]>(() => loadStored('classes', INITIAL_CLASSES));
+  const [classes, setClasses] = useState<ClassInfo[]>(() => {
+    const stored = loadStored<ClassInfo[]>('classes', INITIAL_CLASSES);
+    if (!Array.isArray(stored) || stored.length === 0 || !stored.some(c => c.classPresidentName)) {
+      return INITIAL_CLASSES;
+    }
+    return stored;
+  });
   const [students, setStudents] = useState<Student[]>(() => sanitizeStudentList(loadStored('students', INITIAL_STUDENTS)));
   const [criteria, setCriteria] = useState<Criterion[]>(() => loadStored('criteria', INITIAL_CRITERIA));
   const [violations, setViolations] = useState<Violation[]>(() => loadStored('violations', INITIAL_VIOLATIONS));
-  const [duties, setDuties] = useState<DutyAssignment[]>(() => loadStored('duties', INITIAL_DUTIES));
-  const [zones, setZones] = useState<DutyZone[]>(() => loadStored('zones', INITIAL_ZONES));
-  const [auditors, setAuditors] = useState<AuditorMember[]>(() => loadStored('auditors', INITIAL_AUDITORS));
+  const [duties, setDuties] = useState<DutyAssignment[]>(() => {
+    const stored = loadStored<DutyAssignment[]>('duties', INITIAL_DUTIES);
+    if (!Array.isArray(stored) || stored.length === 0 || stored.some(d => d.auditorName === 'Nguyễn Văn Nam')) {
+      return INITIAL_DUTIES;
+    }
+    return stored;
+  });
+  const [zones, setZones] = useState<DutyZone[]>(() => {
+    const stored = loadStored<DutyZone[]>('zones', INITIAL_ZONES);
+    if (!Array.isArray(stored) || stored.length === 0 || stored.some(z => z.name === 'Khối 10')) {
+      return INITIAL_ZONES;
+    }
+    return stored;
+  });
+  const [auditors, setAuditors] = useState<AuditorMember[]>(() => {
+    const stored = loadStored<AuditorMember[]>('auditors', INITIAL_AUDITORS);
+    if (!Array.isArray(stored) || stored.length < 10 || stored.some(a => a.id === 'codo_nam')) {
+      return INITIAL_AUDITORS;
+    }
+    return stored;
+  });
   const [events, setEvents] = useState<YouthEvent[]>(() => loadStored('events', INITIAL_EVENTS));
   const [news, setNews] = useState<NewsPost[]>(() => loadStored('news', INITIAL_NEWS));
   const [notices, setNotices] = useState<TaskNotice[]>(() => loadStored('notices', INITIAL_NOTICES));
-  const [users, setUsers] = useState<User[]>(() => loadStored('users', INITIAL_USERS));
+  const [users, setUsers] = useState<User[]>(() => {
+    const stored = loadStored<User[]>('users', INITIAL_USERS);
+    if (!Array.isArray(stored) || stored.length === 0 || !stored.some(u => u.username === 'bithu_10_1' && u.name === 'Lâm Xuân Tín')) {
+      return INITIAL_USERS;
+    }
+    return stored;
+  });
   const [feeLocks, setFeeLocks] = useState<Record<string, boolean>>(() => loadStored('feeLocks', {}));
   const [activityReports, setActivityReports] = useState<ActivityReport[]>(() => loadStored('activityReports', INITIAL_ACTIVITY_REPORTS));
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => loadStored('auditLogs', INITIAL_LOGS));
   const [notifications, setNotifications] = useState<AppNotification[]>(() => loadStored('notifications', INITIAL_NOTIFICATIONS));
+  const [mediaFolders, setMediaFolders] = useState<MediaFolder[]>(() => {
+    const stored = loadStored<MediaFolder[]>('mediaFolders', INITIAL_MEDIA_FOLDERS);
+    return sanitizeMediaFolders(stored);
+  });
+  const [mediaAssets, setMediaAssets] = useState<MediaItem[]>(() => {
+    const stored = loadStored<MediaItem[]>('mediaAssets', INITIAL_MEDIA_ASSETS);
+    return sanitizeMediaAssets(stored);
+  });
+  const [documentFolders, setDocumentFolders] = useState<DocumentFolder[]>(() => {
+    const stored = loadStored<DocumentFolder[]>('documentFolders', INITIAL_DOCUMENT_FOLDERS);
+    if (!Array.isArray(stored)) {
+      return INITIAL_DOCUMENT_FOLDERS;
+    }
+    return stored;
+  });
+  const [documentFiles, setDocumentFiles] = useState<DocumentFile[]>(() => {
+    const stored = loadStored<DocumentFile[]>('documentFiles', INITIAL_DOCUMENT_FILES);
+    if (!Array.isArray(stored)) {
+      return INITIAL_DOCUMENT_FILES;
+    }
+    return stored;
+  });
   const [activeView, setActiveView] = useState<string>('portal');
+
+  // Hàm lưu LocalStorage an toàn từng key độc lập (Tránh việc 1 key đầy dung lượng làm hỏng toàn bộ các key khác)
+  const safeSaveLocalStorage = (key: string, value: any) => {
+    try {
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_${key}`, JSON.stringify(value));
+    } catch (err) {
+      console.warn(`[LocalStorage] Lỗi lưu trữ key "${key}":`, err);
+    }
+  };
 
   // Sync to local storage
   useEffect(() => {
-    try {
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_currentUser`, JSON.stringify(currentUser));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_activeWeek`, JSON.stringify(activeWeek));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_isWeekLocked`, JSON.stringify(isWeekLocked));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_schoolSettings`, JSON.stringify(schoolSettings));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_activitySlides`, JSON.stringify(activitySlides));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_academicYears`, JSON.stringify(academicYears));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_selectedAcademicYearId`, JSON.stringify(selectedAcademicYearId));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_weeksConfig`, JSON.stringify(weeksConfig));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_classes`, JSON.stringify(classes));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_students`, JSON.stringify(students));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_criteria`, JSON.stringify(criteria));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_violations`, JSON.stringify(violations));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_duties`, JSON.stringify(duties));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_zones`, JSON.stringify(zones));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_auditors`, JSON.stringify(auditors));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_events`, JSON.stringify(events));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_news`, JSON.stringify(news));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_notices`, JSON.stringify(notices));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_users`, JSON.stringify(users));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_feeLocks`, JSON.stringify(feeLocks));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_activityReports`, JSON.stringify(activityReports));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_auditLogs`, JSON.stringify(auditLogs));
-      localStorage.setItem(`${LOCAL_STORAGE_KEY}_notifications`, JSON.stringify(notifications));
-    } catch (e) {
-      console.warn('LocalStorage save failed:', e);
+    safeSaveLocalStorage('currentUser', currentUser);
+    safeSaveLocalStorage('activeWeek', activeWeek);
+    safeSaveLocalStorage('isWeekLocked', isWeekLocked);
+    safeSaveLocalStorage('schoolSettings', schoolSettings);
+    safeSaveLocalStorage('activitySlides', activitySlides);
+    safeSaveLocalStorage('academicYears', academicYears);
+    safeSaveLocalStorage('selectedAcademicYearId', selectedAcademicYearId);
+    safeSaveLocalStorage('weeksConfig', weeksConfig);
+    safeSaveLocalStorage('classes', classes);
+    safeSaveLocalStorage('students', students);
+    safeSaveLocalStorage('criteria', criteria);
+    safeSaveLocalStorage('violations', violations);
+    safeSaveLocalStorage('duties', duties);
+    safeSaveLocalStorage('zones', zones);
+    safeSaveLocalStorage('auditors', auditors);
+    safeSaveLocalStorage('events', events);
+    safeSaveLocalStorage('news', news);
+    safeSaveLocalStorage('notices', notices);
+    safeSaveLocalStorage('users', users);
+    safeSaveLocalStorage('feeLocks', feeLocks);
+    safeSaveLocalStorage('activityReports', activityReports);
+    safeSaveLocalStorage('auditLogs', auditLogs);
+    safeSaveLocalStorage('notifications', notifications);
+    safeSaveLocalStorage('mediaFolders', mediaFolders);
+    safeSaveLocalStorage('mediaAssets', mediaAssets);
+    safeSaveLocalStorage('documentFolders', documentFolders);
+    safeSaveLocalStorage('documentFiles', documentFiles);
+  }, [currentUser, activeWeek, isWeekLocked, schoolSettings, activitySlides, academicYears, selectedAcademicYearId, weeksConfig, classes, students, criteria, violations, duties, zones, auditors, events, news, notices, users, feeLocks, activityReports, auditLogs, notifications, mediaFolders, mediaAssets, documentFolders, documentFiles]);
+
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
+  // Tự động khôi phục & đồng bộ hai chiều từ IndexedDB (vượt qua giới hạn 5MB, đảm bảo F5 luôn còn ảnh, bài viết, sự kiện & toàn bộ dữ liệu)
+  useEffect(() => {
+    let isMounted = true;
+    const hydrateFromIndexedDB = async () => {
+      try {
+        const [
+          dbFolders, 
+          dbAssets, 
+          dbDocFolders, 
+          dbDocFiles,
+          dbNews,
+          dbEvents,
+          dbViolations,
+          dbNotices,
+          dbSlides,
+          dbSettings,
+          dbClasses,
+          dbStudents,
+          dbCriteria,
+          dbDuties,
+          dbZones,
+          dbAuditors,
+          dbReports,
+          dbUsers,
+          dbWeeks,
+          dbAcademicYears,
+          dbSelectedYearId,
+          dbLogs,
+          dbNotifications,
+          dbFeeLocks,
+          dbIsWeekLocked,
+          dbActiveWeek
+        ] = await Promise.all([
+          getAllIndexedDBItems<MediaFolder>(STORES.MEDIA_FOLDERS),
+          getAllIndexedDBItems<MediaItem>(STORES.MEDIA_ASSETS),
+          getAllIndexedDBItems<DocumentFolder>(STORES.DOCUMENT_FOLDERS),
+          getAllIndexedDBItems<DocumentFile>(STORES.DOCUMENT_FILES),
+          getIndexedDBKV<NewsPost[]>('app_news'),
+          getIndexedDBKV<YouthEvent[]>('app_events'),
+          getIndexedDBKV<Violation[]>('app_violations'),
+          getIndexedDBKV<TaskNotice[]>('app_notices'),
+          getIndexedDBKV<ActivitySlide[]>('app_activity_slides'),
+          getIndexedDBKV<SchoolSettings>('app_school_settings'),
+          getIndexedDBKV<ClassInfo[]>('app_classes'),
+          getIndexedDBKV<Student[]>('app_students'),
+          getIndexedDBKV<Criterion[]>('app_criteria'),
+          getIndexedDBKV<DutyAssignment[]>('app_duties'),
+          getIndexedDBKV<DutyZone[]>('app_zones'),
+          getIndexedDBKV<AuditorMember[]>('app_auditors'),
+          getIndexedDBKV<ActivityReport[]>('app_activity_reports'),
+          getIndexedDBKV<User[]>('app_users'),
+          getIndexedDBKV<WeekConfig[]>('app_weeks_config'),
+          getIndexedDBKV<AcademicYear[]>('app_academic_years'),
+          getIndexedDBKV<string>('app_selected_academic_year_id'),
+          getIndexedDBKV<AuditLog[]>('app_audit_logs'),
+          getIndexedDBKV<AppNotification[]>('app_notifications'),
+          getIndexedDBKV<Record<string, boolean>>('app_fee_locks'),
+          getIndexedDBKV<boolean>('app_is_week_locked'),
+          getIndexedDBKV<number>('app_active_week')
+        ]);
+
+        if (!isMounted) return;
+
+        // 1. Media Folders
+        if (dbFolders && dbFolders.length > 0) {
+          const cleanFolders = sanitizeMediaFolders(dbFolders);
+          setMediaFolders(cleanFolders);
+          if (dbFolders.some(f => f.id.startsWith('folder-'))) {
+            clearIndexedDBStore(STORES.MEDIA_FOLDERS).then(() => {
+              saveIndexedDBBatch(STORES.MEDIA_FOLDERS, cleanFolders);
+            });
+          }
+        } else {
+          saveIndexedDBBatch(STORES.MEDIA_FOLDERS, INITIAL_MEDIA_FOLDERS);
+        }
+
+        // 2. Media Assets
+        if (dbAssets && dbAssets.length > 0) {
+          const cleanAssets = sanitizeMediaAssets(dbAssets);
+          setMediaAssets(cleanAssets);
+        } else {
+          saveIndexedDBBatch(STORES.MEDIA_ASSETS, INITIAL_MEDIA_ASSETS);
+        }
+
+        // 3. Document Folders
+        if (dbDocFolders && dbDocFolders.length > 0) {
+          setDocumentFolders(prev => {
+            const map = new Map<string, DocumentFolder>();
+            INITIAL_DOCUMENT_FOLDERS.forEach(f => map.set(f.id, f));
+            prev.forEach(f => map.set(f.id, f));
+            dbDocFolders.forEach(f => map.set(f.id, f));
+            return Array.from(map.values());
+          });
+        } else {
+          saveIndexedDBBatch(STORES.DOCUMENT_FOLDERS, INITIAL_DOCUMENT_FOLDERS);
+        }
+
+        // 4. Document Files
+        if (dbDocFiles && dbDocFiles.length > 0) {
+          setDocumentFiles(prev => {
+            const map = new Map<string, DocumentFile>();
+            INITIAL_DOCUMENT_FILES.forEach(f => map.set(f.id, f));
+            prev.forEach(f => map.set(f.id, f));
+            dbDocFiles.forEach(f => map.set(f.id, f));
+            return Array.from(map.values());
+          });
+        } else {
+          saveIndexedDBBatch(STORES.DOCUMENT_FILES, INITIAL_DOCUMENT_FILES);
+        }
+
+        // 5. News & Events (Bản tin & Sự kiện phong trào)
+        if (dbNews && Array.isArray(dbNews) && dbNews.length > 0) {
+          setNews(dbNews);
+        }
+        if (dbEvents && Array.isArray(dbEvents) && dbEvents.length > 0) {
+          setEvents(dbEvents);
+        }
+
+        // 6. Violations & Notices & Slides & Settings
+        if (dbViolations && Array.isArray(dbViolations)) {
+          setViolations(dbViolations);
+        }
+        if (dbNotices && Array.isArray(dbNotices) && dbNotices.length > 0) {
+          setNotices(dbNotices);
+        }
+        if (dbSlides && Array.isArray(dbSlides) && dbSlides.length > 0) {
+          setActivitySlides(dbSlides);
+        }
+        if (dbSettings && typeof dbSettings === 'object' && dbSettings.schoolName) {
+          setSchoolSettings(sanitizeSchoolSettings(dbSettings));
+        }
+
+        // 7. Master Data: Classes, Students, Criteria, Duties, Zones, Auditors, Reports, Users
+        if (dbClasses && Array.isArray(dbClasses) && dbClasses.length > 0) {
+          setClasses(dbClasses);
+        }
+        if (dbStudents && Array.isArray(dbStudents) && dbStudents.length > 0) {
+          setStudents(sanitizeStudentList(dbStudents));
+        }
+        if (dbCriteria && Array.isArray(dbCriteria) && dbCriteria.length > 0) {
+          setCriteria(dbCriteria);
+        }
+        if (dbDuties && Array.isArray(dbDuties) && dbDuties.length > 0) {
+          setDuties(dbDuties);
+        }
+        if (dbZones && Array.isArray(dbZones) && dbZones.length > 0) {
+          setZones(dbZones);
+        }
+        if (dbAuditors && Array.isArray(dbAuditors) && dbAuditors.length > 0) {
+          setAuditors(dbAuditors);
+        }
+        if (dbReports && Array.isArray(dbReports)) {
+          setActivityReports(dbReports);
+        }
+        if (dbUsers && Array.isArray(dbUsers) && dbUsers.length > 0) {
+          setUsers(dbUsers);
+        }
+        if (dbWeeks && Array.isArray(dbWeeks) && dbWeeks.length >= 35) {
+          setWeeksConfig(dbWeeks);
+        }
+        if (dbAcademicYears && Array.isArray(dbAcademicYears) && dbAcademicYears.length > 0) {
+          setAcademicYears(dbAcademicYears);
+        }
+        if (dbSelectedYearId && typeof dbSelectedYearId === 'string') {
+          setSelectedAcademicYearId(dbSelectedYearId);
+        }
+        if (dbLogs && Array.isArray(dbLogs)) {
+          setAuditLogs(dbLogs);
+        }
+        if (dbNotifications && Array.isArray(dbNotifications)) {
+          setNotifications(dbNotifications);
+        }
+        if (dbFeeLocks && typeof dbFeeLocks === 'object') {
+          setFeeLocks(dbFeeLocks);
+        }
+        if (typeof dbIsWeekLocked === 'boolean') {
+          setIsWeekLocked(dbIsWeekLocked);
+        }
+        if (typeof dbActiveWeek === 'number' && dbActiveWeek >= 1 && dbActiveWeek <= 35) {
+          setActiveWeekState(dbActiveWeek);
+        }
+
+        setIsHydrated(true);
+      } catch (err) {
+        console.warn('[IndexedDB] Lỗi khởi tạo nạp dữ liệu offline:', err);
+        setIsHydrated(true);
+      }
+    };
+
+    hydrateFromIndexedDB();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Tự động ghi nhận sâu vào IndexedDB khi có thay đổi (sau khi đã hydrate thành công)
+  useEffect(() => {
+    if (!isHydrated) return;
+    setIndexedDBKV('app_news', news);
+    setIndexedDBKV('app_events', events);
+    setIndexedDBKV('app_violations', violations);
+    setIndexedDBKV('app_notices', notices);
+    setIndexedDBKV('app_activity_slides', activitySlides);
+    setIndexedDBKV('app_school_settings', schoolSettings);
+    setIndexedDBKV('app_classes', classes);
+    setIndexedDBKV('app_students', students);
+    setIndexedDBKV('app_criteria', criteria);
+    setIndexedDBKV('app_duties', duties);
+    setIndexedDBKV('app_zones', zones);
+    setIndexedDBKV('app_auditors', auditors);
+    setIndexedDBKV('app_activity_reports', activityReports);
+    setIndexedDBKV('app_users', users);
+    setIndexedDBKV('app_weeks_config', weeksConfig);
+    setIndexedDBKV('app_academic_years', academicYears);
+    setIndexedDBKV('app_selected_academic_year_id', selectedAcademicYearId);
+    setIndexedDBKV('app_audit_logs', auditLogs);
+    setIndexedDBKV('app_notifications', notifications);
+    setIndexedDBKV('app_fee_locks', feeLocks);
+    setIndexedDBKV('app_is_week_locked', isWeekLocked);
+    setIndexedDBKV('app_active_week', activeWeek);
+  }, [
+    isHydrated,
+    news,
+    events,
+    violations,
+    notices,
+    activitySlides,
+    schoolSettings,
+    classes,
+    students,
+    criteria,
+    duties,
+    zones,
+    auditors,
+    activityReports,
+    users,
+    weeksConfig,
+    academicYears,
+    selectedAcademicYearId,
+    auditLogs,
+    notifications,
+    feeLocks,
+    isWeekLocked,
+    activeWeek
+  ]);
+
+  useEffect(() => {
+    if (mediaFolders && mediaFolders.length > 0) {
+      saveIndexedDBBatch(STORES.MEDIA_FOLDERS, mediaFolders);
     }
-  }, [currentUser, activeWeek, isWeekLocked, schoolSettings, activitySlides, academicYears, selectedAcademicYearId, weeksConfig, classes, students, criteria, violations, duties, zones, auditors, events, news, notices, users, feeLocks, activityReports, auditLogs, notifications]);
+  }, [mediaFolders]);
+
+  useEffect(() => {
+    if (mediaAssets && mediaAssets.length > 0) {
+      saveIndexedDBBatch(STORES.MEDIA_ASSETS, mediaAssets);
+    }
+  }, [mediaAssets]);
+
+  useEffect(() => {
+    if (documentFolders && documentFolders.length > 0) {
+      saveIndexedDBBatch(STORES.DOCUMENT_FOLDERS, documentFolders);
+    }
+  }, [documentFolders]);
+
+  useEffect(() => {
+    if (documentFiles && documentFiles.length > 0) {
+      saveIndexedDBBatch(STORES.DOCUMENT_FILES, documentFiles);
+    }
+  }, [documentFiles]);
 
   // Sync lock status with active week config
   const setActiveWeek = (week: number) => {
@@ -347,21 +773,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [activeWeek, weeksConfig]);
 
-  // Hàm đồng bộ toàn diện tất cả bảng dữ liệu từ Supabase Cloud
+  const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
+
+  // Hàm đồng bộ toàn diện tất cả bảng dữ liệu từ Supabase Cloud với thuật toán gộp thông minh (Smart Merge)
   const refreshDataFromCloud = async () => {
     if (!isSupabaseConfigured()) return;
+    setIsSyncingCloud(true);
     try {
       const cloudData = await SupabaseService.loadAllDataFromSupabase();
-      if (!cloudData) return;
+      if (!cloudData) {
+        setIsSyncingCloud(false);
+        return;
+      }
 
-      if (cloudData.classes && cloudData.classes.length > 0) setClasses(cloudData.classes);
-      if (cloudData.criteria && cloudData.criteria.length > 0) setCriteria(cloudData.criteria);
-      if (cloudData.students && cloudData.students.length > 0) setStudents(sanitizeStudentList(cloudData.students));
-      if (cloudData.violations) setViolations(cloudData.violations);
-      if (cloudData.news && cloudData.news.length > 0) setNews(cloudData.news);
-      if (cloudData.notices && cloudData.notices.length > 0) setNotices(cloudData.notices);
+      // Thuật toán Merge bảo toàn dữ liệu: Ưu tiên Cloud nhưng giữ lại toàn bộ dữ liệu mới tạo trên Local chưa kịp lên Cloud
+      const mergeById = <T extends { id: string }>(localList: T[], cloudList?: T[]): T[] => {
+        if (!cloudList || cloudList.length === 0) return localList;
+        const map = new Map<string, T>();
+        cloudList.forEach(item => {
+          if (item?.id) map.set(item.id, item);
+        });
+        localList.forEach(item => {
+          if (item?.id && !map.has(item.id)) {
+            map.set(item.id, item);
+          }
+        });
+        return Array.from(map.values());
+      };
+
+      if (cloudData.classes && cloudData.classes.length > 0) setClasses(prev => mergeById(prev, cloudData.classes));
+      if (cloudData.criteria && cloudData.criteria.length > 0) setCriteria(prev => mergeById(prev, cloudData.criteria));
+      if (cloudData.students && cloudData.students.length > 0) setStudents(prev => mergeById(prev, sanitizeStudentList(cloudData.students!)));
+      if (cloudData.violations) setViolations(prev => mergeById(prev, cloudData.violations!));
+      if (cloudData.news && cloudData.news.length > 0) setNews(prev => mergeById(prev, cloudData.news));
+      if (cloudData.notices && cloudData.notices.length > 0) setNotices(prev => mergeById(prev, cloudData.notices));
       if (cloudData.schoolSettings) setSchoolSettings(cloudData.schoolSettings);
-      if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(cloudData.activitySlides);
+      if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(prev => mergeById(prev, cloudData.activitySlides));
+      if (cloudData.events && cloudData.events.length > 0) setEvents(prev => mergeById(prev, cloudData.events));
+      if (cloudData.documentFolders && cloudData.documentFolders.length > 0) setDocumentFolders(prev => mergeById(prev, cloudData.documentFolders));
+      if (cloudData.documentFiles && cloudData.documentFiles.length > 0) setDocumentFiles(prev => mergeById(prev, cloudData.documentFiles));
+      if (cloudData.mediaFolders && cloudData.mediaFolders.length > 0) setMediaFolders(prev => mergeById(prev, cloudData.mediaFolders));
+      if (cloudData.mediaAssets && cloudData.mediaAssets.length > 0) setMediaAssets(prev => mergeById(prev, sanitizeMediaAssets(cloudData.mediaAssets!)));
       if (cloudData.weeksConfig && cloudData.weeksConfig.length > 0) {
         setWeeksConfig(cloudData.weeksConfig);
         const currentWeek = cloudData.weeksConfig.find(w => w.isCurrent);
@@ -371,7 +823,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       if (cloudData.users && cloudData.users.length > 0) {
-        setUsers(cloudData.users);
+        setUsers(prev => mergeById(prev, cloudData.users));
         // Cập nhật tài khoản hiện tại với thông tin mới nhất từ Cloud
         setCurrentUser(prevUser => {
           if (!prevUser) return null;
@@ -380,23 +832,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
       if (cloudData.duties && cloudData.duties.length > 0) {
-        setDuties(cloudData.duties);
+        setDuties(prev => mergeById(prev, cloudData.duties));
       }
       if (cloudData.academicYears && cloudData.academicYears.length > 0) {
-        setAcademicYears(cloudData.academicYears);
+        setAcademicYears(prev => mergeById(prev, cloudData.academicYears));
       }
       if (cloudData.feeLocks) {
-        setFeeLocks(cloudData.feeLocks);
+        setFeeLocks(prev => ({ ...prev, ...cloudData.feeLocks }));
       }
       if (cloudData.auditLogs && cloudData.auditLogs.length > 0) {
-        setAuditLogs(cloudData.auditLogs);
+        setAuditLogs(prev => mergeById(prev, cloudData.auditLogs));
       }
       if (cloudData.activityReports && cloudData.activityReports.length > 0) {
-        setActivityReports(cloudData.activityReports);
+        setActivityReports(prev => mergeById(prev, cloudData.activityReports));
       }
       console.log('✅ [Multi-Device Sync] Đồng bộ dữ liệu thành công từ Supabase Cloud!');
     } catch (err) {
       console.warn('Lỗi khi đồng bộ từ Supabase Cloud:', err);
+    } finally {
+      setIsSyncingCloud(false);
     }
   };
 
@@ -484,6 +938,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         else if (user.role === 'youth_secretary') setActiveView('secretary');
         else setActiveView('student');
       }
+      // Tự động kéo dữ liệu Cloud mới nhất ngay khi đăng nhập
+      refreshDataFromCloud();
       return true;
     }
     return false;
@@ -504,6 +960,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       else if (user.role === 'youth_secretary') setActiveView('secretary');
       else setActiveView('student');
     }
+    // Tự động kéo dữ liệu Cloud mới nhất ngay khi đổi tài khoản
+    refreshDataFromCloud();
   };
 
   const logout = () => {
@@ -532,6 +990,297 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return updated;
     });
     addLog('Cập nhật cài đặt trường', 'Thay đổi thông tin nhận diện, tên trường hoặc màu sắc giao diện');
+  };
+
+  // Media Asset Management (Kho Ảnh Toàn Hệ Thống)
+  // Media Assets Library & Folders/Albums Management
+  const addMediaFolder = (folderData: Omit<MediaFolder, 'id' | 'createdAt' | 'updatedAt'>): MediaFolder => {
+    const newFolder: MediaFolder = {
+      ...folderData,
+      id: `album-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
+    };
+    setMediaFolders(prev => [...prev, newFolder]);
+    saveIndexedDBItem(STORES.MEDIA_FOLDERS, newFolder);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveMediaFolder(newFolder);
+    }
+    addLog('Tạo Album ảnh mới', `Đã tạo Album "${newFolder.name}" trong Kho Media`);
+    return newFolder;
+  };
+
+  const updateMediaFolder = (id: string, updates: Partial<MediaFolder>) => {
+    setMediaFolders(prev => prev.map(f => {
+      if (f.id === id) {
+        const updated = {
+          ...f,
+          ...updates,
+          updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
+        };
+        saveIndexedDBItem(STORES.MEDIA_FOLDERS, updated);
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveMediaFolder(updated);
+        }
+        return updated;
+      }
+      return f;
+    }));
+    addLog('Cập nhật Album ảnh', `Đã chỉnh sửa Album ảnh ID: ${id}`);
+  };
+
+  const deleteMediaFolder = (id: string): { success: boolean; message: string } => {
+    const folder = mediaFolders.find(f => f.id === id);
+    if (!folder) return { success: false, message: 'Không tìm thấy Album ảnh' };
+
+    // Tìm tất cả các thư mục con cấp dưới nếu có
+    const subFolderIds = mediaFolders.filter(f => f.parentId === id).map(f => f.id);
+    const targetFolderIds = [id, ...subFolderIds];
+
+    // Chuyển ảnh trong các thư mục này sang Album Dùng Chung
+    setMediaAssets(prev => prev.map(m => {
+      const curF = m.folderId || m.albumId;
+      if (curF && targetFolderIds.includes(curF)) {
+        const updated = { ...m, folderId: 'album-general', albumId: 'album-general' };
+        saveIndexedDBItem(STORES.MEDIA_ASSETS, updated);
+        return updated;
+      }
+      return m;
+    }));
+
+    setMediaFolders(prev => prev.filter(f => !targetFolderIds.includes(f.id)));
+    targetFolderIds.forEach(fid => deleteIndexedDBItem(STORES.MEDIA_FOLDERS, fid));
+
+    if (isSupabaseConfigured()) {
+      targetFolderIds.forEach(fid => SupabaseService.deleteMediaFolder(fid));
+    }
+    addLog('Xóa Album ảnh', `Đã xóa Album "${folder.name}" (các ảnh bên trong đã chuyển sang Album Dùng Chung)`);
+    return { success: true, message: 'Đã xóa Album thành công' };
+  };
+
+  const moveMediaToFolder = (mediaId: string, folderId: string) => {
+    setMediaAssets(prev => prev.map(m => {
+      if (m.id === mediaId) {
+        const updated = { ...m, folderId, albumId: folderId };
+        saveIndexedDBItem(STORES.MEDIA_ASSETS, updated);
+        return updated;
+      }
+      return m;
+    }));
+    const targetItem = mediaAssets.find(m => m.id === mediaId);
+    if (targetItem && isSupabaseConfigured()) {
+      SupabaseService.saveMediaAsset({ ...targetItem, folderId, albumId: folderId });
+    }
+    addLog('Chuyển Album ảnh', `Đã chuyển ảnh ${mediaId} sang Album ${folderId}`);
+  };
+
+  const batchMoveMediaToFolder = (mediaIds: string[], folderId: string) => {
+    if (!mediaIds || mediaIds.length === 0) return;
+    setMediaAssets(prev => prev.map(m => {
+      if (mediaIds.includes(m.id)) {
+        const updated = { ...m, folderId, albumId: folderId };
+        saveIndexedDBItem(STORES.MEDIA_ASSETS, updated);
+        return updated;
+      }
+      return m;
+    }));
+    if (isSupabaseConfigured()) {
+      mediaIds.forEach(id => {
+        const item = mediaAssets.find(m => m.id === id);
+        if (item) SupabaseService.saveMediaAsset({ ...item, folderId, albumId: folderId });
+      });
+    }
+    addLog('Chuyển hàng loạt ảnh', `Đã chuyển ${mediaIds.length} ảnh sang Album ${folderId}`);
+  };
+
+  const addMediaAsset = async (
+    file: File | Blob | string,
+    meta?: {
+      title?: string;
+      category?: MediaCategory;
+      folderId?: string;
+      albumId?: string;
+      classId?: string;
+      weekNumber?: number;
+      tags?: string[];
+    }
+  ): Promise<MediaItem | null> => {
+    try {
+      const item = await SupabaseService.uploadMediaAsset(file, {
+        title: meta?.title,
+        category: meta?.category || 'general',
+        folderId: meta?.folderId || meta?.albumId,
+        classId: meta?.classId,
+        weekNumber: meta?.weekNumber,
+        tags: meta?.tags,
+        uploadedBy: currentUser ? { id: currentUser.id, name: currentUser.name, role: currentUser.roleTitle } : undefined
+      });
+      if (item) {
+        setMediaAssets(prev => [item, ...prev.filter(p => p.id !== item.id)]);
+        await saveIndexedDBItem(STORES.MEDIA_ASSETS, item);
+        addLog('Tải ảnh lên Kho Media', `Đã lưu ảnh "${item.title}" vào danh mục ${item.category}`);
+        return item;
+      }
+      return null;
+    } catch (err) {
+      console.error('Lỗi addMediaAsset:', err);
+      return null;
+    }
+  };
+
+  const deleteMediaAsset = async (id: string): Promise<boolean> => {
+    const target = mediaAssets.find(m => m.id === id);
+    if (!target) return false;
+    await SupabaseService.deleteMediaAsset(target);
+    await deleteIndexedDBItem(STORES.MEDIA_ASSETS, id);
+    setMediaAssets(prev => prev.filter(m => m.id !== id));
+    addLog('Xóa ảnh khỏi Kho Media', `Đã xóa ảnh "${target.title}"`);
+    return true;
+  };
+
+  const deleteMediaAssetsBatch = async (ids: string[]): Promise<{ deletedCount: number }> => {
+    if (!ids || ids.length === 0) return { deletedCount: 0 };
+    const targets = mediaAssets.filter(m => ids.includes(m.id));
+    for (const t of targets) {
+      await SupabaseService.deleteMediaAsset(t);
+    }
+    await deleteIndexedDBBatch(STORES.MEDIA_ASSETS, ids);
+    setMediaAssets(prev => prev.filter(m => !ids.includes(m.id)));
+    addLog('Xóa hàng loạt ảnh', `Đã xóa ${targets.length} ảnh khỏi Kho Media`);
+    return { deletedCount: targets.length };
+  };
+
+  const updateMediaAsset = (id: string, updates: Partial<MediaItem>) => {
+    setMediaAssets(prev => prev.map(m => {
+      if (m.id === id) {
+        const updated = { ...m, ...updates };
+        saveIndexedDBItem(STORES.MEDIA_ASSETS, updated);
+        return updated;
+      }
+      return m;
+    }));
+    addLog('Cập nhật thông tin ảnh', `Đã chỉnh sửa thông tin ảnh ID: ${id}`);
+  };
+
+  // Documents & Folders Management (Kho Văn Bản & Biểu Mẫu)
+  const addDocumentFolder = (folderData: Omit<DocumentFolder, 'id' | 'createdAt' | 'updatedAt'>): DocumentFolder => {
+    const newFolder: DocumentFolder = {
+      ...folderData,
+      id: `folder-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
+    };
+    setDocumentFolders(prev => [...prev, newFolder]);
+    saveIndexedDBItem(STORES.DOCUMENT_FOLDERS, newFolder);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveDocumentFolder(newFolder);
+    }
+    addLog('Tạo thư mục văn bản', `Đã tạo thư mục "${newFolder.name}"`);
+    return newFolder;
+  };
+
+  const updateDocumentFolder = (id: string, updates: Partial<DocumentFolder>) => {
+    setDocumentFolders(prev => prev.map(f => {
+      if (f.id === id) {
+        const updated = {
+          ...f,
+          ...updates,
+          updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
+        };
+        saveIndexedDBItem(STORES.DOCUMENT_FOLDERS, updated);
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveDocumentFolder(updated);
+        }
+        return updated;
+      }
+      return f;
+    }));
+    addLog('Cập nhật thư mục văn bản', `Đã chỉnh sửa thư mục ID: ${id}`);
+  };
+
+  const deleteDocumentFolder = (id: string): { success: boolean; message: string } => {
+    const folder = documentFolders.find(f => f.id === id);
+    if (!folder) return { success: false, message: 'Không tìm thấy thư mục' };
+    if (folder.isSystem) return { success: false, message: 'Không thể xóa thư mục hệ thống mặc định' };
+    
+    // Check if folder contains files
+    const hasFiles = documentFiles.some(f => f.folderId === id);
+    if (hasFiles) {
+      return { success: false, message: 'Thư mục đang chứa tài liệu. Vui lòng di chuyển hoặc xóa các file trước khi xóa thư mục!' };
+    }
+
+    setDocumentFolders(prev => prev.filter(f => f.id !== id));
+    deleteIndexedDBItem(STORES.DOCUMENT_FOLDERS, id);
+    if (isSupabaseConfigured()) {
+      SupabaseService.deleteDocumentFolder(id);
+    }
+    addLog('Xóa thư mục văn bản', `Đã xóa thư mục "${folder.name}"`);
+    return { success: true, message: 'Đã xóa thư mục thành công' };
+  };
+
+  const addDocumentFile = (fileData: Omit<DocumentFile, 'id' | 'downloadsCount' | 'viewsCount' | 'createdAt' | 'updatedAt'>): DocumentFile => {
+    const newDoc: DocumentFile = {
+      ...fileData,
+      id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      downloadsCount: 0,
+      viewsCount: 0,
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
+    };
+    setDocumentFiles(prev => [newDoc, ...prev]);
+    saveIndexedDBItem(STORES.DOCUMENT_FILES, newDoc);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveDocumentFile(newDoc);
+    }
+    addLog('Tải lên văn bản / biểu mẫu', `Đã lưu văn bản "${newDoc.title}" (Số: ${newDoc.fileNumber || 'N/A'})`);
+    return newDoc;
+  };
+
+  const updateDocumentFile = (id: string, updates: Partial<DocumentFile>) => {
+    setDocumentFiles(prev => prev.map(d => {
+      if (d.id === id) {
+        const updated = {
+          ...d,
+          ...updates,
+          updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
+        };
+        saveIndexedDBItem(STORES.DOCUMENT_FILES, updated);
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveDocumentFile(updated);
+        }
+        return updated;
+      }
+      return d;
+    }));
+    addLog('Cập nhật văn bản', `Đã chỉnh sửa thông tin văn bản ID: ${id}`);
+  };
+
+  const deleteDocumentFile = (id: string) => {
+    const doc = documentFiles.find(d => d.id === id);
+    setDocumentFiles(prev => prev.filter(d => d.id !== id));
+    deleteIndexedDBItem(STORES.DOCUMENT_FILES, id);
+    if (isSupabaseConfigured()) {
+      SupabaseService.deleteDocumentFile(id);
+    }
+    if (doc) {
+      addLog('Xóa văn bản / biểu mẫu', `Đã xóa văn bản "${doc.title}"`);
+    }
+  };
+
+  const incrementDocumentDownloads = (id: string) => {
+    setDocumentFiles(prev => prev.map(d => d.id === id ? { ...d, downloadsCount: (d.downloadsCount || 0) + 1 } : d));
+  };
+
+  const incrementDocumentViews = (id: string) => {
+    setDocumentFiles(prev => prev.map(d => d.id === id ? { ...d, viewsCount: (d.viewsCount || 0) + 1 } : d));
+  };
+
+  const moveDocumentFile = (fileId: string, targetFolderId: string) => {
+    setDocumentFiles(prev => prev.map(d => d.id === fileId ? {
+      ...d,
+      folderId: targetFolderId,
+      updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
+    } : d));
   };
 
   // Weeks Configuration
@@ -1402,31 +2151,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const generateDefaultDutiesForWeek = (weekNum: number) => {
-    const activeZones = zones.map(z => z.name);
-    const days: DayOfWeek[] = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    const activeAuditors = auditors.filter(a => a.isActive);
-
-    const generated: DutyAssignment[] = [];
-    days.forEach(day => {
-      activeZones.forEach((zone, zIdx) => {
-        const auditor = activeAuditors[zIdx % (activeAuditors.length || 1)] || {
-          id: 'codo_nam',
-          name: 'Nguyễn Văn Nam',
-          classId: '11/2'
-        };
-        generated.push({
-          id: `duty-w${weekNum}-${day}-${zIdx}`,
-          weekNumber: weekNum,
-          day,
-          zone,
-          auditorId: auditor.id,
-          auditorName: auditor.name,
-          auditorClass: auditor.classId || '11/2',
-          shiftTime: zone.includes('Cổng') ? '06:30 - 07:15 & 11:15 - 12:00' : '06:45 - 07:15 & 11:15 - 11:45',
-          isLiveNow: day === 'T2'
-        });
-      });
-    });
+    const generated = generateWeekDuties(weekNum);
 
     setDuties(prev => [
       ...prev.filter(d => d.weekNumber !== weekNum),
@@ -1435,7 +2160,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isSupabaseConfigured()) {
       SupabaseService.saveDutiesBatch(generated);
     }
-    addLog('Tạo lịch trực tự động', `Tạo lịch phân công trực chuẩn cho Tuần ${weekNum} (${generated.length} ca trực)`);
+    addLog('Tạo lịch trực tự động', `Tạo lịch phân công trực chuẩn theo văn bản Đoàn trường cho Tuần ${weekNum} (${generated.length} ca trực)`);
   };
 
   const copyDutiesToWeek = (fromWeek: number, toWeek: number) => {
@@ -1688,17 +2413,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       checkedInStudentIds: []
     };
     setEvents(prev => [newEvent, ...prev]);
+    if (isSupabaseConfigured()) {
+      SupabaseService.saveEvent(newEvent);
+    }
     addLog('Tạo sự kiện phong trào', `Tạo sự kiện mới: "${eventData.title}" (+${eventData.bonusPoints}đ)`);
   };
 
   const updateEvent = (id: string, updates: Partial<YouthEvent>) => {
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+    setEvents(prev => prev.map(e => {
+      if (e.id === id) {
+        const updated = { ...e, ...updates };
+        if (isSupabaseConfigured()) {
+          SupabaseService.saveEvent(updated);
+        }
+        return updated;
+      }
+      return e;
+    }));
     addLog('Cập nhật sự kiện', `Chỉnh sửa thông tin sự kiện ID: ${id}`);
   };
 
   const deleteEvent = (id: string) => {
     const target = events.find(e => e.id === id);
     setEvents(prev => prev.filter(e => e.id !== id));
+    if (isSupabaseConfigured()) {
+      SupabaseService.deleteEvent(id);
+    }
     addLog('Xóa sự kiện', `Xóa sự kiện "${target?.title || id}"`);
   };
 
@@ -2130,7 +2870,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       feeLocks,
       activityReports,
       auditLogs,
-      notifications
+      notifications,
+      mediaFolders,
+      mediaAssets,
+      documentFolders,
+      documentFiles
     };
   };
 
@@ -2159,6 +2903,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (backupData.activityReports) setActivityReports(backupData.activityReports);
       if (backupData.auditLogs) setAuditLogs(backupData.auditLogs);
       if (backupData.notifications) setNotifications(backupData.notifications);
+      if (backupData.mediaFolders) setMediaFolders(backupData.mediaFolders);
+      if (backupData.mediaAssets) setMediaAssets(backupData.mediaAssets);
+      if (backupData.documentFolders) setDocumentFolders(backupData.documentFolders);
+      if (backupData.documentFiles) setDocumentFiles(backupData.documentFiles);
 
       addLog('Khôi phục hệ thống', 'Khôi phục toàn bộ CSDL từ file sao lưu snapshot JSON.');
       return { success: true, message: 'Khôi phục dữ liệu hệ thống thành công 100%!' };
@@ -2437,7 +3185,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         requestPushPermission,
         createFullBackupSnapshot,
         restoreFullBackup,
-        cleanOldStorageData
+        cleanOldStorageData,
+        isSyncingCloud,
+        refreshDataFromCloud,
+        mediaFolders,
+        mediaAssets,
+        addMediaFolder,
+        updateMediaFolder,
+        deleteMediaFolder,
+        moveMediaToFolder,
+        batchMoveMediaToFolder,
+        addMediaAsset,
+        deleteMediaAsset,
+        deleteMediaAssetsBatch,
+        updateMediaAsset,
+        documentFolders,
+        documentFiles,
+        addDocumentFolder,
+        updateDocumentFolder,
+        deleteDocumentFolder,
+        addDocumentFile,
+        updateDocumentFile,
+        deleteDocumentFile,
+        incrementDocumentDownloads,
+        incrementDocumentViews,
+        moveDocumentFile
       }}
     >
       {children}

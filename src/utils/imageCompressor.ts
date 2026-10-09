@@ -140,3 +140,50 @@ export async function compressImage(
     };
   });
 }
+
+/**
+ * Nén trực tiếp và trả về chuỗi Data URL Base64 siêu nhẹ
+ */
+export async function compressImageToDataURL(
+  file: File | Blob | string,
+  options: CompressOptions = {}
+): Promise<string> {
+  if (typeof file === 'string') {
+    if (file.startsWith('http://') || file.startsWith('https://')) {
+      return file;
+    }
+    // Nếu là Data URL và options có yêu cầu nén lại
+    if (file.startsWith('data:image')) {
+      try {
+        const fileObj = dataURLtoFile(file);
+        const compressed = await compressImage(fileObj, options);
+        return new Promise((res) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result as string);
+          r.onerror = () => res(file);
+          r.readAsDataURL(compressed);
+        });
+      } catch {
+        return file;
+      }
+    }
+    return file;
+  }
+
+  try {
+    const compressed = await compressImage(file, options);
+    return new Promise((res) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.onerror = () => res('');
+      r.readAsDataURL(compressed);
+    });
+  } catch {
+    return new Promise((res) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.onerror = () => res('');
+      r.readAsDataURL(file);
+    });
+  }
+}

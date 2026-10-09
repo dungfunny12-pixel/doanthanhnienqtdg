@@ -198,6 +198,8 @@ CREATE TABLE IF NOT EXISTS public.duty_schedule (
     auditor_name VARCHAR(150) NOT NULL,
     auditor_class VARCHAR(20) NOT NULL REFERENCES public.classes(class_id),
     shift_time VARCHAR(50) NOT NULL DEFAULT '06:45 - 07:15 (Đầu giờ)',
+    target_classes VARCHAR(255), -- Các lớp được phân công chấm điểm (VD: '10/1, 10/2')
+    session VARCHAR(20) NOT NULL DEFAULT 'Sáng' CHECK (session IN ('Sáng', 'Chiều')), -- Buổi trực: Sáng hoặc Chiều
     is_live_now BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

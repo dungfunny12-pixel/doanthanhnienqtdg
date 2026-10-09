@@ -14,7 +14,8 @@ import {
   Calendar, 
   AlertTriangle,
   Database,
-  ChevronDown
+  ChevronDown,
+  RefreshCw
 } from 'lucide-react';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { SupabaseConfigModal } from './SupabaseConfigModal';
@@ -39,7 +40,9 @@ export const Header: React.FC = () => {
     markNotificationAsRead,
     markAllNotificationsAsRead,
     clearAllNotifications,
-    requestPushPermission
+    requestPushPermission,
+    isSyncingCloud,
+    refreshDataFromCloud
   } = useApp();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -254,6 +257,30 @@ export const Header: React.FC = () => {
                   ))}
               </select>
             </div>
+
+            {/* Quick Cloud Sync Button */}
+            <button
+              type="button"
+              onClick={() => refreshDataFromCloud()}
+              disabled={isSyncingCloud}
+              title={isSyncingCloud ? 'Đang đồng bộ dữ liệu từ Cloud...' : 'Bấm để đồng bộ tức thì dữ liệu mới nhất giữa điện thoại và máy tính'}
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 border border-slate-700 transition-all relative shrink-0 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 text-emerald-400 ${isSyncingCloud ? 'animate-spin text-amber-400' : ''}`} />
+            </button>
+
+            {/* Cloud DB & 1-Click Sync (Admin only) */}
+            {currentUser?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => setIsSupabaseModalOpen(true)}
+                title="Cấu hình Supabase Cloud & Đẩy toàn bộ dữ liệu Local lên Web Online"
+                className="hidden sm:flex p-1.5 sm:p-2 rounded-xl bg-slate-800/90 hover:bg-emerald-950/80 text-slate-300 hover:text-emerald-400 border border-slate-700 hover:border-emerald-700 transition-all items-center gap-1 text-xs font-bold shrink-0 shadow-sm"
+              >
+                <Database className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden xl:inline text-[11px] text-emerald-300">Đồng Bộ Cloud</span>
+              </button>
+            )}
 
             {/* Notification Bell (Visible everywhere) */}
             <div className="relative shrink-0">
@@ -551,10 +578,15 @@ export const Header: React.FC = () => {
 
           {/* Supabase status in mobile drawer footer */}
           <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-            <span className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured() ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-              CSDL Supabase: {isSupabaseConfigured() ? 'Đã kết nối Cloud' : 'Cục bộ'}
-            </span>
+            <button
+              type="button"
+              onClick={() => { refreshDataFromCloud(); }}
+              disabled={isSyncingCloud}
+              className="flex items-center gap-1.5 text-emerald-400 font-bold hover:underline"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCloud ? 'animate-spin text-amber-400' : ''}`} />
+              <span>{isSyncingCloud ? 'Đang đồng bộ...' : 'Đồng bộ lại Cloud'}</span>
+            </button>
             {currentUser?.role === 'admin' && (
               <button
                 type="button"

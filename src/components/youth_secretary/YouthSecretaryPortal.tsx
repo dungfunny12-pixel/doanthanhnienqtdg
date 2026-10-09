@@ -36,15 +36,23 @@ import {
   Upload,
   ChevronDown,
   ChevronUp,
-  Eye
+  Eye,
+  Folder,
+  Star,
+  File
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { ClassWeeklyScore, ActivityParticipant, ActivityNonParticipant, ActivityReport, Violation } from '../../types';
+import { ClassWeeklyScore, ActivityParticipant, ActivityNonParticipant, ActivityReport, Violation, DocumentFile } from '../../types';
 import { PhotoViewerModal } from '../common/PhotoViewerModal';
+import { MediaPickerButton } from '../common/MediaPickerButton';
+import { RichTextEditor } from '../common/RichTextEditor';
+import { RichTextViewer } from '../common/RichTextViewer';
+import { DocumentViewerModal } from '../common/DocumentViewerModal';
 import { SortableTh } from '../common/SortableTh';
 import { sortDataList } from '../../utils/sortUtils';
 import { SupabaseService } from '../../services/supabaseService';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { compressImageToDataURL } from '../../utils/imageCompressor';
+import * as XLSX from 'xlsx';
 
 export const YouthSecretaryPortal: React.FC = () => {
   const { 
@@ -68,7 +76,11 @@ export const YouthSecretaryPortal: React.FC = () => {
     feeLocks,
     toggleFeeLock,
     isFeeMonthLocked,
-    payYearlyFee
+    payYearlyFee,
+    documentFolders,
+    documentFiles,
+    incrementDocumentDownloads,
+    incrementDocumentViews
   } = useApp();
 
   const classId = currentUser?.classId || '10/1';
@@ -78,7 +90,12 @@ export const YouthSecretaryPortal: React.FC = () => {
   const unionMembers = classStudents.filter(s => s.isUnionMember);
 
   // Main Navigation Tabs for Bí thư
-  const [bithuTab, setBithuTab] = useState<'overview' | 'inbox' | 'activity_reports' | 'union_fee' | 'notices'>('overview');
+  const [bithuTab, setBithuTab] = useState<'overview' | 'inbox' | 'activity_reports' | 'union_fee' | 'notices' | 'documents'>('overview');
+
+  // Document management state for Bí thư
+  const [selectedDocModal, setSelectedDocModal] = useState<DocumentFile | null>(null);
+  const [docSearch, setDocSearch] = useState<string>('');
+  const [docFolderFilter, setDocFolderFilter] = useState<string>('ALL');
 
   // Inbox & Appeals states for Bí thư
   const [inboxGroupFilter, setInboxGroupFilter] = useState<string>('ALL');
@@ -121,13 +138,10 @@ export const YouthSecretaryPortal: React.FC = () => {
             return;
           }
         }
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (reader.result) {
-            setAppealProof(reader.result as string);
-          }
-        };
-        reader.readAsDataURL(file);
+        const compressed = await compressImageToDataURL(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82, outputFormat: 'image/webp' });
+        if (compressed) {
+          setAppealProof(compressed);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -189,12 +203,14 @@ export const YouthSecretaryPortal: React.FC = () => {
       achievement: string;
       note: string;
     }>;
+    proofImages: string[];
   }>({
     activityId: events[0]?.id || 'custom',
     activityTitle: events[0]?.title || '',
     activityType: 'the_thao',
     customActivityTitle: '',
-    participants: {}
+    participants: {},
+    proofImages: []
   });
 
   // Open Activity Reporting Modal
@@ -218,7 +234,8 @@ export const YouthSecretaryPortal: React.FC = () => {
                     targetEvt?.category === 'Tình nguyện' ? 'tinh_nguyen' :
                     targetEvt?.category === 'Văn nghệ' ? 'van_nghe' : 'phong_trao',
       customActivityTitle: '',
-      participants: initialParticipants
+      participants: initialParticipants,
+      proofImages: []
     });
     setReportStudentSearch('');
     setIsReportModalOpen(true);
@@ -280,7 +297,8 @@ export const YouthSecretaryPortal: React.FC = () => {
       secretaryName: currentUser?.name || 'Bí thư Chi đoàn',
       participantCount: selectedEntries.length,
       participants: selectedEntries,
-      nonParticipants: nonSelectedEntries
+      nonParticipants: nonSelectedEntries,
+      proofImages: reportForm.proofImages
     });
 
     alert(`Đã gửi báo cáo danh sách ${selectedEntries.length} học sinh tham gia "${finalTitle}" về Đoàn trường thành công!`);
@@ -408,12 +426,12 @@ export const YouthSecretaryPortal: React.FC = () => {
 
       {/* Main Tabs Navigation */}
       <div className="bg-slate-950/90 p-2 rounded-2xl border border-slate-800 shadow-inner">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-bold">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-bold">
           {[
             { id: 'overview', label: 'Tổng Quan', icon: Trophy, badge: null, isRedBadge: false },
             { 
               id: 'inbox', 
-              label: 'Hộp Thư Nề Nếp & Khiếu Nại', 
+              label: 'Hộp Thư Nề Nếp', 
               icon: AlertCircle, 
               badge: pendingViolations.length,
               isRedBadge: pendingViolations.length > 0 
@@ -425,8 +443,9 @@ export const YouthSecretaryPortal: React.FC = () => {
               badge: classActivityReports.length,
               isRedBadge: false 
             },
-            { id: 'union_fee', label: 'Sổ Đoàn Phí 9 Tháng', icon: Layers, badge: `${unionMembers.length} ĐV`, isRedBadge: false },
+            { id: 'union_fee', label: 'Sổ Đoàn Phí', icon: Layers, badge: `${unionMembers.length} ĐV`, isRedBadge: false },
             { id: 'notices', label: 'Nhiệm Vụ & Lao Động', icon: Bell, badge: classNotices.length, isRedBadge: false },
+            { id: 'documents', label: 'Biểu Mẫu & Cẩm Nang', icon: Folder, badge: documentFiles?.length || 0, isRedBadge: false },
           ].map(tab => {
             const isActive = bithuTab === tab.id;
             const Icon = tab.icon;
@@ -689,9 +708,9 @@ export const YouthSecretaryPortal: React.FC = () => {
                         {vio.note && (
                           <div>
                             <span className="font-bold text-slate-400">Ghi chú từ Cờ đỏ:</span>
-                            <p className="text-slate-200 mt-0.5 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-                              {vio.note}
-                            </p>
+                            <div className="text-slate-200 mt-0.5 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                              <RichTextViewer content={vio.note} compact />
+                            </div>
                           </div>
                         )}
 
@@ -725,7 +744,9 @@ export const YouthSecretaryPortal: React.FC = () => {
                         {vio.appeal && (
                           <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-800/60 space-y-1">
                             <p className="font-bold text-purple-300">Nội dung đã giải trình phúc khảo:</p>
-                            <p className="text-slate-200">{vio.appeal.reason}</p>
+                            <div className="text-slate-200">
+                              <RichTextViewer content={vio.appeal.reason} compact />
+                            </div>
                             <p className="text-[10px] text-purple-400">Bởi: {vio.appeal.appealedBy} lúc {vio.appeal.appealedAt}</p>
                           </div>
                         )}
@@ -801,7 +822,7 @@ export const YouthSecretaryPortal: React.FC = () => {
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-glow active:scale-95 transition-all"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ Lập Báo Cáo Mới</span>
+                <span>Lập Báo Cáo Mới</span>
               </button>
             </div>
           </div>
@@ -1044,7 +1065,7 @@ export const YouthSecretaryPortal: React.FC = () => {
             {classActivityReports.length === 0 && (
               <div className="p-12 text-center bg-slate-950 rounded-3xl border border-slate-800 text-slate-400 text-xs space-y-3">
                 <p className="text-base font-bold text-slate-300">Chi đoàn chưa gửi báo cáo tham gia phong trào nào</p>
-                <p className="text-slate-500">Bí thư hãy bấm nút <strong>"+ Lập Báo Cáo Mới"</strong> để gửi danh sách học sinh tham gia Hội thao, Tình nguyện, Văn nghệ lên Đoàn trường.</p>
+                <p className="text-slate-500">Bí thư hãy bấm nút <strong>"Lập Báo Cáo Mới"</strong> để gửi danh sách học sinh tham gia Hội thao, Tình nguyện, Văn nghệ lên Đoàn trường.</p>
                 <button
                   type="button"
                   onClick={() => handleOpenReportModal()}
@@ -1478,9 +1499,9 @@ export const YouthSecretaryPortal: React.FC = () => {
                     <Clock className="w-3.5 h-3.5" /> Hạn: {notice.deadline}
                   </span>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
-                  {notice.content}
-                </p>
+                <div className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
+                  <RichTextViewer content={notice.content} />
+                </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
                   <span>Phát bởi: <strong>{notice.assignedBy}</strong></span>
                   <span className="text-emerald-400 font-bold">Bí thư chi đoàn triển khai cho đoàn viên</span>
@@ -1491,6 +1512,199 @@ export const YouthSecretaryPortal: React.FC = () => {
               <p className="text-xs text-slate-400 text-center py-4">Hiện không có thông báo điều động lao động nào cho chi đoàn</p>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ================= TAB 6: DOCUMENTS & HANDBOOKS FOR YOUTH SECRETARY ================= */}
+      {bithuTab === 'documents' && (
+        <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card space-y-5 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+            <div>
+              <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                <Folder className="w-5 h-5 text-emerald-500" />
+                <span>KHO BIỂU MẪU & CẨM NANG BÍ THƯ CHI ĐOÀN</span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                Tài liệu phục vụ sinh hoạt chi đoàn, biểu mẫu kết nạp Đoàn viên mới, sổ sách Đoàn và cẩm nang hướng dẫn
+              </p>
+            </div>
+
+            {/* Search */}
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                value={docSearch}
+                onChange={(e) => setDocSearch(e.target.value)}
+                placeholder="Tìm tên đơn, số hiệu, từ khóa..."
+                className="w-full pl-9 pr-8 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              />
+              {docSearch && (
+                <button
+                  type="button"
+                  onClick={() => setDocSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Folder Filter Chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            <button
+              type="button"
+              onClick={() => setDocFolderFilter('ALL')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                docFolderFilter === 'ALL'
+                  ? 'bg-emerald-600 text-white shadow-glow'
+                  : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <Folder className="w-3.5 h-3.5" />
+              <span>Tất cả ({documentFiles?.length || 0})</span>
+            </button>
+            {documentFolders?.map((folder) => {
+              const count = documentFiles?.filter((f) => f.folderId === folder.id).length || 0;
+              return (
+                <button
+                  key={folder.id}
+                  type="button"
+                  onClick={() => setDocFolderFilter(folder.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                    docFolderFilter === folder.id
+                      ? 'bg-emerald-600 text-white shadow-glow'
+                      : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Folder className="w-3.5 h-3.5" style={{ color: folder.color || '#10b981' }} />
+                  <span>{folder.name}</span>
+                  <span className="text-[10px] opacity-75 bg-black/30 px-1.5 py-0.2 rounded-full">
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Document Cards Grid */}
+          {(() => {
+            const filteredDocs = (documentFiles || []).filter((doc) => {
+              const matchFolder = docFolderFilter === 'ALL' || doc.folderId === docFolderFilter;
+              const matchSearch =
+                !docSearch ||
+                doc.title.toLowerCase().includes(docSearch.toLowerCase()) ||
+                (doc.documentNumber && doc.documentNumber.toLowerCase().includes(docSearch.toLowerCase())) ||
+                (doc.tags && doc.tags.some((t) => t.toLowerCase().includes(docSearch.toLowerCase()))) ||
+                (doc.description && doc.description.toLowerCase().includes(docSearch.toLowerCase()));
+              return matchFolder && matchSearch;
+            });
+
+            if (filteredDocs.length === 0) {
+              return (
+                <div className="py-10 text-center rounded-2xl border border-dashed border-slate-800 bg-slate-950/30">
+                  <File className="w-10 h-10 text-slate-600 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm font-semibold text-slate-400">Không tìm thấy tài liệu phù hợp</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {filteredDocs.map((doc) => {
+                  const folder = documentFolders?.find((f) => f.id === doc.folderId);
+                  const formatConfig: Record<string, { label: string; bg: string; text: string; border: string }> = {
+                    pdf: { label: 'PDF', bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/30' },
+                    docx: { label: 'DOCX', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30' },
+                    doc: { label: 'DOC', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30' },
+                    xlsx: { label: 'XLSX', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+                    xls: { label: 'XLS', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+                    pptx: { label: 'PPTX', bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/30' },
+                    zip: { label: 'ZIP', bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/30' },
+                    image: { label: 'ẢNH', bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/30' },
+                    other: { label: 'FILE', bg: 'bg-slate-500/10', text: 'text-slate-400', border: 'border-slate-500/30' }
+                  };
+                  const fmt = formatConfig[doc.fileType] || formatConfig.other;
+
+                  return (
+                    <div
+                      key={doc.id}
+                      className="bg-slate-950/70 border border-slate-800 hover:border-emerald-500/40 rounded-2xl p-3.5 space-y-3 transition-all hover:shadow-lg flex flex-col justify-between group"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border ${fmt.bg} ${fmt.text} ${fmt.border}`}>
+                            {fmt.label}
+                          </span>
+                          {doc.isPinned && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-0.5">
+                              <Star className="w-2.5 h-2.5 fill-amber-400" /> Ghim
+                            </span>
+                          )}
+                          {folder && (
+                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <Folder className="w-3 h-3" style={{ color: folder.color || '#10b981' }} />
+                              <span className="truncate max-w-[120px]">{folder.name}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <h4
+                            onClick={() => {
+                              incrementDocumentViews(doc.id);
+                              setSelectedDocModal(doc);
+                            }}
+                            className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 cursor-pointer leading-snug"
+                            title={doc.title}
+                          >
+                            {doc.title}
+                          </h4>
+                          {doc.documentNumber && (
+                            <p className="text-[11px] font-mono text-emerald-400/90 mt-0.5">
+                              {doc.documentNumber}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                          <span>{doc.fileSize}</span>
+                          <span>{doc.downloadCount || 0} lượt tải</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            incrementDocumentViews(doc.id);
+                            setSelectedDocModal(doc);
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-[11px] font-bold flex items-center gap-1 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Xem</span>
+                        </button>
+
+                        <a
+                          href={doc.fileUrl || doc.url}
+                          download={doc.title}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => incrementDocumentDownloads(doc.id)}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-[11px] font-bold flex items-center gap-1 transition-colors shadow-sm"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Tải về</span>
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -1715,6 +1929,47 @@ export const YouthSecretaryPortal: React.FC = () => {
                     );
                   })}
                 </div>
+                {/* Proof images for activity report */}
+                <div className="pt-2 border-t border-slate-800">
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    📸 Ảnh minh chứng hoạt động của Chi đoàn (Tùy chọn):
+                  </label>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {reportForm.proofImages.map((img, idx) => (
+                      <div key={idx} className="relative group w-16 h-16 rounded-xl overflow-hidden border border-slate-700">
+                        <img
+                          src={img}
+                          alt="Minh chứng hoạt động"
+                          onClick={() => setViewingPhoto(img)}
+                          className="w-full h-full object-cover cursor-pointer"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setReportForm(prev => ({ ...prev, proofImages: prev.proofImages.filter((_, i) => i !== idx) }))}
+                          className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-red-600 text-white text-[9px]"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    <MediaPickerButton
+                      category="activities"
+                      suggestedClassId={classId}
+                      suggestedWeek={activeWeek}
+                      multiple={true}
+                      onSelect={(urls) => {
+                        const newUrls = Array.isArray(urls) ? urls : [urls];
+                        setReportForm(prev => ({
+                          ...prev,
+                          proofImages: Array.from(new Set([...prev.proofImages, ...newUrls]))
+                        }));
+                      }}
+                      label="Kho Media / Tải Ảnh Hoạt Động"
+                      className="px-3 py-2 rounded-xl border border-dashed border-purple-500/60 bg-purple-950/20 hover:bg-purple-950/40 text-purple-300 font-bold text-xs"
+                    />
+                  </div>
+                </div>
+
               </div>
 
               {/* Action Buttons */}
@@ -1769,19 +2024,14 @@ export const YouthSecretaryPortal: React.FC = () => {
             </div>
 
             <form onSubmit={handleSendAppeal} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">
-                  Lý do phúc khảo / Giải trình cụ thể (*):
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  value={appealReason}
-                  onChange={(e) => setAppealReason(e.target.value)}
-                  placeholder="Ví dụ: Học sinh bị ốm có giấy xác nhận của Phòng Y tế; Chi đoàn đã trực nhật sạch sẽ lúc 6h45 trước khi chấm..."
-                  className="w-full p-3 rounded-2xl bg-slate-950 border border-slate-700 text-white placeholder-slate-600 focus:outline-none focus:border-rose-500"
-                />
-              </div>
+              <RichTextEditor
+                value={appealReason}
+                onChange={setAppealReason}
+                label="Lý do phúc khảo / Giải trình cụ thể (*):"
+                placeholder="Ví dụ: Học sinh bị ốm có giấy xác nhận của Phòng Y tế; Chi đoàn đã trực nhật sạch sẽ lúc 6h45 trước khi chấm..."
+                toolbarPreset="minimal"
+                minHeight="140px"
+              />
 
               <div>
                 <label className="block font-bold text-slate-300 mb-1">
@@ -1789,26 +2039,28 @@ export const YouthSecretaryPortal: React.FC = () => {
                 </label>
                 <div className="flex items-center gap-3">
                   {appealProof && (
-                    <img
-                      src={appealProof}
-                      alt="Giấy xác nhận"
-                      className="w-16 h-16 object-cover rounded-xl border border-slate-700"
-                    />
+                    <div className="relative group w-16 h-16 rounded-xl overflow-hidden border border-slate-700">
+                      <img
+                        src={appealProof}
+                        alt="Giấy xác nhận"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAppealProof('')}
+                        className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-red-600 text-white text-[9px]"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => appealFileInputRef.current?.click()}
-                    className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white flex items-center gap-1.5 cursor-pointer hover:border-slate-500 transition-colors"
-                  >
-                    <Upload className="w-4 h-4 text-amber-400" />
-                    <span>Tải ảnh từ máy tính</span>
-                  </button>
-                  <input
-                    type="file"
-                    ref={appealFileInputRef}
-                    onChange={handleAppealFileUpload}
-                    accept="image/*"
-                    className="hidden"
+                  <MediaPickerButton
+                    category="violations"
+                    suggestedClassId={classId}
+                    suggestedWeek={activeWeek}
+                    onSelect={(url) => setAppealProof(Array.isArray(url) ? url[0] : url)}
+                    label="Chọn / Chụp Ảnh Minh Chứng"
+                    className="px-3.5 py-2.5 rounded-xl border border-dashed border-amber-500/60 bg-amber-950/20 hover:bg-amber-950/40 text-amber-300 font-bold"
                   />
                 </div>
               </div>
@@ -1841,6 +2093,15 @@ export const YouthSecretaryPortal: React.FC = () => {
           onClose={() => setViewingPhoto(null)}
           imageUrl={viewingPhoto}
           title="Minh chứng vi phạm chi tiết"
+        />
+      )}
+
+      {/* Document Viewer Modal */}
+      {selectedDocModal && (
+        <DocumentViewerModal
+          isOpen={true}
+          onClose={() => setSelectedDocModal(null)}
+          document={selectedDocModal}
         />
       )}
 

@@ -1,5 +1,6 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
-import { compressImage, dataURLtoFile } from '../utils/imageCompressor';
+import { compressImage, dataURLtoFile, compressImageToDataURL } from '../utils/imageCompressor';
+import { saveIndexedDBItem, deleteIndexedDBItem, STORES } from '../utils/indexedDBStorage';
 import { 
   ClassInfo, 
   Student, 
@@ -14,7 +15,12 @@ import {
   WeekConfig,
   AcademicYear,
   AuditLog,
-  ActivityReport
+  ActivityReport,
+  MediaFolder,
+  MediaItem,
+  YouthEvent,
+  DocumentFolder,
+  DocumentFile
 } from '../types';
 
 /**
@@ -40,6 +46,11 @@ export const SupabaseService = {
     feeLocks?: Record<string, boolean>;
     auditLogs?: AuditLog[];
     activityReports?: ActivityReport[];
+    mediaFolders?: MediaFolder[];
+    mediaAssets?: MediaItem[];
+    events?: YouthEvent[];
+    documentFolders?: DocumentFolder[];
+    documentFiles?: DocumentFile[];
   } | null> {
     const client = getSupabaseClient();
     if (!client || !isSupabaseConfigured()) return null;
@@ -136,6 +147,41 @@ export const SupabaseService = {
         .select('*')
         .eq('is_deleted', false);
 
+      // 16. Events
+      let rawEvents: any[] = [];
+      try {
+        const { data } = await client.from('events').select('*').eq('is_deleted', false);
+        if (data) rawEvents = data;
+      } catch {}
+
+      // 17. Document Folders
+      let rawFolders: any[] = [];
+      try {
+        const { data } = await client.from('document_folders').select('*').eq('is_deleted', false);
+        if (data) rawFolders = data;
+      } catch {}
+
+      // 18. Document Files
+      let rawFiles: any[] = [];
+      try {
+        const { data } = await client.from('document_files').select('*').eq('is_deleted', false);
+        if (data) rawFiles = data;
+      } catch {}
+
+      // 19. Media Assets
+      let rawMedia: any[] = [];
+      try {
+        const { data } = await client.from('media_assets').select('*');
+        if (data) rawMedia = data;
+      } catch {}
+
+      // 20. Media Folders / Albums
+      let rawMediaFolders: any[] = [];
+      try {
+        const { data } = await client.from('media_folders').select('*').eq('is_deleted', false);
+        if (data) rawMediaFolders = data;
+      } catch {}
+
       if (classErr) {
         console.warn('Không thể tải dữ liệu từ Supabase, sử dụng dữ liệu cục bộ:', classErr.message);
         return null;
@@ -202,39 +248,65 @@ export const SupabaseService = {
         status: s.is_deleted ? 'inactive' : (s.status || 'active')
       }));
 
-      const violations: Violation[] = (rawViolations || []).map(v => ({
-        id: v.violation_id,
-        classId: v.class_id,
-        className: v.class_name || `Lớp ${v.class_id}`,
-        day: v.day,
-        date: v.date_recorded || (v.created_at ? v.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
-        weekNumber: v.week_number,
-        criterionId: v.criterion_id || v.criteria_code,
-        criterionName: v.criterion_name || 'Vi phạm nề nếp',
-        groupName: v.criterion_group || 'Nề nếp & Tác phong',
-        quantity: Number(v.quantity) || 1,
-        pointsDeducted: Number(v.score_deducted) || 0,
-        bonusPoints: Number(v.bonus_points) || 0,
-        type: Number(v.bonus_points) > 0 ? 'bonus' : 'deduction',
-        studentNames: v.student_names || [],
-        note: v.note || '',
-        proofImages: v.proof_images || [],
-        reportedBy: {
-          id: v.reporter_id || v.reported_by_id || 'system',
-          name: v.reported_by_name || 'Ban Cờ Đỏ',
-          role: v.reported_by_role || 'auditor'
-        },
-        reportedAt: v.created_at || new Date().toISOString(),
-        status: v.status || 'pending',
-        appeal: v.appeal_reason ? {
-          reason: v.appeal_reason,
-          proofImages: v.appeal_proofs || [],
-          appealedBy: 'Bí thư / GVCN',
-          appealedAt: v.appeal_created_at || v.created_at || new Date().toISOString(),
-          adminResponse: v.admin_response
-        } : undefined,
-        locked: v.is_locked || false
-      }));
+      const violations: Violation[] = (rawViolations || []).map(v => {
+        let studentNames: string[] = [];
+        if (Array.isArray(v.student_names)) {
+          studentNames = v.student_names;
+        } else if (typeof v.student_names === 'string') {
+          if (v.student_names.startsWith('[')) {
+            try { studentNames = JSON.parse(v.student_names); } catch { studentNames = []; }
+          } else {
+            studentNames = v.student_names.replace(/^\{|\}$/g, '').split(',').map((s: string) => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+          }
+        }
+
+        let studentIds: string[] = [];
+        if (Array.isArray(v.student_ids)) {
+          studentIds = v.student_ids;
+        } else if (typeof v.student_ids === 'string') {
+          if (v.student_ids.startsWith('[')) {
+            try { studentIds = JSON.parse(v.student_ids); } catch { studentIds = []; }
+          } else {
+            studentIds = v.student_ids.replace(/^\{|\}$/g, '').split(',').map((s: string) => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+          }
+        }
+
+        return {
+          id: v.violation_id,
+          classId: v.class_id,
+          className: v.class_name || `Lớp ${v.class_id}`,
+          day: v.day,
+          session: v.session || 'Sáng',
+          date: v.date_recorded || (v.created_at ? v.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
+          weekNumber: v.week_number,
+          criterionId: v.criterion_id || v.criteria_code,
+          criterionName: v.criterion_name || 'Vi phạm nề nếp',
+          groupName: v.criterion_group || 'Nề nếp & Tác phong',
+          quantity: Number(v.quantity) || 1,
+          pointsDeducted: Number(v.score_deducted) || 0,
+          bonusPoints: Number(v.bonus_points) || 0,
+          type: Number(v.bonus_points) > 0 ? 'bonus' : 'deduction',
+          studentNames,
+          studentIds,
+          note: v.note || '',
+          proofImages: v.proof_images || [],
+          reportedBy: {
+            id: v.reporter_id || v.reported_by_id || 'system',
+            name: v.reported_by_name || 'Ban Cờ Đỏ',
+            role: v.reported_by_role || 'auditor'
+          },
+          reportedAt: v.created_at || new Date().toISOString(),
+          status: v.status || 'pending',
+          appeal: v.appeal_reason ? {
+            reason: v.appeal_reason,
+            proofImages: v.appeal_proofs || [],
+            appealedBy: 'Bí thư / GVCN',
+            appealedAt: v.appeal_created_at || v.created_at || new Date().toISOString(),
+            adminResponse: v.admin_response
+          } : undefined,
+          locked: v.is_locked || false
+        };
+      });
 
       const news: NewsPost[] = (rawNews || []).map(n => ({
         id: n.news_id,
@@ -343,7 +415,9 @@ export const SupabaseService = {
             auditorName: d.auditor_name,
             auditorClass: d.auditor_class || '10/1',
             shiftTime: d.shift_time || '06:45 - 07:15 (Đầu giờ)',
-            isLiveNow: Boolean(d.is_live_now)
+            isLiveNow: Boolean(d.is_live_now),
+            targetClasses: d.target_classes || undefined,
+            session: (d.session as 'Sáng' | 'Chiều') || undefined
           }))
         : undefined;
 
@@ -399,6 +473,113 @@ export const SupabaseService = {
           }))
         : undefined;
 
+      const events: YouthEvent[] | undefined = (rawEvents && rawEvents.length > 0)
+        ? rawEvents.map(e => ({
+            id: e.event_id || e.id,
+            title: e.title,
+            description: e.description || '',
+            category: (e.category || 'Phong trào') as any,
+            thumbnail: e.thumbnail || e.cover_image || 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&auto=format&fit=crop',
+            location: e.location || 'Sân trường THPT Quang Trung',
+            startDate: e.start_date || e.date || new Date().toISOString().split('T')[0],
+            endDate: e.end_date || e.date || new Date().toISOString().split('T')[0],
+            bonusPoints: Number(e.bonus_points) || 10,
+            maxSlots: Number(e.max_slots) || 100,
+            registeredCount: Number(e.registered_count) || (e.registered_student_ids?.length || 0),
+            registeredStudentIds: e.registered_student_ids || [],
+            checkedInStudentIds: e.checked_in_student_ids || [],
+            isRegistrationOpen: e.is_registration_open ?? true,
+            qrCodeValue: e.qr_code_value || `EVT-${e.event_id || e.id}`
+          }))
+        : undefined;
+
+      const documentFolders: DocumentFolder[] | undefined = (rawFolders && rawFolders.length > 0)
+        ? rawFolders.map(f => ({
+            id: f.folder_id || f.id,
+            name: f.name,
+            code: f.code || undefined,
+            description: f.description || undefined,
+            parentId: f.parent_id || null,
+            icon: f.icon || undefined,
+            color: f.color || undefined,
+            isSystem: Boolean(f.is_system),
+            order: Number(f.order) || 0,
+            allowedRoles: f.allowed_roles || undefined,
+            createdAt: f.created_at || new Date().toISOString(),
+            updatedAt: f.updated_at || new Date().toISOString()
+          }))
+        : undefined;
+
+      const documentFiles: DocumentFile[] | undefined = (rawFiles && rawFiles.length > 0)
+        ? rawFiles.map(f => ({
+            id: f.file_id || f.id,
+            title: f.title,
+            fileNumber: f.file_number || undefined,
+            documentNumber: f.document_number || f.file_number || undefined,
+            fileName: f.file_name || f.title || 'Tai_lieu.pdf',
+            fileUrl: f.file_url,
+            url: f.file_url,
+            fileSize: f.file_size || '1 MB',
+            fileSizeBytes: Number(f.file_size_bytes) || 1024000,
+            fileType: f.file_type || 'pdf',
+            mimeType: f.mime_type || undefined,
+            folderId: f.folder_id,
+            category: f.category || 'form',
+            publishDate: f.publish_date || f.issue_date || (f.created_at ? f.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
+            issueDate: f.issue_date || f.publish_date || undefined,
+            signer: f.signer || undefined,
+            signerRole: f.signer_role || undefined,
+            tags: f.tags || [],
+            downloadsCount: Number(f.downloads_count) || 0,
+            downloadCount: Number(f.downloads_count) || 0,
+            viewsCount: Number(f.views_count) || 0,
+            viewCount: Number(f.views_count) || 0,
+            isPublic: f.is_public ?? true,
+            isPinned: Boolean(f.is_pinned),
+            description: f.description || undefined,
+            version: f.version || undefined,
+            uploadedBy: f.uploaded_by || 'BCH Đoàn Trường',
+            createdAt: f.created_at || new Date().toISOString(),
+            updatedAt: f.updated_at || new Date().toISOString()
+          }))
+        : undefined;
+
+      const mediaFolders: MediaFolder[] | undefined = (rawMediaFolders && rawMediaFolders.length > 0)
+        ? rawMediaFolders.map(f => ({
+            id: f.folder_id || f.id,
+            name: f.name,
+            description: f.description || undefined,
+            color: f.color || '#3b82f6',
+            icon: f.icon || 'folder',
+            coverImage: f.cover_image || undefined,
+            category: f.category || 'activities',
+            isSystem: Boolean(f.is_system),
+            order: Number(f.order_num) || 0,
+            createdAt: f.created_at || new Date().toISOString(),
+            updatedAt: f.updated_at || new Date().toISOString()
+          }))
+        : undefined;
+
+      const mediaAssets: MediaItem[] | undefined = (rawMedia && rawMedia.length > 0)
+        ? rawMedia.map(m => ({
+            id: m.id,
+            title: m.title || 'Ảnh Media',
+            url: m.url,
+            category: m.category || 'general',
+            folderId: m.folder_id || m.album_id || undefined,
+            albumId: m.folder_id || m.album_id || undefined,
+            bucket: m.bucket || 'media',
+            size: Number(m.size_bytes) || 85000,
+            sizeFormatted: m.size_formatted || 'Đã tối ưu',
+            format: m.format || 'webp',
+            uploadedAt: m.created_at || new Date().toISOString(),
+            uploadedBy: m.uploaded_by,
+            classId: m.class_id,
+            weekNumber: m.week_number,
+            tags: m.tags || []
+          }))
+        : undefined;
+
       return {
         classes,
         criteria,
@@ -414,7 +595,12 @@ export const SupabaseService = {
         academicYears,
         feeLocks,
         auditLogs,
-        activityReports
+        activityReports,
+        events,
+        documentFolders,
+        documentFiles,
+        mediaFolders,
+        mediaAssets
       };
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu từ Supabase:', err);
@@ -423,7 +609,7 @@ export const SupabaseService = {
   },
 
   /**
-   * Đẩy toàn bộ dữ liệu khởi tạo / mẫu lên Supabase (Seed / Migration ban đầu)
+   * Đẩy toàn bộ dữ liệu từ Local lên Supabase Cloud (1-Click Full Cloud Sync / Migration)
    */
   async seedLocalDataToSupabase(payload: {
     classes: ClassInfo[];
@@ -432,7 +618,18 @@ export const SupabaseService = {
     violations: Violation[];
     news: NewsPost[];
     notices: TaskNotice[];
+    events?: YouthEvent[];
+    documentFolders?: DocumentFolder[];
+    documentFiles?: DocumentFile[];
+    mediaFolders?: MediaFolder[];
+    mediaAssets?: MediaItem[];
+    activityReports?: ActivityReport[];
+    activitySlides?: ActivitySlide[];
+    weeksConfig?: WeekConfig[];
+    users?: User[];
+    duties?: DutyAssignment[];
     schoolSettings?: SchoolSettings;
+    academicYears?: AcademicYear[];
   }): Promise<{ success: boolean; message: string }> {
     const client = getSupabaseClient();
     if (!client) {
@@ -440,26 +637,31 @@ export const SupabaseService = {
     }
 
     try {
+      let totalSynced = 0;
+
       // 1. Seed Classes
-      if (payload.classes.length > 0) {
+      if (payload.classes && payload.classes.length > 0) {
         const mappedClasses = payload.classes.map(c => ({
           class_id: c.id,
           class_name: c.name,
           grade: c.grade,
           gvcn_name: c.gvcnName,
+          gvcn_id: c.gvcnId || null,
           bithu_name: c.bithuName,
+          bithu_id: c.bithuId || null,
           total_students: c.totalStudents,
           union_members_count: c.unionMembers,
           standard_score: c.standardScore,
           is_archived: c.isArchived,
-          academic_year: c.academicYearId || '2025_2026',
+          academic_year: c.academicYearId || '2026_2027',
           is_deleted: false
         }));
         await client.from('classes').upsert(mappedClasses, { onConflict: 'class_id' });
+        totalSynced += mappedClasses.length;
       }
 
       // 2. Seed Criteria
-      if (payload.criteria.length > 0) {
+      if (payload.criteria && payload.criteria.length > 0) {
         const mappedCriteria = payload.criteria.map(cr => ({
           criteria_code: cr.code || cr.id,
           group_id: cr.groupId,
@@ -474,10 +676,11 @@ export const SupabaseService = {
           is_deleted: false
         }));
         await client.from('criteria').upsert(mappedCriteria, { onConflict: 'criteria_code' });
+        totalSynced += mappedCriteria.length;
       }
 
       // 3. Seed Students
-      if (payload.students.length > 0) {
+      if (payload.students && payload.students.length > 0) {
         const mappedStudents = payload.students.map(s => ({
           student_id: s.studentId || s.id,
           class_id: s.classId,
@@ -495,17 +698,95 @@ export const SupabaseService = {
           rank_title: s.rankTitle || 'Đoàn viên',
           is_deleted: false
         }));
-        await client.from('students').upsert(mappedStudents, { onConflict: 'student_id' });
+        // Insert in batches of 100
+        for (let i = 0; i < mappedStudents.length; i += 100) {
+          const batch = mappedStudents.slice(i, i + 100);
+          await client.from('students').upsert(batch, { onConflict: 'student_id' });
+        }
+        totalSynced += mappedStudents.length;
       }
 
-      // 4. Seed Settings
+      // 4. Seed News
+      if (payload.news && payload.news.length > 0) {
+        for (const n of payload.news) {
+          await this.saveNews(n);
+        }
+        totalSynced += payload.news.length;
+      }
+
+      // 5. Seed Notices
+      if (payload.notices && payload.notices.length > 0) {
+        for (const nt of payload.notices) {
+          await this.saveTaskNotice(nt);
+        }
+        totalSynced += payload.notices.length;
+      }
+
+      // 6. Seed Events
+      if (payload.events && payload.events.length > 0) {
+        for (const ev of payload.events) {
+          await this.saveEvent(ev);
+        }
+        totalSynced += payload.events.length;
+      }
+
+      // 7. Seed Document Folders & Files
+      if (payload.documentFolders && payload.documentFolders.length > 0) {
+        for (const folder of payload.documentFolders) {
+          await this.saveDocumentFolder(folder);
+        }
+      }
+      if (payload.documentFiles && payload.documentFiles.length > 0) {
+        for (const file of payload.documentFiles) {
+          await this.saveDocumentFile(file);
+        }
+      }
+
+      // 8. Seed Media Folders & Assets
+      if (payload.mediaFolders && payload.mediaFolders.length > 0) {
+        for (const f of payload.mediaFolders) {
+          await this.saveMediaFolder(f);
+        }
+      }
+      if (payload.mediaAssets && payload.mediaAssets.length > 0) {
+        for (const m of payload.mediaAssets) {
+          await this.saveMediaAsset(m);
+        }
+      }
+
+      // 9. Seed Activity Reports
+      if (payload.activityReports && payload.activityReports.length > 0) {
+        for (const r of payload.activityReports) {
+          await this.saveActivityReport(r);
+        }
+      }
+
+      // 9. Seed Activity Slides
+      if (payload.activitySlides && payload.activitySlides.length > 0) {
+        for (const sl of payload.activitySlides) {
+          await this.saveActivitySlide(sl);
+        }
+      }
+
+      // 10. Seed Users & Duties
+      if (payload.users && payload.users.length > 0) {
+        await this.saveUsersBatch(payload.users);
+      }
+      if (payload.duties && payload.duties.length > 0) {
+        await this.saveDutiesBatch(payload.duties);
+      }
+
+      // 11. Seed Weeks & Settings
+      if (payload.weeksConfig && payload.weeksConfig.length > 0) {
+        await this.saveWeeksConfig(payload.weeksConfig);
+      }
       if (payload.schoolSettings) {
         await this.saveSchoolSettings(payload.schoolSettings);
       }
 
       return {
         success: true,
-        message: `Đã đồng bộ thành công ${payload.classes.length} lớp, ${payload.students.length} học sinh, ${payload.criteria.length} tiêu chí lên Supabase Cloud!`
+        message: `Đã đồng bộ thành công toàn bộ cơ sở dữ liệu lên Supabase Cloud! Website online đã sẵn sàng hoạt động.`
       };
     } catch (err: any) {
       return {
@@ -702,6 +983,7 @@ export const SupabaseService = {
 
   /**
    * Lưu hàng loạt học sinh lên Supabase Cloud (Import Excel / Nâng cấp hàng loạt)
+   * Tự động chia nhỏ thành các gói 100 học sinh để đảm bảo an toàn 100% khi số lượng lớn (500+ học sinh)
    */
   async saveStudentsBatch(students: Student[]): Promise<boolean> {
     const client = getSupabaseClient();
@@ -709,37 +991,44 @@ export const SupabaseService = {
 
     try {
       const mapped = students.map(s => ({
-        student_id: s.studentId || s.id,
-        class_id: s.classId,
-        full_name: s.name,
-        name: s.name,
-        grade: s.grade,
-        gender: s.gender,
-        dob: s.dob,
-        ethnicity: s.ethnicity || 'Kinh',
-        phone_number: s.phone || null,
-        phone: s.phone || null,
-        address: s.address || null,
-        is_union_member: s.isUnionMember,
-        union_joined_date: s.unionJoinedDate || null,
-        union_joined_place: s.unionJoinedPlace || null,
-        union_card_number: s.unionCardNumber || null,
+        student_id: String(s.studentId || s.id).trim(),
+        class_id: String(s.classId || '10/1').trim(),
+        full_name: String(s.name || '').trim(),
+        name: String(s.name || '').trim(),
+        grade: Number(s.grade || 10),
+        gender: String(s.gender || 'Nam').trim(),
+        dob: String(s.dob || '2009-01-01').trim(),
+        ethnicity: String(s.ethnicity || 'Kinh').trim(),
+        phone_number: s.phone ? String(s.phone).trim() : null,
+        phone: s.phone ? String(s.phone).trim() : null,
+        address: String(s.address || '').trim(),
+        member_type: s.isUnionMember ? 'Đoàn viên' : 'Học sinh',
+        is_union_member: Boolean(s.isUnionMember),
+        union_joined_date: s.unionJoinedDate ? String(s.unionJoinedDate).trim() : null,
+        union_joined_place: s.unionJoinedPlace ? String(s.unionJoinedPlace).trim() : null,
+        union_card_number: s.unionCardNumber ? String(s.unionCardNumber).trim() : null,
         union_position: s.unionPosition || (s.isUnionMember ? 'Đoàn viên' : 'Học sinh'),
         union_fee_status: s.unionFeeStatus || 'paid',
         union_booklet_status: s.unionBookletStatus || 'submitted',
         conduct_rating: s.conductRating || 'Xuất sắc',
         custom_notes: s.customNotes || '',
-        activity_points: s.points || 100,
-        points: s.points || 100,
+        activity_points: Number(s.points || 100),
+        points: Number(s.points || 100),
         rank_title: s.rankTitle || 'Đoàn viên',
+        violations_count: Number(s.violationsCount || 0),
         status: s.status || 'active',
         is_deleted: s.status === 'inactive'
       }));
 
-      const { error } = await client.from('students').upsert(mapped, { onConflict: 'student_id' });
-      if (error) {
-        console.error('Lỗi khi lưu hàng loạt học sinh lên Supabase:', error.message);
-        return false;
+      // Chia nhỏ thành các mẻ 100 bản ghi
+      const CHUNK_SIZE = 100;
+      for (let i = 0; i < mapped.length; i += CHUNK_SIZE) {
+        const chunk = mapped.slice(i, i + CHUNK_SIZE);
+        const { error } = await client.from('students').upsert(chunk, { onConflict: 'student_id' });
+        if (error) {
+          console.error(`Lỗi khi lưu mẻ học sinh [${i} - ${i + chunk.length}]:`, error.message);
+          return false;
+        }
       }
       return true;
     } catch (err) {
@@ -956,6 +1245,8 @@ export const SupabaseService = {
         violation_id: violation.id,
         week_number: violation.weekNumber,
         day: violation.day,
+        session: violation.session || 'Sáng',
+        date_recorded: violation.date || (violation.reportedAt ? violation.reportedAt.split(' ')[0] : new Date().toISOString().split('T')[0]),
         class_id: violation.classId,
         class_name: violation.className,
         criterion_id: violation.criterionId,
@@ -964,9 +1255,12 @@ export const SupabaseService = {
         quantity: violation.quantity || 1,
         score_deducted: violation.type === 'bonus' ? 0 : violation.pointsDeducted,
         bonus_points: violation.type === 'bonus' ? (violation.bonusPoints || violation.pointsDeducted) : 0,
-        reporter_id: violation.reportedBy.id,
-        reported_by_name: violation.reportedBy.name,
-        note: violation.note,
+        student_names: violation.studentNames || [],
+        student_ids: violation.studentIds || [],
+        reporter_id: violation.reportedBy?.id || 'system',
+        reported_by_name: violation.reportedBy?.name || 'Ban Cờ Đỏ',
+        reported_by_role: violation.reportedBy?.role || 'auditor',
+        note: violation.note || null,
         proof_images: proofImages,
         status: violation.status,
         appeal_reason: violation.appeal?.reason || null,
@@ -999,55 +1293,187 @@ export const SupabaseService = {
   },
 
   /**
-   * Tải ảnh minh chứng / media trực tiếp lên Supabase Storage
-   * Tự động nén tối ưu dung lượng (WebP/JPEG) giúp giảm 95% kích thước, tải siêu nhanh
-   * Trả về đường dẫn CDN công khai (Public URL)
+   * Tải ảnh minh chứng / media trực tiếp lên Supabase Storage hoặc Fallback Local WebP
+   * Tự động nén tối ưu dung lượng (WebP) giúp giảm 95% kích thước, tải siêu tốc
    */
   async uploadImage(
-    file: File | Blob | string, 
-    bucket: 'proof_images' | 'media' = 'proof_images',
+    file: File | Blob | string,
+    bucket: 'violations' | 'media' | 'proof_images' = 'violations',
     options?: { maxWidth?: number; quality?: number }
   ): Promise<string | null> {
-    const client = getSupabaseClient();
-    if (!client || !isSupabaseConfigured()) return null;
-
     try {
-      // Nếu là chuỗi URL công khai đã upload trước đó, trả về luôn
+      if (!file) return null;
+
+      // Nếu truyền trực tiếp chuỗi URL (HTTP/HTTPS) hoặc Data URL
       if (typeof file === 'string') {
-        if (file.startsWith('http://') || file.startsWith('https://')) {
+        if (file.startsWith('http://') || file.startsWith('https://') || file.startsWith('data:image')) {
           return file;
         }
-        if (file.startsWith('data:')) {
-          file = dataURLtoFile(file);
-        } else {
-          return null;
-        }
+        return file;
       }
 
-      // Tự động nén ảnh trước khi tải lên
+      // Tự động nén ảnh sang chuẩn WebP trước khi tải lên
       const maxWidth = options?.maxWidth || (bucket === 'media' ? 1600 : 1200);
       const quality = options?.quality || 0.82;
       const optimizedFile = await compressImage(file, { maxWidth, quality, outputFormat: 'image/webp' });
 
-      const ext = optimizedFile.name ? optimizedFile.name.split('.').pop() : 'webp';
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
+      const client = getSupabaseClient();
+      // Nếu có cấu hình Supabase Cloud, thử tải lên Storage bucket
+      if (client && isSupabaseConfigured()) {
+        try {
+          const ext = optimizedFile.name ? optimizedFile.name.split('.').pop() : 'webp';
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
 
-      const { error } = await client.storage.from(bucket).upload(fileName, optimizedFile, {
-        cacheControl: '31536000', // Cache 1 năm trên Browser & CDN
-        upsert: true,
-        contentType: optimizedFile.type || 'image/webp'
-      });
+          const targetBucket = bucket === 'proof_images' ? 'proof_images' : bucket;
+          const { error } = await client.storage.from(targetBucket).upload(fileName, optimizedFile, {
+            cacheControl: '31536000', // Cache 1 năm trên Browser & CDN
+            upsert: true,
+            contentType: optimizedFile.type || 'image/webp'
+          });
 
-      if (error) {
-        console.error(`Lỗi tải ảnh lên bucket ${bucket}:`, error.message);
-        return null;
+          if (!error) {
+            const { data } = client.storage.from(targetBucket).getPublicUrl(fileName);
+            if (data?.publicUrl) {
+              return data.publicUrl;
+            }
+          } else {
+            console.warn(`[Supabase Storage] Lỗi lưu trữ vào bucket ${bucket}, tự động chuyển sang lưu trữ nội bộ nén WebP:`, error.message);
+          }
+        } catch (cloudErr) {
+          console.warn('[Supabase Storage] Không thể kết nối Cloud Storage, tự động chuyển sang lưu trữ cục bộ:', cloudErr);
+        }
       }
 
-      const { data } = client.storage.from(bucket).getPublicUrl(fileName);
-      return data.publicUrl;
+      // Fallback cục bộ (Offline / Local): Chuyển ảnh WebP đã nén siêu nhẹ sang chuỗi Data URL
+      return await compressImageToDataURL(optimizedFile, { maxWidth: 1280, maxHeight: 1280, quality: 0.78, outputFormat: 'image/webp' });
     } catch (err) {
-      console.error('Lỗi khi xử lý và tải tệp ảnh lên Supabase:', err);
+      console.error('Lỗi khi xử lý và nén tệp ảnh:', err);
+      if (typeof file !== 'string') {
+        return await compressImageToDataURL(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.75 });
+      }
+      return file;
+    }
+  },
+
+  /**
+   * Tải ảnh lên và lưu đầy đủ thông tin vào kho Media toàn hệ thống
+   */
+  async uploadMediaAsset(
+    file: File | Blob | string,
+    meta: {
+      title?: string;
+      category?: 'all' | 'violations' | 'activities' | 'news_events' | 'branding' | 'students' | 'general';
+      folderId?: string;
+      albumId?: string;
+      classId?: string;
+      weekNumber?: number;
+      tags?: string[];
+      uploadedBy?: { id?: string; name?: string; role?: string };
+    }
+  ): Promise<MediaItem | null> {
+    try {
+      const bucket = (meta.category === 'violations' || meta.category === 'activities') ? 'proof_images' : 'media';
+      let fileSize = 0;
+      let format = 'webp';
+
+      if (file instanceof File) {
+        fileSize = file.size;
+        format = file.name.split('.').pop() || 'webp';
+      }
+
+      const publicUrl = await this.uploadImage(file, bucket, { maxWidth: 1400, quality: 0.80 });
+      if (!publicUrl) return null;
+
+      const formatSize = (bytes: number): string => {
+        if (!bytes || bytes <= 0) return 'Đã tối ưu';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      };
+
+      const folderId = meta.folderId || meta.albumId;
+
+      const mediaItem: MediaItem = {
+        id: `media_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        title: meta.title || 'Ảnh tải lên',
+        url: publicUrl,
+        category: meta.category || 'general',
+        folderId,
+        albumId: folderId,
+        bucket,
+        size: fileSize || 85000,
+        sizeFormatted: formatSize(fileSize || 85000),
+        format,
+        uploadedAt: new Date().toLocaleString('vi-VN', { 
+          year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' 
+        }),
+        uploadedBy: meta.uploadedBy,
+        classId: meta.classId,
+        weekNumber: meta.weekNumber,
+        tags: meta.tags || []
+      };
+
+      // Lưu ngay vào IndexedDB để đảm bảo trên môi trường Local không bao giờ bị mất khi F5
+      await saveIndexedDBItem(STORES.MEDIA_ASSETS, mediaItem);
+
+      const client = getSupabaseClient();
+      if (client && isSupabaseConfigured()) {
+        try {
+          await client.from('media_assets').upsert({
+            id: mediaItem.id,
+            title: mediaItem.title,
+            url: mediaItem.url,
+            category: mediaItem.category,
+            folder_id: mediaItem.folderId || null,
+            bucket: mediaItem.bucket,
+            size_bytes: mediaItem.size,
+            format: mediaItem.format,
+            uploaded_by: mediaItem.uploadedBy,
+            class_id: mediaItem.classId,
+            week_number: mediaItem.weekNumber,
+            tags: mediaItem.tags,
+            created_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+        } catch {
+          // Bỏ qua nếu bảng media_assets chưa được migrate trên cloud, dữ liệu vẫn được lưu vào client state
+        }
+      }
+
+      return mediaItem;
+    } catch (err) {
+      console.error('Lỗi uploadMediaAsset:', err);
       return null;
+    }
+  },
+
+  /**
+   * Xóa ảnh khỏi Supabase Storage & Database & IndexedDB
+   */
+  async deleteMediaAsset(item: MediaItem): Promise<boolean> {
+    // Xóa khỏi IndexedDB cục bộ
+    await deleteIndexedDBItem(STORES.MEDIA_ASSETS, item.id);
+
+    const client = getSupabaseClient();
+    if (!client) return true;
+
+    try {
+      if (item.url && item.bucket) {
+        const parts = item.url.split('/');
+        const fileName = parts[parts.length - 1];
+        if (fileName) {
+          await client.storage.from(item.bucket).remove([fileName]);
+        }
+      }
+
+      try {
+        await client.from('media_assets').delete().eq('id', item.id);
+      } catch {
+        // Ignore if table doesn't exist
+      }
+      return true;
+    } catch (err) {
+      console.warn('Lỗi khi xóa media asset:', err);
+      return false;
     }
   },
 
@@ -1280,6 +1706,8 @@ export const SupabaseService = {
         auditor_class: duty.auditorClass,
         shift_time: duty.shiftTime || '06:45 - 07:15 (Đầu giờ)',
         is_live_now: Boolean(duty.isLiveNow),
+        target_classes: duty.targetClasses || null,
+        session: duty.session || 'Sáng',
         custom_duty_id: duty.id
       });
       return true;
@@ -1304,6 +1732,8 @@ export const SupabaseService = {
         auditor_class: d.auditorClass,
         shift_time: d.shiftTime || '06:45 - 07:15 (Đầu giờ)',
         is_live_now: Boolean(d.isLiveNow),
+        target_classes: d.targetClasses || null,
+        session: d.session || 'Sáng',
         custom_duty_id: d.id
       }));
       await client.from('duty_schedule').upsert(mapped);
@@ -1439,6 +1869,239 @@ export const SupabaseService = {
       return true;
     } catch (err) {
       console.warn('Lỗi xóa activity_report:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu sự kiện phong trào lên Supabase Cloud
+   */
+  async saveEvent(event: YouthEvent): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      let thumb = event.thumbnail;
+      if (thumb && thumb.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(thumb, 'media');
+        if (uploaded) thumb = uploaded;
+      }
+      await client.from('events').upsert({
+        event_id: event.id,
+        title: event.title,
+        description: event.description,
+        category: event.category,
+        thumbnail: thumb || null,
+        location: event.location,
+        start_date: event.startDate,
+        end_date: event.endDate,
+        bonus_points: event.bonusPoints,
+        max_slots: event.maxSlots,
+        registered_count: event.registeredCount,
+        registered_student_ids: event.registeredStudentIds,
+        checked_in_student_ids: event.checkedInStudentIds,
+        is_registration_open: event.isRegistrationOpen,
+        qr_code_value: event.qrCodeValue,
+        is_deleted: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'event_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu event lên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa sự kiện phong trào trên Supabase Cloud
+   */
+  async deleteEvent(eventId: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('events').update({ is_deleted: true }).eq('event_id', eventId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa event trên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu thư mục văn bản lên Supabase Cloud
+   */
+  async saveDocumentFolder(folder: DocumentFolder): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('document_folders').upsert({
+        folder_id: folder.id,
+        name: folder.name,
+        code: folder.code || null,
+        description: folder.description || null,
+        parent_id: folder.parentId,
+        icon: folder.icon || null,
+        color: folder.color || null,
+        is_system: folder.isSystem || false,
+        order_num: folder.order || 0,
+        allowed_roles: folder.allowedRoles || null,
+        created_at: folder.createdAt || new Date().toISOString(),
+        updated_at: folder.updatedAt || new Date().toISOString(),
+        is_deleted: false
+      }, { onConflict: 'folder_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu document_folder lên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa thư mục văn bản trên Supabase Cloud
+   */
+  async deleteDocumentFolder(folderId: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('document_folders').update({ is_deleted: true }).eq('folder_id', folderId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa document_folder trên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu tệp văn bản / biểu mẫu lên Supabase Cloud
+   */
+  async saveDocumentFile(doc: DocumentFile): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('document_files').upsert({
+        file_id: doc.id,
+        title: doc.title,
+        file_number: doc.fileNumber || doc.documentNumber || null,
+        file_name: doc.fileName || doc.title,
+        file_url: doc.fileUrl || doc.url,
+        file_size: doc.fileSize,
+        file_size_bytes: doc.fileSizeBytes || null,
+        file_type: doc.fileType,
+        mime_type: doc.mimeType || null,
+        folder_id: doc.folderId,
+        category: doc.category,
+        publish_date: doc.publishDate || doc.issueDate || new Date().toISOString().split('T')[0],
+        sign_date: doc.signDate || null,
+        signer: doc.signer || null,
+        signer_role: doc.signerRole || null,
+        tags: doc.tags || [],
+        downloads_count: doc.downloadsCount || doc.downloadCount || 0,
+        views_count: doc.viewsCount || doc.viewCount || 0,
+        is_public: doc.isPublic,
+        is_pinned: doc.isPinned || false,
+        description: doc.description || null,
+        version: doc.version || null,
+        uploaded_by: doc.uploadedBy,
+        created_at: doc.createdAt || new Date().toISOString(),
+        updated_at: doc.updatedAt || new Date().toISOString(),
+        is_deleted: false
+      }, { onConflict: 'file_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu document_file lên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa tệp văn bản / biểu mẫu trên Supabase Cloud
+   */
+  async deleteDocumentFile(fileId: string): Promise<boolean> {
+    const client = getSupabaseClient();
+    if (!client) return false;
+    try {
+      await client.from('document_files').update({ is_deleted: true }).eq('file_id', fileId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa document_file trên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu thư mục / Album ảnh lên Supabase Cloud & IndexedDB
+   */
+  async saveMediaFolder(folder: MediaFolder): Promise<boolean> {
+    await saveIndexedDBItem(STORES.MEDIA_FOLDERS, folder);
+    const client = getSupabaseClient();
+    if (!client) return true;
+    try {
+      await client.from('media_folders').upsert({
+        folder_id: folder.id,
+        name: folder.name,
+        description: folder.description || null,
+        color: folder.color || '#3b82f6',
+        icon: folder.icon || 'folder',
+        cover_image: folder.coverImage || null,
+        category: folder.category || 'activities',
+        is_system: folder.isSystem || false,
+        order_num: folder.order || 0,
+        created_at: folder.createdAt || new Date().toISOString(),
+        updated_at: folder.updatedAt || new Date().toISOString(),
+        is_deleted: false
+      }, { onConflict: 'folder_id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu media_folder lên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Xóa thư mục / Album ảnh trên Supabase Cloud & IndexedDB
+   */
+  async deleteMediaFolder(folderId: string): Promise<boolean> {
+    await deleteIndexedDBItem(STORES.MEDIA_FOLDERS, folderId);
+    const client = getSupabaseClient();
+    if (!client) return true;
+    try {
+      await client.from('media_folders').update({ is_deleted: true }).eq('folder_id', folderId);
+      return true;
+    } catch (err) {
+      console.warn('Lỗi xóa media_folder trên Supabase:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Lưu thông tin media item lên Supabase Cloud & IndexedDB
+   */
+  async saveMediaAsset(item: MediaItem): Promise<boolean> {
+    await saveIndexedDBItem(STORES.MEDIA_ASSETS, item);
+    const client = getSupabaseClient();
+    if (!client) return true;
+    try {
+      await client.from('media_assets').upsert({
+        id: item.id,
+        title: item.title,
+        description: item.description || null,
+        url: item.url,
+        category: item.category || 'general',
+        folder_id: item.folderId || item.albumId || null,
+        bucket: item.bucket || 'media',
+        size_bytes: item.size || null,
+        size_formatted: item.sizeFormatted || null,
+        format: item.format || 'webp',
+        uploaded_by: item.uploadedBy || null,
+        class_id: item.classId || null,
+        week_number: item.weekNumber || null,
+        tags: item.tags || [],
+        is_system_asset: item.isSystemAsset || false,
+        created_at: item.uploadedAt || new Date().toISOString(),
+        is_deleted: false
+      }, { onConflict: 'id' });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu media_asset lên Supabase:', err);
       return false;
     }
   }

@@ -29,7 +29,26 @@ interface SupabaseConfigModalProps {
 }
 
 export const SupabaseConfigModal: React.FC<SupabaseConfigModalProps> = ({ isOpen, onClose }) => {
-  const { classes, criteria, students, violations, news, notices } = useApp();
+  const { 
+    classes, 
+    criteria, 
+    students, 
+    violations, 
+    news, 
+    notices, 
+    events, 
+    documentFolders, 
+    documentFiles, 
+    mediaFolders,
+    mediaAssets,
+    activityReports, 
+    activitySlides, 
+    weeksConfig, 
+    users, 
+    duties, 
+    schoolSettings, 
+    academicYears 
+  } = useApp();
   
   const [url, setUrl] = useState('');
   const [anonKey, setAnonKey] = useState('');
@@ -67,7 +86,7 @@ export const SupabaseConfigModal: React.FC<SupabaseConfigModalProps> = ({ isOpen
       return;
     }
 
-    if (!window.confirm('Hành động này sẽ tải danh sách lớp, học sinh, tiêu chí hiện tại lên cơ sở dữ liệu Supabase. Bạn có muốn tiếp tục?')) {
+    if (!window.confirm('Hành động này sẽ tải toàn bộ cơ sở dữ liệu trên máy Local (Lớp học, Học sinh, Cán bộ Đoàn, Lịch trực, Tiêu chí, Điểm số, Bản tin, Thông báo, Sự kiện, Kho văn bản & Biểu mẫu, Kho Media & Album ảnh, Slide hoạt động) lên Supabase Cloud để chạy Online. Bạn có muốn tiếp tục?')) {
       return;
     }
 
@@ -80,7 +99,19 @@ export const SupabaseConfigModal: React.FC<SupabaseConfigModalProps> = ({ isOpen
       students,
       violations,
       news,
-      notices
+      notices,
+      events,
+      documentFolders,
+      documentFiles,
+      mediaFolders,
+      mediaAssets,
+      activityReports,
+      activitySlides,
+      weeksConfig,
+      users,
+      duties,
+      schoolSettings,
+      academicYears
     });
 
     setSyncResult(res);

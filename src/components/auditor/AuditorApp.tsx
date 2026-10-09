@@ -27,8 +27,10 @@ import {
 import { DayOfWeek, Criterion, ClassInfo } from '../../types';
 import { PhotoViewerModal } from '../common/PhotoViewerModal';
 import { ChangePasswordModal } from '../common/ChangePasswordModal';
+import { MediaPickerButton } from '../common/MediaPickerButton';
 import { SupabaseService } from '../../services/supabaseService';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { compressImageToDataURL } from '../../utils/imageCompressor';
 
 export const AuditorApp: React.FC = () => {
   const { 
@@ -178,35 +180,10 @@ export const AuditorApp: React.FC = () => {
             return;
           }
         }
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            const maxDim = 1200;
-            if (width > maxDim || height > maxDim) {
-              if (width > height) {
-                height = Math.round((height * maxDim) / width);
-                width = maxDim;
-              } else {
-                width = Math.round((width * maxDim) / height);
-                height = maxDim;
-              }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0, width, height);
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            if (proofImages.length < 5) {
-              setProofImages(prev => [...prev, compressedDataUrl]);
-            }
-          };
-          img.src = event.target?.result as string;
-        };
-        reader.readAsDataURL(file);
+        const compressed = await compressImageToDataURL(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82, outputFormat: 'image/webp' });
+        if (compressed && proofImages.length < 5) {
+          setProofImages(prev => [...prev, compressed]);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -251,10 +228,14 @@ export const AuditorApp: React.FC = () => {
     let studentList: string[] | undefined = undefined;
     if (isCollective) {
       studentList = ['Lỗi tập thể lớp'];
-    } else if (selectedStudentNames.length > 0) {
-      studentList = selectedStudentNames;
-    } else if (customStudentInput.trim()) {
-      studentList = [customStudentInput.trim()];
+    } else {
+      const merged = [...selectedStudentNames];
+      if (customStudentInput.trim() && !merged.includes(customStudentInput.trim())) {
+        merged.push(customStudentInput.trim());
+      }
+      if (merged.length > 0) {
+        studentList = merged;
+      }
     }
 
     const vioData = {
@@ -891,24 +872,22 @@ export const AuditorApp: React.FC = () => {
                     </div>
                   ))}
 
-                  {proofImages.length < 3 && (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-700 hover:border-red-500 bg-slate-950 flex flex-col items-center justify-center text-slate-400 hover:text-white transition-colors"
-                    >
-                      <Camera className="w-5 h-5 mb-0.5 text-amber-400" />
-                      <span className="text-[9px] font-bold">Thêm ảnh</span>
-                    </button>
+                  {proofImages.length < 5 && (
+                    <div className="flex items-center gap-2">
+                      <MediaPickerButton
+                        category="violations"
+                        suggestedClassId={selectedClassId}
+                        suggestedWeek={activeWeek}
+                        multiple={true}
+                        onSelect={(urls) => {
+                          const newUrls = Array.isArray(urls) ? urls : [urls];
+                          setProofImages(prev => Array.from(new Set([...prev, ...newUrls])).slice(0, 5));
+                        }}
+                        label="Kho Media / Chụp Ảnh"
+                        className="h-20 px-4 rounded-xl border-2 border-dashed border-red-500/50 bg-red-950/20 hover:bg-red-950/40 text-red-300 font-bold"
+                      />
+                    </div>
                   )}
-
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept="image/*"
-                    className="hidden"
-                  />
                 </div>
               </div>
 

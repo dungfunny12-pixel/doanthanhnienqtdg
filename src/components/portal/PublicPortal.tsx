@@ -27,12 +27,21 @@ import {
   CloudSun,
   CloudRain,
   Droplets,
-  Wind
+  Wind,
+  FileText,
+  Download,
+  Folder,
+  Copy,
+  Search,
+  File,
+  Star
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { ClassWeeklyScore, NewsPost, DayOfWeek } from '../../types';
+import { ClassWeeklyScore, NewsPost, DayOfWeek, DocumentFile } from '../../types';
 import { YouthUnionBadge } from '../common/YouthUnionBadge';
 import { ChangePasswordModal } from '../common/ChangePasswordModal';
+import { RichTextViewer } from '../common/RichTextViewer';
+import { DocumentViewerModal } from '../common/DocumentViewerModal';
 
 export const PublicPortal: React.FC = () => {
   const { 
@@ -50,10 +59,20 @@ export const PublicPortal: React.FC = () => {
     loginAsUser, 
     users,
     schoolSettings,
-    activitySlides
+    activitySlides,
+    documentFolders,
+    documentFiles,
+    incrementDocumentDownloads,
+    incrementDocumentViews
   } = useApp();
 
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+
+  // Document repository state
+  const [selectedDocModal, setSelectedDocModal] = useState<DocumentFile | null>(null);
+  const [publicDocSearch, setPublicDocSearch] = useState<string>('');
+  const [publicDocFolder, setPublicDocFolder] = useState<string>('ALL');
+  const [publicDocCategory, setPublicDocCategory] = useState<string>('ALL');
 
   // Filters for leaderboard & media
   const [selectedGrade, setSelectedGrade] = useState<'ALL' | 10 | 11 | 12>('ALL');
@@ -61,6 +80,9 @@ export const PublicPortal: React.FC = () => {
   const [selectedArticleModal, setSelectedArticleModal] = useState<NewsPost | null>(null);
   const [dutyTab, setDutyTab] = useState<'today' | 'week'>('today');
   const [isWeeklyDutyModalOpen, setIsWeeklyDutyModalOpen] = useState(false);
+  const [dutyModalSession, setDutyModalSession] = useState<'ALL' | 'Sáng' | 'Chiều'>('ALL');
+  const [dutyModalSearch, setDutyModalSearch] = useState<string>('');
+  const [dutyModalDay, setDutyModalDay] = useState<'ALL' | DayOfWeek>('ALL');
 
   // Activity Photo Slider state
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
@@ -527,24 +549,36 @@ export const PublicPortal: React.FC = () => {
               {todayDuties.map(duty => (
                 <div
                   key={duty.id}
-                  className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all"
+                  className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2"
                 >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-amber-400 border border-slate-700">
-                      {duty.zone}
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                      duty.session === 'Chiều' 
+                        ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' 
+                        : 'bg-amber-950 text-amber-300 border border-amber-800'
+                    }`}>
+                      {duty.session || 'Sáng'}
                     </span>
                     {duty.isLiveNow && (
                       <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                        Đang làm việc
+                        Đang trực
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">🛡️</span>
-                    <div>
-                      <p className="font-bold text-white text-xs">{duty.auditorName}</p>
-                      <p className="text-[10px] text-slate-400">Chi đoàn {duty.auditorClass} • {duty.shiftTime.split('&')[0]}</p>
+                  <div className="flex items-start gap-2">
+                    <span className="text-base">🚩</span>
+                    <div className="space-y-0.5 flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="font-bold text-white text-xs truncate">{duty.auditorName}</p>
+                        <span className="text-[10px] text-amber-400 font-bold shrink-0">Lớp {duty.auditorClass}</span>
+                      </div>
+                      {duty.targetClasses && (
+                        <p className="text-[11px] text-red-300 font-semibold truncate">
+                          Chấm điểm: <span className="font-bold text-red-200">{duty.targetClasses}</span>
+                        </p>
+                      )}
+                      <p className="text-[10px] text-slate-400 truncate">📍 {duty.zone}</p>
                     </div>
                   </div>
                 </div>
@@ -886,6 +920,225 @@ export const PublicPortal: React.FC = () => {
 
       </div>
 
+      {/* ================= PUBLIC DOCUMENT & FORM REPOSITORY ================= */}
+      <div className="glass-panel rounded-3xl p-6 border border-amber-500/20 bg-gradient-to-b from-slate-900 via-slate-900/90 to-amber-950/10 shadow-card space-y-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 text-xl shadow-inner">
+              📁
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-black text-white">
+                  KHO BIỂU MẪU & VĂN BẢN ĐOÀN CÔNG KHAI
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  Tải miễn phí
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Đoàn viên, học sinh và thầy cô có thể tra cứu, xem trực tuyến và tải về các mẫu đơn, cẩm nang, nghị quyết và kế hoạch mới nhất
+              </p>
+            </div>
+          </div>
+
+          {/* Quick search input */}
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={publicDocSearch}
+              onChange={(e) => setPublicDocSearch(e.target.value)}
+              placeholder="Tìm tên đơn, số hiệu, từ khóa..."
+              className="w-full pl-9 pr-8 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+            />
+            {publicDocSearch && (
+              <button
+                type="button"
+                onClick={() => setPublicDocSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+          <button
+            type="button"
+            onClick={() => {
+              setPublicDocFolder('ALL');
+              setPublicDocCategory('ALL');
+            }}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+              publicDocFolder === 'ALL' && publicDocCategory === 'ALL'
+                ? 'bg-amber-600 text-white shadow-glow'
+                : 'bg-slate-950/60 border border-slate-800 text-slate-400 hover:text-white'
+            }`}
+          >
+            <span>Tất cả tài liệu</span>
+            <span className="text-[10px] opacity-80 bg-black/30 px-1.5 py-0.2 rounded-full">
+              {documentFiles?.filter((d) => d.isPublic).length || 0}
+            </span>
+          </button>
+
+          {documentFolders?.map((folder) => {
+            const count = documentFiles?.filter((f) => f.isPublic && f.folderId === folder.id).length || 0;
+            if (count === 0) return null;
+            return (
+              <button
+                key={folder.id}
+                type="button"
+                onClick={() => {
+                  setPublicDocFolder(folder.id);
+                  setPublicDocCategory('ALL');
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  publicDocFolder === folder.id
+                    ? 'bg-amber-600 text-white shadow-glow'
+                    : 'bg-slate-950/60 border border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Folder className="w-3.5 h-3.5" style={{ color: folder.color || '#f59e0b' }} />
+                <span>{folder.name}</span>
+                <span className="text-[10px] opacity-80 bg-black/30 px-1.5 py-0.2 rounded-full">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Document Cards */}
+        {(() => {
+          const publicDocs = (documentFiles || []).filter((doc) => {
+            if (!doc.isPublic) return false;
+            const matchFolder = publicDocFolder === 'ALL' || doc.folderId === publicDocFolder;
+            const matchCategory = publicDocCategory === 'ALL' || doc.category === publicDocCategory;
+            const matchSearch =
+              !publicDocSearch ||
+              doc.title.toLowerCase().includes(publicDocSearch.toLowerCase()) ||
+              (doc.documentNumber && doc.documentNumber.toLowerCase().includes(publicDocSearch.toLowerCase())) ||
+              (doc.tags && doc.tags.some((t) => t.toLowerCase().includes(publicDocSearch.toLowerCase()))) ||
+              (doc.description && doc.description.toLowerCase().includes(publicDocSearch.toLowerCase()));
+            return matchFolder && matchCategory && matchSearch;
+          });
+
+          if (publicDocs.length === 0) {
+            return (
+              <div className="py-10 text-center rounded-2xl border border-dashed border-slate-800 bg-slate-950/40">
+                <FileText className="w-10 h-10 text-slate-600 mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-semibold text-slate-400">Không tìm thấy tài liệu phù hợp</p>
+                <p className="text-xs text-slate-500 mt-1">Vui lòng thử từ khóa tìm kiếm khác</p>
+              </div>
+            );
+          }
+
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {publicDocs.map((doc) => {
+                const folder = documentFolders?.find((f) => f.id === doc.folderId);
+                const formatConfig: Record<string, { label: string; bg: string; text: string; border: string }> = {
+                  pdf: { label: 'PDF', bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/30' },
+                  docx: { label: 'DOCX', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30' },
+                  doc: { label: 'DOC', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30' },
+                  xlsx: { label: 'XLSX', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+                  xls: { label: 'XLS', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+                  pptx: { label: 'PPTX', bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/30' },
+                  zip: { label: 'ZIP', bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/30' },
+                  image: { label: 'ẢNH', bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/30' },
+                  other: { label: 'FILE', bg: 'bg-slate-500/10', text: 'text-slate-400', border: 'border-slate-500/30' }
+                };
+                const fmt = formatConfig[doc.fileType] || formatConfig.other;
+
+                return (
+                  <div
+                    key={doc.id}
+                    className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/90 hover:border-amber-500/40 transition-all hover:shadow-lg flex flex-col justify-between group"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border ${fmt.bg} ${fmt.text} ${fmt.border}`}>
+                          {fmt.label}
+                        </span>
+                        {doc.isPinned && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-0.5">
+                            <Star className="w-2.5 h-2.5 fill-amber-400" /> Ghim
+                          </span>
+                        )}
+                        {folder && (
+                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                            <Folder className="w-3 h-3" style={{ color: folder.color || '#f59e0b' }} />
+                            <span className="truncate max-w-[120px]">{folder.name}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <h4
+                          onClick={() => {
+                            incrementDocumentViews(doc.id);
+                            setSelectedDocModal(doc);
+                          }}
+                          className="font-bold text-white text-xs sm:text-sm group-hover:text-amber-400 transition-colors line-clamp-2 cursor-pointer leading-snug"
+                          title={doc.title}
+                        >
+                          {doc.title}
+                        </h4>
+                        {doc.documentNumber && (
+                          <p className="text-[11px] font-mono text-amber-400/90 mt-0.5">
+                            {doc.documentNumber}
+                          </p>
+                        )}
+                      </div>
+
+                      {doc.description && (
+                        <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                          {doc.description}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                        <span>{doc.issueDate ? `Ban hành: ${doc.issueDate}` : `Dung lượng: ${doc.fileSize}`}</span>
+                        <span>{doc.downloadCount || 0} lượt tải</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 mt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          incrementDocumentViews(doc.id);
+                          setSelectedDocModal(doc);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Xem trước</span>
+                      </button>
+
+                      <a
+                        href={doc.fileUrl || doc.url}
+                        download={doc.title}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => incrementDocumentDownloads(doc.id)}
+                        className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all active:scale-95"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Tải về</span>
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </div>
+
       {/* ================= MODAL: CLASS SCORE BREAKDOWN (READ-ONLY) ================= */}
       {selectedClassModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
@@ -1049,8 +1302,8 @@ export const PublicPortal: React.FC = () => {
               className="w-full h-64 object-cover rounded-2xl border border-slate-700 shadow-md"
             />
 
-            <div className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-line bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80">
-              {selectedArticleModal.content}
+            <div className="bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-800/80 shadow-inner">
+              <RichTextViewer content={selectedArticleModal.content} />
             </div>
 
             {/* Attachments */}
@@ -1105,77 +1358,273 @@ export const PublicPortal: React.FC = () => {
       )}
 
       {/* ================= MODAL: FULL WEEKLY CỜ ĐỎ DUTY SCHEDULE ================= */}
-      {isWeeklyDutyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="glass-modal max-w-4xl w-full rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-red-600 text-white font-bold">🛡️</span>
-                <div>
-                  <h3 className="text-base font-black text-white">LỊCH TRỰC ĐỘI CỜ ĐỎ TOÀN TRƯỜNG</h3>
-                  <p className="text-xs text-slate-400">Phân công giám sát nề nếp từ Thứ 2 đến Thứ 7 (Tuần {activeWeek})</p>
+      {isWeeklyDutyModalOpen && (() => {
+        const currentWeekDuties = duties.filter(d => d.weekNumber === activeWeek);
+        const filtered = currentWeekDuties.filter(d => {
+          const matchSession = dutyModalSession === 'ALL' || d.session === dutyModalSession || (!d.session && dutyModalSession === 'Sáng');
+          const matchDay = dutyModalDay === 'ALL' || d.day === dutyModalDay;
+          const q = dutyModalSearch.toLowerCase().trim();
+          const matchSearch = !q || 
+            d.auditorName.toLowerCase().includes(q) || 
+            d.auditorClass.toLowerCase().includes(q) || 
+            (d.targetClasses && d.targetClasses.toLowerCase().includes(q)) || 
+            d.zone.toLowerCase().includes(q) ||
+            d.day.toLowerCase().includes(q);
+          return matchSession && matchDay && matchSearch;
+        });
+
+        const morningDuties = filtered.filter(d => (d.session || 'Sáng') === 'Sáng');
+        const afternoonDuties = filtered.filter(d => d.session === 'Chiều');
+        const dayOrder: DayOfWeek[] = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        const getDayLabel = (d: DayOfWeek) => {
+          switch (d) {
+            case 'T2': return 'Thứ 2';
+            case 'T3': return 'Thứ 3';
+            case 'T4': return 'Thứ 4';
+            case 'T5': return 'Thứ 5';
+            case 'T6': return 'Thứ 6';
+            case 'T7': return 'Thứ 7';
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+            <div className="glass-modal max-w-5xl w-full rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <span className="p-2.5 rounded-2xl bg-red-600/20 text-red-400 border border-red-500/30 text-xl font-bold">🚩</span>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
+                      LỊCH PHÂN CÔNG TRỰC CỜ ĐỎ - NĂM HỌC 2026 - 2027
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      BCH Đoàn Trường THPT Quang Trung – Đông Giang • Tuần {activeWeek}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition-colors hidden sm:flex items-center gap-1.5"
+                  >
+                    <span>🖨️ In Lịch</span>
+                  </button>
+                  <button
+                    onClick={() => setIsWeeklyDutyModalOpen(false)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={() => setIsWeeklyDutyModalOpen(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Schedule Matrix Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-950 text-slate-300 border-b border-slate-800">
-                    <th className="p-3 font-bold">Khu Vực Trực</th>
-                    {daysOfWeek.map(d => (
-                      <th key={d} className={`p-3 font-bold text-center ${d === 'T2' ? 'bg-red-950/40 text-red-300' : ''}`}>
-                        {d} {d === 'T2' && <span className="text-[10px] block font-normal">(Hôm nay)</span>}
-                      </th>
+              {/* Filters Toolbar */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-xs">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={dutyModalSearch}
+                    onChange={(e) => setDutyModalSearch(e.target.value)}
+                    placeholder="Tìm theo tên, lớp, phòng..."
+                    className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-red-500"
+                  />
+                  {dutyModalSearch && (
+                    <button onClick={() => setDutyModalSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Session Filter */}
+                <div className="flex items-center bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1">
+                  <span className="text-slate-400 mr-2 font-bold">Buổi:</span>
+                  <select
+                    value={dutyModalSession}
+                    onChange={(e) => setDutyModalSession(e.target.value as any)}
+                    className="bg-transparent text-white font-bold outline-none cursor-pointer flex-1"
+                  >
+                    <option value="ALL" className="bg-slate-900">Tất cả ({currentWeekDuties.length} ca)</option>
+                    <option value="Sáng" className="bg-slate-900">Buổi Sáng (32 ca)</option>
+                    <option value="Chiều" className="bg-slate-900">Buổi Chiều (12 ca)</option>
+                  </select>
+                </div>
+
+                {/* Day Filter */}
+                <div className="flex items-center bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1">
+                  <span className="text-slate-400 mr-2 font-bold">Thứ:</span>
+                  <select
+                    value={dutyModalDay}
+                    onChange={(e) => setDutyModalDay(e.target.value as any)}
+                    className="bg-transparent text-white font-bold outline-none cursor-pointer flex-1"
+                  >
+                    <option value="ALL" className="bg-slate-900">Tất cả các ngày</option>
+                    {dayOrder.map(d => (
+                      <option key={d} value={d} className="bg-slate-900">{getDayLabel(d)}</option>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {(zones && zones.length > 0 ? zones.map(z => z.name) : ['Khối 10', 'Khối 11', 'Khối 12', 'Khu Căn Tin & Nhà Đa Năng']).map((zoneName: string) => (
-                    <tr key={zoneName} className="hover:bg-slate-800/40">
-                      <td className="p-3 font-bold text-white bg-slate-900/60 whitespace-nowrap">
-                        {zoneName}
-                      </td>
-                      {daysOfWeek.map(d => {
-                        const match = duties.find(duty => duty.weekNumber === activeWeek && duty.day === d && duty.zone === zoneName) ||
-                                      duties.find(duty => duty.day === d && duty.zone === zoneName);
-                        return (
-                          <td key={d} className={`p-2.5 text-center ${d === 'T2' ? 'bg-red-950/20' : ''}`}>
-                            {match ? (
-                              <div className="p-1.5 rounded-lg bg-slate-900 border border-slate-800">
-                                <p className="font-bold text-white text-[11px]">{match.auditorName}</p>
-                                <span className="text-[10px] text-amber-400">({match.auditorClass})</span>
-                              </div>
-                            ) : (
-                              <span className="text-slate-600 text-xs">-</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </select>
+                </div>
+              </div>
 
-            <div className="pt-3 border-t border-slate-800 flex justify-end">
-              <button
-                onClick={() => setIsWeeklyDutyModalOpen(false)}
-                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-colors"
-              >
-                Đóng Lịch Trực
-              </button>
+              {/* Schedule Content */}
+              <div className="space-y-6">
+                {/* Part I: Buổi Sáng */}
+                {(dutyModalSession === 'ALL' || dutyModalSession === 'Sáng') && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-amber-500/30">
+                      <h4 className="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        I. LỊCH TRỰC PHÂN CÔNG BUỔI SÁNG (06:45 - 07:15 & 11:15 - 11:45)
+                      </h4>
+                      <span className="text-[11px] text-slate-400 font-bold">{morningDuties.length} ca trực</span>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-2xl border border-slate-800">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-900/90 text-slate-300 border-b border-slate-800">
+                            <th className="p-2.5 font-bold text-center w-24">Thời Gian</th>
+                            <th className="p-2.5 font-bold text-center w-20">Lớp Trực</th>
+                            <th className="p-2.5 font-bold">Người Trực (Cờ Đỏ)</th>
+                            <th className="p-2.5 font-bold text-center w-36">Chấm Điểm Lớp</th>
+                            <th className="p-2.5 font-bold">Khu Vực Trực</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60 bg-slate-950/50">
+                          {morningDuties.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="p-4 text-center text-slate-500">
+                                Không có ca trực buổi sáng phù hợp với bộ lọc.
+                              </td>
+                            </tr>
+                          ) : (
+                            dayOrder.map(day => {
+                              const dayShifts = morningDuties.filter(d => d.day === day);
+                              if (dayShifts.length === 0) return null;
+
+                              return dayShifts.map((shift, idx) => (
+                                <tr key={shift.id} className="hover:bg-slate-800/30 transition-colors">
+                                  {idx === 0 && (
+                                    <td
+                                      rowSpan={dayShifts.length}
+                                      className="p-2.5 font-bold text-center text-amber-400 bg-slate-900/60 border-r border-slate-800 align-middle"
+                                    >
+                                      <span className="text-sm font-black block">{getDayLabel(day)}</span>
+                                      <span className="text-[10px] text-slate-400 block font-normal">({dayShifts.length} ca)</span>
+                                    </td>
+                                  )}
+                                  <td className="p-2.5 font-bold text-center text-white bg-slate-900/20">
+                                    <span className="px-2 py-0.5 rounded-md bg-slate-800 text-amber-400 font-bold border border-slate-700">
+                                      {shift.auditorClass}
+                                    </span>
+                                  </td>
+                                  <td className="p-2.5 font-bold text-white">
+                                    <span className="text-white">{shift.auditorName}</span>
+                                  </td>
+                                  <td className="p-2.5 font-bold text-center">
+                                    <span className="px-2 py-0.5 rounded-lg bg-red-950/80 text-red-300 border border-red-800/80 text-[11px] font-bold">
+                                      {shift.targetClasses || 'Toàn trường'}
+                                    </span>
+                                  </td>
+                                  <td className="p-2.5 text-slate-300">
+                                    <span>{shift.zone}</span>
+                                  </td>
+                                </tr>
+                              ));
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Part II: Buổi Chiều */}
+                {(dutyModalSession === 'ALL' || dutyModalSession === 'Chiều') && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-indigo-500/30">
+                      <h4 className="text-xs sm:text-sm font-black text-indigo-400 uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                        II. LỊCH TRỰC PHÂN CÔNG BUỔI CHIỀU (12:45 - 13:15 & 16:45 - 17:15)
+                      </h4>
+                      <span className="text-[11px] text-slate-400 font-bold">{afternoonDuties.length} ca trực</span>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-2xl border border-slate-800">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-900/90 text-slate-300 border-b border-slate-800">
+                            <th className="p-2.5 font-bold text-center w-24">Thời Gian</th>
+                            <th className="p-2.5 font-bold text-center w-20">Lớp Trực</th>
+                            <th className="p-2.5 font-bold">Người Trực (Cờ Đỏ)</th>
+                            <th className="p-2.5 font-bold text-center w-36">Chấm Điểm Lớp</th>
+                            <th className="p-2.5 font-bold">Khu Vực Trực</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60 bg-slate-950/50">
+                          {afternoonDuties.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="p-4 text-center text-slate-500">
+                                Không có ca trực buổi chiều phù hợp với bộ lọc.
+                              </td>
+                            </tr>
+                          ) : (
+                            dayOrder.map(day => {
+                              const dayShifts = afternoonDuties.filter(d => d.day === day);
+                              if (dayShifts.length === 0) return null;
+
+                              return dayShifts.map((shift, idx) => (
+                                <tr key={shift.id} className="hover:bg-slate-800/30 transition-colors">
+                                  {idx === 0 && (
+                                    <td
+                                      rowSpan={dayShifts.length}
+                                      className="p-2.5 font-bold text-center text-indigo-400 bg-slate-900/60 border-r border-slate-800 align-middle"
+                                    >
+                                      <span className="text-sm font-black block">{getDayLabel(day)}</span>
+                                      <span className="text-[10px] text-slate-400 block font-normal">({dayShifts.length} ca)</span>
+                                    </td>
+                                  )}
+                                  <td className="p-2.5 font-bold text-center text-white bg-slate-900/20">
+                                    <span className="px-2 py-0.5 rounded-md bg-slate-800 text-indigo-300 font-bold border border-slate-700">
+                                      {shift.auditorClass}
+                                    </span>
+                                  </td>
+                                  <td className="p-2.5 font-bold text-white">
+                                    <span className="text-white">{shift.auditorName}</span>
+                                  </td>
+                                  <td className="p-2.5 font-bold text-center">
+                                    <span className="px-2 py-1 rounded-lg bg-indigo-950/80 text-indigo-300 border border-indigo-800/80 text-[11px] font-bold">
+                                      {shift.targetClasses || 'Toàn trường'}
+                                    </span>
+                                  </td>
+                                  <td className="p-2.5 text-slate-300">
+                                    <span>{shift.zone}</span>
+                                  </td>
+                                </tr>
+                              ));
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-slate-800 flex justify-end">
+                <button
+                  onClick={() => setIsWeeklyDutyModalOpen(false)}
+                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-colors"
+                >
+                  Đóng Lịch Trực
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ================= MODAL: FULL PHOTO VIEWER ================= */}
       {selectedPhotoModal && (
@@ -1218,6 +1667,15 @@ export const PublicPortal: React.FC = () => {
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
       />
+
+      {/* Document Viewer Modal */}
+      {selectedDocModal && (
+        <DocumentViewerModal
+          isOpen={true}
+          onClose={() => setSelectedDocModal(null)}
+          document={selectedDocModal}
+        />
+      )}
 
     </div>
   );

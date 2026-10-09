@@ -20,6 +20,7 @@ import {
 import { QRCodeModal } from '../common/QRCodeModal';
 import { PhotoViewerModal } from '../common/PhotoViewerModal';
 import { ChangePasswordModal } from '../common/ChangePasswordModal';
+import { MediaPickerButton } from '../common/MediaPickerButton';
 
 export const StudentHub: React.FC = () => {
   const { 
@@ -29,7 +30,8 @@ export const StudentHub: React.FC = () => {
     events, 
     registerForEvent, 
     getWeeklyScores, 
-    violations 
+    violations,
+    updateUser
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'card' | 'events' | 'ranking' | 'history'>('card');
@@ -68,11 +70,29 @@ export const StudentHub: React.FC = () => {
       {/* Top Header */}
       <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <img
-            src={currentUser?.avatar || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150'}
-            alt={currentUser?.name}
-            className="w-12 h-12 rounded-2xl object-cover border-2 border-red-500 shadow-md"
-          />
+          <div className="relative group">
+            <img
+              src={currentUser?.avatar || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150'}
+              alt={currentUser?.name}
+              className="w-14 h-14 rounded-2xl object-cover border-2 border-red-500 shadow-md"
+            />
+            <div className="absolute -bottom-1 -right-1">
+              <MediaPickerButton
+                category="students"
+                suggestedClassId={studentClassId}
+                onSelect={(url) => {
+                  const newAvatar = Array.isArray(url) ? url[0] : url;
+                  if (currentUser) {
+                    updateUser(currentUser.id, { avatar: newAvatar });
+                  }
+                }}
+                variant="iconOnly"
+                label=""
+                className="w-6 h-6 !p-0 rounded-full bg-slate-900 border border-slate-700 text-amber-400 hover:bg-amber-950 flex items-center justify-center shadow-lg cursor-pointer"
+                title="Đổi ảnh thẻ chân dung 3x4"
+              />
+            </div>
+          </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-black text-white">{currentUser?.name || 'Nguyễn Quang Minh'}</h2>

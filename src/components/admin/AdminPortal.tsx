@@ -61,7 +61,12 @@ import {
   FileCheck,
   Shield,
   Loader2,
-  Cloud
+  Cloud,
+  Folder,
+  FolderPlus,
+  FileText,
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 import { SupabaseService } from '../../services/supabaseService';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -92,6 +97,15 @@ import { PhotoViewerModal } from '../common/PhotoViewerModal';
 import { AcademicYearRolloverModal } from './AcademicYearRolloverModal';
 import { SortableTh } from '../common/SortableTh';
 import { sortDataList } from '../../utils/sortUtils';
+import { MediaPickerButton } from '../common/MediaPickerButton';
+import { MediaManagerModal } from '../common/MediaManagerModal';
+import { ResourceManagerView } from '../common/ResourceManagerView';
+import { RichTextEditor } from '../common/RichTextEditor';
+import { RichTextViewer } from '../common/RichTextViewer';
+import { DocumentManagerModal } from '../common/DocumentManagerModal';
+import { DocumentViewerModal } from '../common/DocumentViewerModal';
+import { DocumentPickerButton } from '../common/DocumentPickerButton';
+import { compressImageToDataURL } from '../../utils/imageCompressor';
 
 export const AdminPortal: React.FC = () => {
   const {
@@ -113,6 +127,26 @@ export const AdminPortal: React.FC = () => {
     weeksConfig,
     schoolSettings,
     activitySlides,
+    mediaFolders,
+    mediaAssets,
+    addMediaFolder,
+    updateMediaFolder,
+    deleteMediaFolder,
+    moveMediaToFolder,
+    batchMoveMediaToFolder,
+    addMediaAsset,
+    deleteMediaAsset,
+    documentFolders,
+    documentFiles,
+    addDocumentFolder,
+    updateDocumentFolder,
+    deleteDocumentFolder,
+    addDocumentFile,
+    updateDocumentFile,
+    deleteDocumentFile,
+    incrementDocumentDownloads,
+    incrementDocumentViews,
+    moveDocumentFile,
     academicYears,
     selectedAcademicYearId,
     currentAcademicYear,
@@ -203,13 +237,29 @@ export const AdminPortal: React.FC = () => {
   // Operations Hub Sub-Tab: 'students' | 'classes' | 'duties' | 'weeks'
   const [operationsSubTab, setOperationsSubTab] = useState<'students' | 'classes' | 'duties' | 'weeks'>('students');
 
-  // Media Hub Sub-Tab: 'news' | 'announcements' | 'tasks_notices' | 'events' | 'activity_reports'
-  const [mediaHubSubTab, setMediaHubSubTab] = useState<'news' | 'announcements' | 'tasks_notices' | 'events' | 'activity_reports'>('news');
+  // Media Hub Sub-Tab: 'news_events' | 'news' | 'announcements' | 'tasks_notices' | 'events' | 'activity_reports' | 'media_library' | 'documents'
+  const [mediaHubSubTab, setMediaHubSubTab] = useState<'news_events' | 'news' | 'announcements' | 'tasks_notices' | 'events' | 'activity_reports' | 'media_library' | 'documents'>('news_events');
+  const [newsEventsViewFilter, setNewsEventsViewFilter] = useState<'ALL' | 'events' | 'news'>('ALL');
   const [activitySearch, setActivitySearch] = useState<string>('');
   const [activityClassFilter, setActivityClassFilter] = useState<string>('ALL');
   const [activityTypeFilter, setActivityTypeFilter] = useState<string>('ALL');
   const [activityStatusFilter, setActivityStatusFilter] = useState<string>('ALL');
   const [selectedReportDetail, setSelectedReportDetail] = useState<import('../../types').ActivityReport | null>(null);
+
+  // Media Library Sub-Tab state in Media Hub
+  const [mediaSearchQuery, setMediaSearchQuery] = useState<string>('');
+  const [mediaCategoryFilter, setMediaCategoryFilter] = useState<string>('ALL');
+  const [mediaFolderFilter, setMediaFolderFilter] = useState<string>('ALL');
+  const [mediaClassFilter, setMediaClassFilter] = useState<string>('ALL');
+  const [isGlobalMediaModalOpen, setIsGlobalMediaModalOpen] = useState<boolean>(false);
+  const [previewMediaItem, setPreviewMediaItem] = useState<import('../../types').MediaItem | null>(null);
+
+  // Document Management Sub-Tab state
+  const [isGlobalDocumentModalOpen, setIsGlobalDocumentModalOpen] = useState<boolean>(false);
+  const [previewDocumentFile, setPreviewDocumentFile] = useState<import('../../types').DocumentFile | null>(null);
+  const [docSearchQuery, setDocSearchQuery] = useState<string>('');
+  const [docFolderFilter, setDocFolderFilter] = useState<string>('ALL');
+  const [docCategoryFilter, setDocCategoryFilter] = useState<string>('ALL');
 
   // System Hub Sub-Tab: 'users' | 'settings' | 'slides' | 'export' | 'backup' | 'rollover' | 'logs'
   const [systemHubSubTab, setSystemHubSubTab] = useState<'users' | 'settings' | 'slides' | 'export' | 'backup' | 'rollover' | 'logs'>('users');
@@ -248,11 +298,10 @@ export const AdminPortal: React.FC = () => {
           return;
         }
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSlideForm(prev => ({ ...prev, imageUrl: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+      const compressed = await compressImageToDataURL(file, { maxWidth: 1400, maxHeight: 1400, quality: 0.82, outputFormat: 'image/webp' });
+      if (compressed) {
+        setSlideForm(prev => ({ ...prev, imageUrl: compressed }));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -811,6 +860,10 @@ export const AdminPortal: React.FC = () => {
 
   // Duty Schedule state
   const [dutyWeekFilter, setDutyWeekFilter] = useState<number>(activeWeek);
+  const [dutyViewMode, setDutyViewMode] = useState<'official' | 'matrix'>('official');
+  const [dutySessionFilter, setDutySessionFilter] = useState<'ALL' | 'Sáng' | 'Chiều'>('ALL');
+  const [dutyDayFilter, setDutyDayFilter] = useState<'ALL' | DayOfWeek>('ALL');
+  const [dutySearch, setDutySearch] = useState<string>('');
   const [isDutyModalOpen, setIsDutyModalOpen] = useState<boolean>(false);
   const [editingDuty, setEditingDuty] = useState<DutyAssignment | null>(null);
   const [dutyForm, setDutyForm] = useState<{
@@ -822,15 +875,19 @@ export const AdminPortal: React.FC = () => {
     auditorClass: string;
     shiftTime: string;
     isLiveNow: boolean;
+    targetClasses: string;
+    session: 'Sáng' | 'Chiều';
   }>({
     weekNumber: activeWeek,
     day: 'T2',
-    zone: zones[0]?.name || 'Khối 10',
-    auditorId: auditors[0]?.id || 'codo_nam',
-    auditorName: auditors[0]?.name || 'Nguyễn Văn Nam',
-    auditorClass: auditors[0]?.classId || '11/2',
+    zone: zones[0]?.name || 'Phòng 8 (tầng 2), Phòng 7 (tầng 2)',
+    auditorId: auditors[0]?.id || 'codo_12_1_1',
+    auditorName: auditors[0]?.name || 'Đặng Cát Diệu',
+    auditorClass: auditors[0]?.classId || '12/1',
     shiftTime: '06:45 - 07:15 & 11:15 - 11:45',
-    isLiveNow: true
+    isLiveNow: true,
+    targetClasses: '10/1, 10/2',
+    session: 'Sáng'
   });
 
   const [isCopyDutyModalOpen, setIsCopyDutyModalOpen] = useState<boolean>(false);
@@ -1135,11 +1192,10 @@ export const AdminPortal: React.FC = () => {
           return;
         }
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEventForm(prev => ({ ...prev, thumbnail: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+      const compressed = await compressImageToDataURL(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82, outputFormat: 'image/webp' });
+      if (compressed) {
+        setEventForm(prev => ({ ...prev, thumbnail: compressed }));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -1168,6 +1224,7 @@ export const AdminPortal: React.FC = () => {
     ethnicity: string;
     phone: string;
     address: string;
+    avatar?: string;
     isUnionMember: boolean;
     unionCardNumber: string;
     unionPosition: string;
@@ -1190,6 +1247,7 @@ export const AdminPortal: React.FC = () => {
     ethnicity: 'Kinh',
     phone: '',
     address: 'Thôn Trung Sơn, xã Đông Giang, TP Đà Nẵng',
+    avatar: '',
     isUnionMember: true,
     unionCardNumber: '',
     unionPosition: 'Đoàn viên',
@@ -1222,21 +1280,37 @@ export const AdminPortal: React.FC = () => {
     grade: 10 | 11 | 12;
     gvcnName: string;
     gvcnId: string;
+    classPresidentName: string;
+    classPresidentPhone: string;
+    academicVicePresidentName: string;
+    academicVicePresidentPhone: string;
     bithuName: string;
     bithuId: string;
+    bithuPhone: string;
+    deputySecretaryName: string;
+    deputySecretaryPhone: string;
     totalStudents: number;
     unionMembers: number;
   }>({
-    id: '10/7',
-    name: 'Lớp 10/7',
+    id: '10/1',
+    name: 'Lớp 10/1',
     grade: 10,
     gvcnName: '',
     gvcnId: '',
-    bithuName: 'Lê Văn Trưởng',
-    bithuId: 'bithu_10_7',
+    classPresidentName: '',
+    classPresidentPhone: '',
+    academicVicePresidentName: '',
+    academicVicePresidentPhone: '',
+    bithuName: '',
+    bithuId: 'bithu_10_1',
+    bithuPhone: '',
+    deputySecretaryName: '',
+    deputySecretaryPhone: '',
     totalStudents: 40,
     unionMembers: 30
   });
+  const [classViewMode, setClassViewMode] = useState<'table' | 'cards'>('table');
+  const [classSearchQuery, setClassSearchQuery] = useState<string>('');
 
   // ================= WEEK CRUD MODAL STATE =================
   const [isWeekModalOpen, setIsWeekModalOpen] = useState<boolean>(false);
@@ -2080,13 +2154,10 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
           return;
         }
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setNewsForm(prev => ({ ...prev, thumbnail: event.target!.result as string }));
-        }
-      };
-      reader.readAsDataURL(file);
+      const compressed = await compressImageToDataURL(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82, outputFormat: 'image/webp' });
+      if (compressed) {
+        setNewsForm(prev => ({ ...prev, thumbnail: compressed }));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -2235,18 +2306,14 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
           return;
         }
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const res = event.target.result as string;
-          setSettingsForm(prev => {
-            const next = { ...prev, logoUrl: res };
-            updateSchoolSettings(next);
-            return next;
-          });
-        }
-      };
-      reader.readAsDataURL(file);
+      const compressed = await compressImageToDataURL(file, { maxWidth: 800, maxHeight: 800, quality: 0.85, outputFormat: 'image/webp' });
+      if (compressed) {
+        setSettingsForm(prev => {
+          const next = { ...prev, logoUrl: compressed };
+          updateSchoolSettings(next);
+          return next;
+        });
+      }
     } catch (err) {
       console.error(err);
       alert('Không thể tải ảnh: ' + (err instanceof Error ? err.message : 'Lỗi không xác định'));
@@ -2273,18 +2340,14 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
           return;
         }
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const res = event.target.result as string;
-          setSettingsForm(prev => {
-            const next = { ...prev, youthUnionLogoUrl: res };
-            updateSchoolSettings(next);
-            return next;
-          });
-        }
-      };
-      reader.readAsDataURL(file);
+      const compressed = await compressImageToDataURL(file, { maxWidth: 800, maxHeight: 800, quality: 0.85, outputFormat: 'image/webp' });
+      if (compressed) {
+        setSettingsForm(prev => {
+          const next = { ...prev, youthUnionLogoUrl: compressed };
+          updateSchoolSettings(next);
+          return next;
+        });
+      }
     } catch (err) {
       console.error(err);
       alert('Không thể tải ảnh: ' + (err instanceof Error ? err.message : 'Lỗi không xác định'));
@@ -2311,18 +2374,14 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
           return;
         }
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const res = event.target.result as string;
-          setSettingsForm(prev => {
-            const next = { ...prev, bannerTopImage: res };
-            updateSchoolSettings(next);
-            return next;
-          });
-        }
-      };
-      reader.readAsDataURL(file);
+      const compressed = await compressImageToDataURL(file, { maxWidth: 1600, maxHeight: 600, quality: 0.82, outputFormat: 'image/webp' });
+      if (compressed) {
+        setSettingsForm(prev => {
+          const next = { ...prev, bannerTopImage: compressed };
+          updateSchoolSettings(next);
+          return next;
+        });
+      }
     } catch (err) {
       console.error(err);
       alert('Không thể tải ảnh: ' + (err instanceof Error ? err.message : 'Lỗi không xác định'));
@@ -2349,18 +2408,14 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
           return;
         }
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const res = event.target.result as string;
-          setSettingsForm(prev => {
-            const next = { ...prev, footerBannerImage: res };
-            updateSchoolSettings(next);
-            return next;
-          });
-        }
-      };
-      reader.readAsDataURL(file);
+      const compressed = await compressImageToDataURL(file, { maxWidth: 1600, maxHeight: 600, quality: 0.82, outputFormat: 'image/webp' });
+      if (compressed) {
+        setSettingsForm(prev => {
+          const next = { ...prev, footerBannerImage: compressed };
+          updateSchoolSettings(next);
+          return next;
+        });
+      }
     } catch (err) {
       console.error(err);
       alert('Không thể tải ảnh: ' + (err instanceof Error ? err.message : 'Lỗi không xác định'));
@@ -2405,12 +2460,19 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
         grade: classForm.grade,
         gvcnName: classForm.gvcnName,
         gvcnId: classForm.gvcnId,
+        classPresidentName: classForm.classPresidentName,
+        classPresidentPhone: classForm.classPresidentPhone,
+        academicVicePresidentName: classForm.academicVicePresidentName,
+        academicVicePresidentPhone: classForm.academicVicePresidentPhone,
         bithuName: classForm.bithuName,
         bithuId: classForm.bithuId,
+        bithuPhone: classForm.bithuPhone,
+        deputySecretaryName: classForm.deputySecretaryName,
+        deputySecretaryPhone: classForm.deputySecretaryPhone,
         totalStudents: Number(classForm.totalStudents),
         unionMembers: Number(classForm.unionMembers)
       });
-      alert(`Đã cập nhật thông tin lớp ${classForm.name} thành công!`);
+      alert(`Đã cập nhật thông tin ban cán sự & lớp ${classForm.name} thành công!`);
     } else {
       addClass({
         id: classForm.id,
@@ -2418,8 +2480,15 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
         grade: classForm.grade,
         gvcnName: classForm.gvcnName || 'Chưa phân công',
         gvcnId: classForm.gvcnId || '',
+        classPresidentName: classForm.classPresidentName,
+        classPresidentPhone: classForm.classPresidentPhone,
+        academicVicePresidentName: classForm.academicVicePresidentName,
+        academicVicePresidentPhone: classForm.academicVicePresidentPhone,
         bithuName: classForm.bithuName || 'Đang cập nhật',
-        bithuId: classForm.bithuId || '',
+        bithuId: classForm.bithuId || `bithu_${classForm.id.replace('/', '_')}`,
+        bithuPhone: classForm.bithuPhone,
+        deputySecretaryName: classForm.deputySecretaryName,
+        deputySecretaryPhone: classForm.deputySecretaryPhone,
         totalStudents: Number(classForm.totalStudents) || 40,
         unionMembers: Number(classForm.unionMembers) || 30
       });
@@ -2427,6 +2496,179 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
     }
     setIsClassModalOpen(false);
     setEditingClass(null);
+  };
+
+  // Export Ban Cán Sự Lớp & BCH Chi Đoàn to Excel
+  const exportCadreToExcel = () => {
+    const sortedClasses = [...classes].sort((a, b) => {
+      const gA = a.grade;
+      const gB = b.grade;
+      if (gA !== gB) return gA - gB;
+      const numA = parseInt(a.id.split('/')[1] || '0', 10);
+      const numB = parseInt(b.id.split('/')[1] || '0', 10);
+      return numA - numB;
+    });
+
+    const headers = [
+      ['DANH SÁCH BAN CÁN SỰ LỚP - NĂM HỌC 2026-2027'],
+      ['TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG'],
+      [''],
+      ['TT', 'LỚP', 'LỚP TRƯỞNG', 'SỐ ĐT LỚP TRƯỞNG', 'LỚP PHÓ HT', 'SỐ ĐT LỚP PHÓ HT', 'BÍ THƯ', 'SỐ ĐT BÍ THƯ', 'PHÓ BÍ THƯ', 'SỐ ĐT PHÓ BÍ THƯ', 'GVCN']
+    ];
+
+    const rows = sortedClasses.map((c, idx) => [
+      idx + 1,
+      c.id,
+      c.classPresidentName || '',
+      c.classPresidentPhone ? `'${c.classPresidentPhone}` : '',
+      c.academicVicePresidentName || '',
+      c.academicVicePresidentPhone ? `'${c.academicVicePresidentPhone}` : '',
+      c.bithuName || '',
+      c.bithuPhone ? `'${c.bithuPhone}` : '',
+      c.deputySecretaryName || '',
+      c.deputySecretaryPhone ? `'${c.deputySecretaryPhone}` : '',
+      c.gvcnName || ''
+    ]);
+
+    const worksheet = XLSX.utils.aoa_to_sheet([...headers, ...rows]);
+    worksheet['!cols'] = [
+      { wch: 6 },  // TT
+      { wch: 10 }, // Lớp
+      { wch: 24 }, // Lớp trưởng
+      { wch: 16 }, // SĐT LT
+      { wch: 24 }, // Lớp phó HT
+      { wch: 16 }, // SĐT LP
+      { wch: 24 }, // Bí thư
+      { wch: 16 }, // SĐT BT
+      { wch: 24 }, // Phó BT
+      { wch: 16 }, // SĐT PBT
+      { wch: 22 }  // GVCN
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'BanCanSuLop');
+    XLSX.writeFile(workbook, `DANH_SACH_BAN_CAN_SU_LOP_2026_2027.xlsx`);
+  };
+
+  // Sync Cadre Accounts to Users Table
+  const handleSyncCadreAccounts = () => {
+    let syncedCount = 0;
+    classes.forEach(c => {
+      const classKey = c.id.replace('/', '_');
+
+      // 1. Bí Thư (youth_secretary)
+      if (c.bithuName) {
+        const uId = `bithu_${classKey}`;
+        const existing = users.find(u => u.username === uId || u.id === uId);
+        if (existing) {
+          updateUser(existing.id, {
+            name: c.bithuName,
+            phone: c.bithuPhone || existing.phone,
+            role: 'youth_secretary',
+            roleTitle: `Bí thư Chi đoàn ${c.id}`,
+            classId: c.id
+          });
+        } else {
+          addUser({
+            username: uId,
+            password: '123456@Password',
+            name: c.bithuName,
+            role: 'youth_secretary',
+            roleTitle: `Bí thư Chi đoàn ${c.id}`,
+            classId: c.id,
+            phone: c.bithuPhone || '',
+            email: `${uId}@thpt.edu.vn`,
+            isActive: true
+          });
+        }
+        syncedCount++;
+      }
+
+      // 2. Lớp Trưởng (youth_secretary)
+      if (c.classPresidentName && c.classPresidentName !== c.bithuName) {
+        const uId = `loptruong_${classKey}`;
+        const existing = users.find(u => u.username === uId || u.id === uId);
+        if (existing) {
+          updateUser(existing.id, {
+            name: c.classPresidentName,
+            phone: c.classPresidentPhone || existing.phone,
+            role: 'youth_secretary',
+            roleTitle: `Lớp trưởng ${c.id}`,
+            classId: c.id
+          });
+        } else {
+          addUser({
+            username: uId,
+            password: '123456@Password',
+            name: c.classPresidentName,
+            role: 'youth_secretary',
+            roleTitle: `Lớp trưởng ${c.id}`,
+            classId: c.id,
+            phone: c.classPresidentPhone || '',
+            email: `${uId}@thpt.edu.vn`,
+            isActive: true
+          });
+        }
+        syncedCount++;
+      }
+
+      // 3. Lớp Phó HT (user)
+      if (c.academicVicePresidentName) {
+        const uId = `loppho_${classKey}`;
+        const existing = users.find(u => u.username === uId || u.id === uId);
+        if (existing) {
+          updateUser(existing.id, {
+            name: c.academicVicePresidentName,
+            phone: c.academicVicePresidentPhone || existing.phone,
+            role: 'user',
+            roleTitle: `Lớp phó Học tập ${c.id}`,
+            classId: c.id
+          });
+        } else {
+          addUser({
+            username: uId,
+            password: '123456@Password',
+            name: c.academicVicePresidentName,
+            role: 'user',
+            roleTitle: `Lớp phó Học tập ${c.id}`,
+            classId: c.id,
+            phone: c.academicVicePresidentPhone || '',
+            email: `${uId}@thpt.edu.vn`,
+            isActive: true
+          });
+        }
+        syncedCount++;
+      }
+
+      // 4. Phó Bí Thư (user)
+      if (c.deputySecretaryName && c.deputySecretaryName !== c.academicVicePresidentName) {
+        const uId = `phobithu_${classKey}`;
+        const existing = users.find(u => u.username === uId || u.id === uId);
+        if (existing) {
+          updateUser(existing.id, {
+            name: c.deputySecretaryName,
+            phone: c.deputySecretaryPhone || existing.phone,
+            role: 'user',
+            roleTitle: `Phó Bí thư Chi đoàn ${c.id}`,
+            classId: c.id
+          });
+        } else {
+          addUser({
+            username: uId,
+            password: '123456@Password',
+            name: c.deputySecretaryName,
+            role: 'user',
+            roleTitle: `Phó Bí thư Chi đoàn ${c.id}`,
+            classId: c.id,
+            phone: c.deputySecretaryPhone || '',
+            email: `${uId}@thpt.edu.vn`,
+            isActive: true
+          });
+        }
+        syncedCount++;
+      }
+    });
+
+    alert(`⚡ Đã đồng bộ và phân quyền thành công ${syncedCount} tài khoản Ban Cán Sự & BCH Chi Đoàn 15 Lớp (Mật khẩu mặc định: 123456@Password)!`);
   };
 
   // Handle Week Form Save
@@ -2470,13 +2712,10 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
           return;
         }
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.result) {
-          setViolationForm(prev => ({ ...prev, proofImage: reader.result as string }));
-        }
-      };
-      reader.readAsDataURL(file);
+      const compressed = await compressImageToDataURL(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82, outputFormat: 'image/webp' });
+      if (compressed) {
+        setViolationForm(prev => ({ ...prev, proofImage: compressed }));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -2538,7 +2777,9 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
         auditorName,
         auditorClass,
         shiftTime: dutyForm.shiftTime,
-        isLiveNow: dutyForm.isLiveNow
+        isLiveNow: dutyForm.isLiveNow,
+        targetClasses: dutyForm.targetClasses || undefined,
+        session: dutyForm.session
       });
       alert(`Đã cập nhật ca trực ${dutyForm.zone} (${dutyForm.day}) thành công!`);
     } else {
@@ -2550,7 +2791,9 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
         auditorName,
         auditorClass,
         shiftTime: dutyForm.shiftTime,
-        isLiveNow: dutyForm.isLiveNow
+        isLiveNow: dutyForm.isLiveNow,
+        targetClasses: dutyForm.targetClasses || undefined,
+        session: dutyForm.session
       });
       alert(`Đã thêm mới ca trực ${dutyForm.zone} (${dutyForm.day}) thành công!`);
     }
@@ -2721,6 +2964,31 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
     }
   };
 
+  const [isPushingStudents, setIsPushingStudents] = useState(false);
+
+  const handlePushStudentsToCloud = async () => {
+    if (!students || students.length === 0) {
+      alert('Không có học sinh nào trong danh sách để tải lên Cloud!');
+      return;
+    }
+    if (!window.confirm(`Bạn có chắc chắn muốn đẩy toàn bộ ${students.length} học sinh hiện tại lên CSDL Supabase Cloud để đồng bộ với điện thoại và các thiết bị khác?`)) {
+      return;
+    }
+    setIsPushingStudents(true);
+    try {
+      const ok = await SupabaseService.saveStudentsBatch(students);
+      if (ok) {
+        alert(`🎉 ĐÃ ĐỒNG BỘ THÀNH CÔNG ${students.length} HỌC SINH LÊN SUPABASE CLOUD!\n\n📱 Bây giờ trên điện thoại bạn chỉ cần mở lại hoặc bấm nút 🔄 (Đồng bộ) là sẽ thấy đầy đủ ${students.length} học sinh!`);
+      } else {
+        alert('Có lỗi khi lưu học sinh lên Supabase Cloud. Vui lòng kiểm tra kết nối mạng hoặc thử lại.');
+      }
+    } catch (e: any) {
+      alert(`Lỗi khi đẩy dữ liệu: ${e?.message || 'Không xác định'}`);
+    } finally {
+      setIsPushingStudents(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6 animate-fadeIn">
 
@@ -2743,15 +3011,25 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
           </div>
         </div>
 
-        {/* Lock / Unlock Week Action */}
-        <div className="flex items-center space-x-2">
+        {/* Quick Actions & Lock Week */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsGlobalDocumentModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all active:scale-95"
+            title="Mở trình quản lý văn bản, biểu mẫu và thư mục phân cấp"
+          >
+            <Folder className="w-4 h-4" />
+            <span>📁 Kho Văn Bản ({documentFiles?.length || 0})</span>
+          </button>
+
           {isWeekLocked ? (
             <button
               onClick={() => { setPinAction('unlock'); setPinError(''); setPinInput(''); }}
               className="px-4 py-2 rounded-xl bg-red-950 border border-red-700 text-red-300 hover:bg-red-900 text-xs font-bold flex items-center gap-2 transition-colors"
             >
               <Lock className="w-4 h-4 text-red-400" />
-              <span>Tuần {activeWeek} Đang Khóa (Mở Khóa)</span>
+              <span>Tuần {activeWeek} Đang Khóa</span>
             </button>
           ) : (
             <button
@@ -2759,7 +3037,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white text-xs font-bold shadow-glow flex items-center gap-2 transition-all"
             >
               <Lock className="w-4 h-4" />
-              <span>Khóa Sổ Tuần {activeWeek} (Lock Data)</span>
+              <span>Khóa Sổ Tuần {activeWeek}</span>
             </button>
           )}
         </div>
@@ -2783,9 +3061,9 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             },
             {
               id: 'media_hub',
-              label: 'Bản Tin & Thông Báo',
-              icon: Newspaper,
-              badge: news.length
+              label: 'Kho Văn Bản, Bản Tin & Media',
+              icon: Folder,
+              badge: `${documentFiles?.length || 0} file`
             },
             { id: 'criteria', label: 'Quản Lý Tiêu Chí', icon: Sliders, badge: criteria.length },
             { id: 'system_hub', label: 'Tài Khoản, Cài Đặt & Báo Cáo', icon: Settings, badge: users.length },
@@ -3239,7 +3517,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>+ Ghi Nhận Lỗi / Điểm Mới</span>
+                    <span>Ghi Nhận Lỗi / Điểm Mới</span>
                   </button>
                 </div>
               </div>
@@ -3425,7 +3703,23 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           -{vio.pointsDeducted}đ
                         </td>
                         <td className="p-3 text-slate-300">
-                          {vio.studentNames && vio.studentNames.length > 0 ? vio.studentNames.join(', ') : 'Tập thể lớp'}
+                          {vio.studentNames && vio.studentNames.length > 0 && !vio.studentNames.some(n => n.toLowerCase().includes('tập thể')) ? (
+                            <div className="flex flex-wrap gap-1">
+                              {vio.studentNames.map((name, i) => (
+                                <span
+                                  key={i}
+                                  className="px-2 py-0.5 rounded-lg bg-red-950/80 border border-red-800/70 text-red-200 text-xs font-semibold inline-flex items-center gap-1 shadow-sm"
+                                >
+                                  <span className="text-[10px]">👤</span>
+                                  {name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic">
+                              {vio.studentNames && vio.studentNames.length > 0 ? vio.studentNames.join(', ') : 'Tập thể lớp'}
+                            </span>
+                          )}
                         </td>
                         <td className="p-3 text-slate-400">{vio.reportedBy.name}</td>
                         <td className="p-3 text-center">
@@ -3815,7 +4109,17 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   </div>
 
                   {/* Primary Action Buttons */}
-                  <div className="flex items-center gap-2 shrink-0 justify-end">
+                  <div className="flex items-center gap-2 shrink-0 justify-end flex-wrap sm:flex-nowrap">
+                    <button
+                      onClick={handlePushStudentsToCloud}
+                      disabled={isPushingStudents}
+                      className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                      title="Đẩy toàn bộ danh sách học sinh hiện tại trên máy tính lên CSDL Supabase Cloud để đồng bộ với điện thoại"
+                    >
+                      <Cloud className={`w-4 h-4 ${isPushingStudents ? 'animate-spin text-amber-300' : 'text-blue-200'}`} />
+                      <span>{isPushingStudents ? 'Đang đồng bộ...' : `Đẩy lên Cloud (${students.length})`}</span>
+                    </button>
+
                     <button
                       onClick={() => setIsImportModalOpen(true)}
                       className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
@@ -3838,6 +4142,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           ethnicity: 'Kinh',
                           phone: '',
                           address: 'Thôn Trung Sơn, xã Đông Giang, TP Đà Nẵng',
+                          avatar: '',
                           isUnionMember: true,
                           unionCardNumber: '',
                           unionPosition: 'Đoàn viên',
@@ -3856,7 +4161,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all active:scale-95"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>+ Thêm Học Sinh</span>
+                      <span>Thêm Học Sinh</span>
                     </button>
 
                     <button
@@ -4127,6 +4432,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                     ethnicity: st.ethnicity || 'Kinh',
                                     phone: st.phone || '',
                                     address: st.address || '',
+                                    avatar: st.avatar || '',
                                     isUnionMember: st.isUnionMember,
                                     unionCardNumber: st.unionCardNumber || '',
                                     unionPosition: st.unionPosition || 'Đoàn viên',
@@ -4170,348 +4476,914 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             </div>
           )}
 
-          {/* Master Sub-Tab 2: CLASSES (SORTED & GROUPED BY GRADE) */}
-          {operationsSubTab === 'classes' && (
-            <div className="space-y-6 animate-fadeIn">
-              {/* Header & Filter Controls */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-                <div>
-                  <h4 className="text-sm font-black text-white flex items-center gap-2">
-                    <span>DANH SÁCH 18 LỚP HỌC TOÀN TRƯỜNG</span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800 text-[10px] font-bold">
-                      Sắp xếp theo Khối 10, 11, 12
-                    </span>
-                  </h4>
-                  <p className="text-[11px] text-slate-400">Quản lý lớp học, giáo viên chủ nhiệm, bí thư chi đoàn và sĩ số</p>
+          {/* Master Sub-Tab 2: CLASSES & CADRES (BAN CÁN SỰ & BCH CHI ĐOÀN) */}
+          {operationsSubTab === 'classes' && (() => {
+            const sortedAndFilteredClasses = classes
+              .filter(c => classGradeTab === 'ALL' || c.grade === classGradeTab)
+              .filter(c => {
+                if (!classSearchQuery.trim()) return true;
+                const q = classSearchQuery.toLowerCase().trim();
+                return (
+                  c.id.toLowerCase().includes(q) ||
+                  c.name.toLowerCase().includes(q) ||
+                  (c.gvcnName && c.gvcnName.toLowerCase().includes(q)) ||
+                  (c.classPresidentName && c.classPresidentName.toLowerCase().includes(q)) ||
+                  (c.academicVicePresidentName && c.academicVicePresidentName.toLowerCase().includes(q)) ||
+                  (c.bithuName && c.bithuName.toLowerCase().includes(q)) ||
+                  (c.deputySecretaryName && c.deputySecretaryName.toLowerCase().includes(q))
+                );
+              })
+              .sort((a, b) => {
+                const gA = a.grade;
+                const gB = b.grade;
+                if (gA !== gB) return gA - gB;
+                const numA = parseInt(a.id.split('/')[1] || '0', 10);
+                const numB = parseInt(b.id.split('/')[1] || '0', 10);
+                return numA - numB;
+              });
+
+            const totalStudentsCount = classes.reduce((acc, c) => acc + (c.totalStudents || 0), 0);
+            const totalUnionCount = classes.reduce((acc, c) => acc + (c.unionMembers || 0), 0);
+
+            return (
+              <div className="space-y-5 animate-fadeIn">
+                {/* Header Banner & Global Action Buttons */}
+                <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-slate-900 via-slate-950 to-blue-950/40 border border-slate-800 shadow-xl space-y-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="p-2 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 text-base font-bold">
+                          🏛️
+                        </span>
+                        <h4 className="text-base font-black text-white tracking-wide uppercase flex items-center gap-2">
+                          <span>DANH SÁCH BAN CÁN SỰ & BCH CHI ĐOÀN 15 LỚP</span>
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700 text-[11px] font-bold">
+                            Năm học 2026 - 2027
+                          </span>
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Quản lý cơ cấu Ban Cán sự (Lớp trưởng, Lớp phó HT) và BCH Chi đoàn (Bí thư, Phó Bí thư) cùng phân quyền tài khoản hệ thống.
+                      </p>
+                    </div>
+
+                    {/* Action Buttons: Excel Export, Sync Accounts, Add Class */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={exportCadreToExcel}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all"
+                        title="Xuất bảng danh sách Ban cán sự 15 lớp ra file Excel (.xlsx)"
+                      >
+                        <FileSpreadsheet className="w-4 h-4" />
+                        <span>Xuất File Excel</span>
+                      </button>
+
+                      <button
+                        onClick={handleSyncCadreAccounts}
+                        className="px-3.5 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all"
+                        title="Tự động đồng bộ và cấp quyền tài khoản Youth Secretary / User cho tất cả cán bộ lớp"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        <span>Đồng Bộ Tài Khoản</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setEditingClass(null);
+                          setClassForm({
+                            id: `10/${classes.filter(c => c.grade === 10).length + 1}`,
+                            name: `Lớp 10/${classes.filter(c => c.grade === 10).length + 1}`,
+                            grade: 10,
+                            gvcnName: '',
+                            gvcnId: '',
+                            classPresidentName: '',
+                            classPresidentPhone: '',
+                            academicVicePresidentName: '',
+                            academicVicePresidentPhone: '',
+                            bithuName: '',
+                            bithuId: `bithu_10_${classes.filter(c => c.grade === 10).length + 1}`,
+                            bithuPhone: '',
+                            deputySecretaryName: '',
+                            deputySecretaryPhone: '',
+                            totalStudents: 40,
+                            unionMembers: 30
+                          });
+                          setIsClassModalOpen(true);
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Thêm Lớp Mới</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Summary Metric Counters */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-800/80 text-xs">
+                    <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+                      <span className="text-slate-400 font-bold">Tổng số lớp:</span>
+                      <strong className="text-white text-sm font-mono">{classes.length} Lớp</strong>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+                      <span className="text-slate-400 font-bold">Tổng sĩ số:</span>
+                      <strong className="text-sky-300 text-sm font-mono">{totalStudentsCount} HS</strong>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+                      <span className="text-slate-400 font-bold">Đoàn viên:</span>
+                      <strong className="text-amber-300 text-sm font-mono">{totalUnionCount} ĐV</strong>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+                      <span className="text-slate-400 font-bold">Cán bộ lớp:</span>
+                      <strong className="text-emerald-300 text-sm font-mono">{classes.length * 4} Cán bộ</strong>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                {/* Filter & View Switcher Toolbar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 bg-slate-950 rounded-2xl border border-slate-800 text-xs">
                   {/* Grade Filter Pills */}
-                  <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
+                  <div className="flex items-center gap-1.5 overflow-x-auto">
                     <button
                       onClick={() => setClassGradeTab('ALL')}
-                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                      className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${
                         classGradeTab === 'ALL'
                           ? 'bg-blue-600 text-white shadow-glow'
-                          : 'text-slate-400 hover:text-white'
+                          : 'bg-slate-900 text-slate-400 hover:text-white'
                       }`}
                     >
-                      Tất cả 18 Lớp
+                      Tất cả ({classes.length} Lớp)
                     </button>
                     <button
                       onClick={() => setClassGradeTab(10)}
-                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                      className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${
                         classGradeTab === 10
                           ? 'bg-sky-600 text-white shadow-glow'
-                          : 'text-slate-400 hover:text-white'
+                          : 'bg-slate-900 text-slate-400 hover:text-white'
                       }`}
                     >
-                      Khối 10 (6 Lớp)
+                      Khối 10 ({classes.filter(c => c.grade === 10).length} Lớp)
                     </button>
                     <button
                       onClick={() => setClassGradeTab(11)}
-                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                      className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${
                         classGradeTab === 11
                           ? 'bg-emerald-600 text-white shadow-glow'
-                          : 'text-slate-400 hover:text-white'
+                          : 'bg-slate-900 text-slate-400 hover:text-white'
                       }`}
                     >
-                      Khối 11 (6 Lớp)
+                      Khối 11 ({classes.filter(c => c.grade === 11).length} Lớp)
                     </button>
                     <button
                       onClick={() => setClassGradeTab(12)}
-                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                      className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${
                         classGradeTab === 12
                           ? 'bg-purple-600 text-white shadow-glow'
-                          : 'text-slate-400 hover:text-white'
+                          : 'bg-slate-900 text-slate-400 hover:text-white'
                       }`}
                     >
-                      Khối 12 (6 Lớp)
+                      Khối 12 ({classes.filter(c => c.grade === 12).length} Lớp)
                     </button>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setEditingClass(null);
-                      setClassForm({
-                        id: `10/${classes.filter(c => c.grade === 10).length + 1}`,
-                        name: `Lớp 10/${classes.filter(c => c.grade === 10).length + 1}`,
-                        grade: 10,
-                        gvcnName: '',
-                        gvcnId: '',
-                        bithuName: '',
-                        bithuId: '',
-                        totalStudents: 40,
-                        unionMembers: 30
-                      });
-                      setIsClassModalOpen(true);
-                    }}
-                    className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>+ Thêm Lớp Mới</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* RENDER BY GRADES (10, 11, 12) */}
-              {[10, 11, 12].filter(grade => classGradeTab === 'ALL' || classGradeTab === grade).map(grade => {
-                const gradeClasses = classes
-                  .filter(c => c.grade === grade)
-                  .sort((a, b) => {
-                    const numA = parseInt(a.id.split('/')[1] || '0', 10);
-                    const numB = parseInt(b.id.split('/')[1] || '0', 10);
-                    if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
-                    return a.id.localeCompare(b.id);
-                  });
-
-                const gradeColors = {
-                  10: {
-                    badge: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
-                    border: 'border-sky-500/20',
-                    headerBg: 'from-sky-950/40 to-slate-900/40',
-                    dot: 'bg-sky-400'
-                  },
-                  11: {
-                    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-                    border: 'border-emerald-500/20',
-                    headerBg: 'from-emerald-950/40 to-slate-900/40',
-                    dot: 'bg-emerald-400'
-                  },
-                  12: {
-                    badge: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
-                    border: 'border-purple-500/20',
-                    headerBg: 'from-purple-950/40 to-slate-900/40',
-                    dot: 'bg-purple-400'
-                  }
-                }[grade as 10 | 11 | 12];
-
-                const totalGradeStudents = gradeClasses.reduce((acc, c) => acc + (c.totalStudents || 0), 0);
-                const totalGradeUnion = gradeClasses.reduce((acc, c) => acc + (c.unionMembers || 0), 0);
-
-                return (
-                  <div key={grade} className={`p-4 rounded-3xl bg-slate-950/60 border ${gradeColors.border} space-y-3.5`}>
-                    {/* Grade Section Title */}
-                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
-                      <div className="flex items-center gap-2.5">
-                        <span className={`w-3 h-3 rounded-full ${gradeColors.dot} shadow-glow`}></span>
-                        <h3 className="text-sm font-black text-white tracking-wide uppercase">
-                          KHỐI {grade} ({gradeClasses.length} LỚP: {grade}/1 - {grade}/{gradeClasses.length})
-                        </h3>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${gradeColors.badge}`}>
-                          Khối {grade}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-400">
-                        <span>Tổng sĩ số: <strong className="text-white">{totalGradeStudents} HS</strong></span>
-                        <span>•</span>
-                        <span>Đoàn viên: <strong className="text-amber-300">{totalGradeUnion} ĐV</strong></span>
-                      </div>
+                  <div className="flex items-center gap-2">
+                    {/* Search Input */}
+                    <div className="relative min-w-[220px] flex-1 sm:flex-initial">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+                      <input
+                        type="text"
+                        value={classSearchQuery}
+                        onChange={(e) => setClassSearchQuery(e.target.value)}
+                        placeholder="Tìm lớp, cán bộ lớp, GVCN..."
+                        className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder-slate-500 focus:border-blue-500"
+                      />
                     </div>
 
-                    {/* Class Cards Grid in Exact Order: 10/1 -> 10/6, 11/1 -> 11/6, 12/1 -> 12/6 */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                      {gradeClasses.map(c => (
-                        <div
-                          key={c.id}
-                          className={`p-4 rounded-2xl border space-y-2 text-xs transition-all ${
-                            c.isArchived
-                              ? 'bg-slate-950/40 border-slate-800 opacity-60'
-                              : 'bg-slate-950 border-slate-800 hover:border-slate-700 hover:shadow-card'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-extrabold text-white text-sm">{c.name}</span>
-                            <span className="px-2 py-0.5 rounded bg-slate-900 text-amber-400 font-mono text-[10px] font-bold">
-                              Khối {c.grade}
-                            </span>
+                    {/* View Switcher: Table vs Cards */}
+                    <div className="flex items-center bg-slate-900 p-0.5 rounded-xl border border-slate-700 font-bold shrink-0">
+                      <button
+                        onClick={() => setClassViewMode('table')}
+                        className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                          classViewMode === 'table' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Xem chế độ bảng danh sách"
+                      >
+                        <Table className="w-3.5 h-3.5" />
+                        <span>Bảng</span>
+                      </button>
+                      <button
+                        onClick={() => setClassViewMode('cards')}
+                        className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                          classViewMode === 'cards' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Xem chế độ thẻ"
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>Thẻ</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* VIEW 1: OFFICIAL CADRE TABLE VIEW */}
+                {classViewMode === 'table' && (
+                  <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/80 shadow-2xl">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-900/90 text-slate-300 border-b border-slate-800 text-[11px] uppercase tracking-wider">
+                          <th className="p-3 text-center w-12 text-slate-400 font-black">TT</th>
+                          <th className="p-3 text-center w-16 font-black text-amber-400">Lớp</th>
+                          <th className="p-3 font-black text-blue-400">Lớp Trưởng</th>
+                          <th className="p-3 font-black text-sky-400">Lớp Phó Học Tập</th>
+                          <th className="p-3 font-black text-emerald-400">Bí Thư Chi Đoàn</th>
+                          <th className="p-3 font-black text-purple-400">Phó Bí Thư</th>
+                          <th className="p-3 font-black text-amber-300">GVCN</th>
+                          <th className="p-3 text-center font-black text-slate-300">Sĩ Số / ĐV</th>
+                          <th className="p-3 text-right font-black">Thao Tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60">
+                        {sortedAndFilteredClasses.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="p-8 text-center text-slate-500">
+                              Không tìm thấy lớp học nào phù hợp bộ lọc!
+                            </td>
+                          </tr>
+                        ) : (
+                          sortedAndFilteredClasses.map((c, index) => (
+                            <tr key={c.id} className="hover:bg-slate-800/40 transition-colors">
+                              {/* TT */}
+                              <td className="p-3 text-center font-mono font-bold text-slate-400">
+                                <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 text-[11px]">
+                                  {index + 1}
+                                </span>
+                              </td>
+
+                              {/* Lớp */}
+                              <td className="p-3 text-center">
+                                <span className="px-2.5 py-1 rounded-xl bg-blue-950/80 border border-blue-700 text-blue-300 font-extrabold text-xs font-mono">
+                                  {c.id}
+                                </span>
+                              </td>
+
+                              {/* Lớp Trưởng */}
+                              <td className="p-3">
+                                <div className="font-bold text-white whitespace-nowrap">
+                                  {c.classPresidentName || <span className="text-slate-500 italic">Chưa phân công</span>}
+                                </div>
+                                {c.classPresidentPhone && (
+                                  <a
+                                    href={`tel:${c.classPresidentPhone}`}
+                                    className="text-[11px] text-blue-400 hover:text-blue-300 font-mono flex items-center gap-1 mt-0.5"
+                                  >
+                                    <span>📞 {c.classPresidentPhone}</span>
+                                  </a>
+                                )}
+                              </td>
+
+                              {/* Lớp Phó Học Tập */}
+                              <td className="p-3">
+                                <div className="font-bold text-slate-200 whitespace-nowrap">
+                                  {c.academicVicePresidentName || <span className="text-slate-500 italic">Chưa phân công</span>}
+                                </div>
+                                {c.academicVicePresidentPhone && (
+                                  <a
+                                    href={`tel:${c.academicVicePresidentPhone}`}
+                                    className="text-[11px] text-sky-400 hover:text-sky-300 font-mono flex items-center gap-1 mt-0.5"
+                                  >
+                                    <span>📞 {c.academicVicePresidentPhone}</span>
+                                  </a>
+                                )}
+                              </td>
+
+                              {/* Bí Thư Chi Đoàn */}
+                              <td className="p-3">
+                                <div className="font-bold text-emerald-300 whitespace-nowrap flex items-center gap-1.5">
+                                  <span>{c.bithuName || <span className="text-slate-500 italic">Chưa phân công</span>}</span>
+                                  <span className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] font-mono font-bold">
+                                    Bí thư
+                                  </span>
+                                </div>
+                                {c.bithuPhone && (
+                                  <a
+                                    href={`tel:${c.bithuPhone}`}
+                                    className="text-[11px] text-emerald-400 hover:text-emerald-300 font-mono flex items-center gap-1 mt-0.5"
+                                  >
+                                    <span>📞 {c.bithuPhone}</span>
+                                  </a>
+                                )}
+                              </td>
+
+                              {/* Phó Bí Thư */}
+                              <td className="p-3">
+                                <div className="font-bold text-purple-200 whitespace-nowrap">
+                                  {c.deputySecretaryName || <span className="text-slate-500 italic">Chưa phân công</span>}
+                                </div>
+                                {c.deputySecretaryPhone && (
+                                  <a
+                                    href={`tel:${c.deputySecretaryPhone}`}
+                                    className="text-[11px] text-purple-400 hover:text-purple-300 font-mono flex items-center gap-1 mt-0.5"
+                                  >
+                                    <span>📞 {c.deputySecretaryPhone}</span>
+                                  </a>
+                                )}
+                              </td>
+
+                              {/* GVCN */}
+                              <td className="p-3">
+                                <span className="font-bold text-amber-300 whitespace-nowrap">
+                                  {c.gvcnName || <span className="text-slate-500 italic">Chưa phân công</span>}
+                                </span>
+                              </td>
+
+                              {/* Sĩ số / Đoàn viên */}
+                              <td className="p-3 text-center whitespace-nowrap">
+                                <div className="font-mono text-xs">
+                                  <strong className="text-white">{c.totalStudents}</strong>
+                                  <span className="text-slate-500 mx-1">/</span>
+                                  <strong className="text-amber-300">{c.unionMembers} ĐV</strong>
+                                </div>
+                              </td>
+
+                              {/* Thao tác */}
+                              <td className="p-3 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => {
+                                      setEditingClass(c);
+                                      setClassForm({
+                                        id: c.id,
+                                        name: c.name,
+                                        grade: c.grade,
+                                        gvcnName: c.gvcnName,
+                                        gvcnId: c.gvcnId,
+                                        classPresidentName: c.classPresidentName || '',
+                                        classPresidentPhone: c.classPresidentPhone || '',
+                                        academicVicePresidentName: c.academicVicePresidentName || '',
+                                        academicVicePresidentPhone: c.academicVicePresidentPhone || '',
+                                        bithuName: c.bithuName || '',
+                                        bithuId: c.bithuId || `bithu_${c.id.replace('/', '_')}`,
+                                        bithuPhone: c.bithuPhone || '',
+                                        deputySecretaryName: c.deputySecretaryName || '',
+                                        deputySecretaryPhone: c.deputySecretaryPhone || '',
+                                        totalStudents: c.totalStudents,
+                                        unionMembers: c.unionMembers
+                                      });
+                                      setIsClassModalOpen(true);
+                                    }}
+                                    title="Sửa thông tin lớp & Ban Cán sự"
+                                    className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-700 hover:border-amber-600 flex items-center gap-1 text-[11px] font-bold"
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                    <span>Sửa</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => archiveClass(c.id, !c.isArchived)}
+                                    title={c.isArchived ? 'Khôi phục lớp' : 'Lưu trữ lớp'}
+                                    className="p-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700"
+                                  >
+                                    <Archive className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`Bạn có chắc chắn muốn xóa ${c.name}?`)) {
+                                        const res = deleteClass(c.id);
+                                        alert(res.message);
+                                      }
+                                    }}
+                                    title="Xóa lớp"
+                                    className="p-1 rounded-lg bg-slate-900 hover:bg-rose-950 text-rose-400 border border-slate-700 hover:border-rose-700"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* VIEW 2: CLASS CARDS VIEW */}
+                {classViewMode === 'cards' && (
+                  <div className="space-y-6">
+                    {[10, 11, 12].filter(grade => classGradeTab === 'ALL' || classGradeTab === grade).map(grade => {
+                      const gradeClasses = sortedAndFilteredClasses.filter(c => c.grade === grade);
+                      if (gradeClasses.length === 0) return null;
+
+                      const gradeColors = {
+                        10: {
+                          badge: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+                          border: 'border-sky-500/20',
+                          dot: 'bg-sky-400'
+                        },
+                        11: {
+                          badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+                          border: 'border-emerald-500/20',
+                          dot: 'bg-emerald-400'
+                        },
+                        12: {
+                          badge: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+                          border: 'border-purple-500/20',
+                          dot: 'bg-purple-400'
+                        }
+                      }[grade as 10 | 11 | 12];
+
+                      const totalGradeStudents = gradeClasses.reduce((acc, c) => acc + (c.totalStudents || 0), 0);
+                      const totalGradeUnion = gradeClasses.reduce((acc, c) => acc + (c.unionMembers || 0), 0);
+
+                      return (
+                        <div key={grade} className={`p-4 rounded-3xl bg-slate-950/60 border ${gradeColors.border} space-y-3.5`}>
+                          {/* Grade Section Title */}
+                          <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
+                            <div className="flex items-center gap-2.5">
+                              <span className={`w-3 h-3 rounded-full ${gradeColors.dot} shadow-glow`}></span>
+                              <h3 className="text-sm font-black text-white tracking-wide uppercase">
+                                KHỐI {grade} ({gradeClasses.length} LỚP: {grade}/1 - {grade}/{gradeClasses.length})
+                              </h3>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${gradeColors.badge}`}>
+                                Khối {grade}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-slate-400">
+                              <span>Tổng sĩ số: <strong className="text-white">{totalGradeStudents} HS</strong></span>
+                              <span>•</span>
+                              <span>Đoàn viên: <strong className="text-amber-300">{totalGradeUnion} ĐV</strong></span>
+                            </div>
                           </div>
-                          <p className="text-slate-300">
-                            GVCN: <strong className="text-amber-300">{c.gvcnName || 'Chưa phân công'}</strong>
-                          </p>
-                          <p className="text-slate-300">
-                            Bí thư Chi đoàn: <strong>{c.bithuName || 'Chưa phân công'}</strong>
-                          </p>
-                          <div className="flex justify-between text-slate-400 pt-1 border-t border-slate-900 text-[11px]">
-                            <span>Sĩ số: <strong>{c.totalStudents} HS</strong></span>
-                            <span>Đoàn viên: <strong>{c.unionMembers} ĐV</strong></span>
-                          </div>
 
-                          <div className="pt-2 flex justify-end gap-1.5 border-t border-slate-900">
-                            <button
-                              onClick={() => {
-                                setEditingClass(c);
-                                setClassForm({
-                                  id: c.id,
-                                  name: c.name,
-                                  grade: c.grade,
-                                  gvcnName: c.gvcnName,
-                                  gvcnId: c.gvcnId,
-                                  bithuName: c.bithuName,
-                                  bithuId: c.bithuId,
-                                  totalStudents: c.totalStudents,
-                                  unionMembers: c.unionMembers
-                                });
-                                setIsClassModalOpen(true);
-                              }}
-                              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 flex items-center gap-1 text-[11px]"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                              <span>Sửa</span>
-                            </button>
+                          {/* Class Cards Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                            {gradeClasses.map(c => (
+                              <div
+                                key={c.id}
+                                className={`p-4 rounded-2xl border space-y-3 text-xs transition-all ${
+                                  c.isArchived
+                                    ? 'bg-slate-950/40 border-slate-800 opacity-60'
+                                    : 'bg-slate-950 border-slate-800 hover:border-slate-700 hover:shadow-card'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-extrabold text-white text-sm">{c.name}</span>
+                                  <span className="px-2 py-0.5 rounded bg-slate-900 text-amber-400 font-mono text-[10px] font-bold">
+                                    Khối {c.grade}
+                                  </span>
+                                </div>
 
-                            <button
-                              onClick={() => archiveClass(c.id, !c.isArchived)}
-                              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center gap-1 text-[11px]"
-                            >
-                              <Archive className="w-3 h-3" />
-                              <span>{c.isArchived ? 'Khôi phục' : 'Lưu trữ'}</span>
-                            </button>
+                                <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                                  <div className="flex justify-between text-slate-300">
+                                    <span className="text-slate-400">GVCN:</span>
+                                    <strong className="text-amber-300">{c.gvcnName || 'Chưa phân công'}</strong>
+                                  </div>
+                                  <div className="flex justify-between text-slate-300">
+                                    <span className="text-slate-400">Lớp Trưởng:</span>
+                                    <span className="font-bold text-blue-300">
+                                      {c.classPresidentName || '—'} {c.classPresidentPhone ? `(${c.classPresidentPhone})` : ''}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-slate-300">
+                                    <span className="text-slate-400">Lớp Phó HT:</span>
+                                    <span className="font-bold text-sky-300">
+                                      {c.academicVicePresidentName || '—'} {c.academicVicePresidentPhone ? `(${c.academicVicePresidentPhone})` : ''}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-slate-300">
+                                    <span className="text-slate-400">Bí Thư:</span>
+                                    <span className="font-bold text-emerald-300">
+                                      {c.bithuName || '—'} {c.bithuPhone ? `(${c.bithuPhone})` : ''}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-slate-300">
+                                    <span className="text-slate-400">Phó Bí Thư:</span>
+                                    <span className="font-bold text-purple-300">
+                                      {c.deputySecretaryName || '—'} {c.deputySecretaryPhone ? `(${c.deputySecretaryPhone})` : ''}
+                                    </span>
+                                  </div>
+                                </div>
 
-                            <button
-                              onClick={() => {
-                                if (confirm(`Bạn có chắc chắn muốn xóa ${c.name}?`)) {
-                                  const res = deleteClass(c.id);
-                                  alert(res.message);
-                                }
-                              }}
-                              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-rose-950 text-rose-400 flex items-center gap-1 text-[11px]"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Xóa</span>
-                            </button>
+                                <div className="flex justify-between text-slate-400 pt-1 border-t border-slate-900 text-[11px]">
+                                  <span>Sĩ số: <strong>{c.totalStudents} HS</strong></span>
+                                  <span>Đoàn viên: <strong>{c.unionMembers} ĐV</strong></span>
+                                </div>
+
+                                <div className="pt-2 flex justify-end gap-1.5 border-t border-slate-900">
+                                  <button
+                                    onClick={() => {
+                                      setEditingClass(c);
+                                      setClassForm({
+                                        id: c.id,
+                                        name: c.name,
+                                        grade: c.grade,
+                                        gvcnName: c.gvcnName,
+                                        gvcnId: c.gvcnId,
+                                        classPresidentName: c.classPresidentName || '',
+                                        classPresidentPhone: c.classPresidentPhone || '',
+                                        academicVicePresidentName: c.academicVicePresidentName || '',
+                                        academicVicePresidentPhone: c.academicVicePresidentPhone || '',
+                                        bithuName: c.bithuName || '',
+                                        bithuId: c.bithuId || `bithu_${c.id.replace('/', '_')}`,
+                                        bithuPhone: c.bithuPhone || '',
+                                        deputySecretaryName: c.deputySecretaryName || '',
+                                        deputySecretaryPhone: c.deputySecretaryPhone || '',
+                                        totalStudents: c.totalStudents,
+                                        unionMembers: c.unionMembers
+                                      });
+                                      setIsClassModalOpen(true);
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 flex items-center gap-1 text-[11px]"
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                    <span>Sửa</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => archiveClass(c.id, !c.isArchived)}
+                                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center gap-1 text-[11px]"
+                                  >
+                                    <Archive className="w-3 h-3" />
+                                    <span>{c.isArchived ? 'Khôi phục' : 'Lưu trữ'}</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`Bạn có chắc chắn muốn xóa ${c.name}?`)) {
+                                        const res = deleteClass(c.id);
+                                        alert(res.message);
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-rose-950 text-rose-400 flex items-center gap-1 text-[11px]"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    <span>Xóa</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })()}
 
           {/* Master Sub-Tab 3: DUTIES */}
-          {operationsSubTab === 'duties' && (
-            <div className="space-y-6 animate-fadeIn">
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-slate-800">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-black text-white">LỊCH PHÂN CÔNG TRỰC BAN ĐỘI CỜ ĐỎ</h4>
-                      <span className="px-2.5 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-800 text-xs font-bold">
-                        Tuần {dutyWeekFilter}
-                      </span>
+          {operationsSubTab === 'duties' && (() => {
+            const currentWeekDuties = duties.filter(d => d.weekNumber === dutyWeekFilter);
+            
+            // Search and filters
+            const filteredDuties = currentWeekDuties.filter(d => {
+              const matchSession = dutySessionFilter === 'ALL' || d.session === dutySessionFilter || (!d.session && dutySessionFilter === 'Sáng');
+              const matchDay = dutyDayFilter === 'ALL' || d.day === dutyDayFilter;
+              const q = dutySearch.toLowerCase().trim();
+              const matchSearch = !q || 
+                d.auditorName.toLowerCase().includes(q) || 
+                d.auditorClass.toLowerCase().includes(q) || 
+                (d.targetClasses && d.targetClasses.toLowerCase().includes(q)) || 
+                d.zone.toLowerCase().includes(q) ||
+                d.day.toLowerCase().includes(q);
+              return matchSession && matchDay && matchSearch;
+            });
+
+            const morningDuties = filteredDuties.filter(d => (d.session || 'Sáng') === 'Sáng');
+            const afternoonDuties = filteredDuties.filter(d => d.session === 'Chiều');
+
+            const handleExportExcel = () => {
+              const rows = currentWeekDuties.map((d, index) => ({
+                'STT': index + 1,
+                'Tuần': `Tuần ${d.weekNumber}`,
+                'Buổi': d.session || 'Sáng',
+                'Thời Gian': d.day === 'T2' ? 'Thứ 2' : d.day === 'T3' ? 'Thứ 3' : d.day === 'T4' ? 'Thứ 4' : d.day === 'T5' ? 'Thứ 5' : d.day === 'T6' ? 'Thứ 6' : 'Thứ 7',
+                'Lớp Trực': d.auditorClass,
+                'Người Trực (Cờ đỏ)': d.auditorName,
+                'Chấm Điểm Lớp': d.targetClasses || '',
+                'Khu Vực Trực': d.zone,
+                'Khung Giờ': d.shiftTime
+              }));
+              const ws = XLSX.utils.json_to_sheet(rows);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, `LichTruc_Tuan_${dutyWeekFilter}`);
+              XLSX.writeFile(wb, `Lich_Phan_Cong_Truc_Co_Do_Tuan_${dutyWeekFilter}.xlsx`);
+            };
+
+            const dayOrder: DayOfWeek[] = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+            const getDayLabel = (d: DayOfWeek) => {
+              switch (d) {
+                case 'T2': return 'Thứ 2';
+                case 'T3': return 'Thứ 3';
+                case 'T4': return 'Thứ 4';
+                case 'T5': return 'Thứ 5';
+                case 'T6': return 'Thứ 6';
+                case 'T7': return 'Thứ 7';
+              }
+            };
+
+            return (
+              <div className="space-y-6 animate-fadeIn">
+                {/* Main Header & Controls Card */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 shadow-xl">
+                  <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="p-1.5 rounded-lg bg-red-600/20 text-red-400 border border-red-500/30 font-bold text-sm">🚩</span>
+                        <h4 className="text-base font-black text-white uppercase tracking-tight">
+                          LỊCH PHÂN CÔNG TRỰC CỜ ĐỎ - NĂM HỌC 2026 - 2027
+                        </h4>
+                        <span className="px-2.5 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-800 text-xs font-bold">
+                          Tuần {dutyWeekFilter}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-900 text-amber-400 border border-slate-700 text-xs font-bold">
+                          {currentWeekDuties.length} ca trực / tuần
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        BCH Đoàn Trường THPT Quang Trung – Đông Giang • Phân công 30 cán bộ cờ đỏ giám sát 18 lớp học
+                      </p>
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      Phân công ca trực nề nếp, giám sát các khu vực toàn trường từ Thứ 2 đến Thứ 7
-                    </p>
+
+                    {/* Action & View Mode Buttons */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* View mode toggle */}
+                      <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs">
+                        <button
+                          onClick={() => setDutyViewMode('official')}
+                          className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+                            dutyViewMode === 'official' ? 'bg-red-600 text-white shadow-glow' : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Văn Bản Chính Thức</span>
+                        </button>
+                        <button
+                          onClick={() => setDutyViewMode('matrix')}
+                          className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+                            dutyViewMode === 'matrix' ? 'bg-red-600 text-white shadow-glow' : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <Layers className="w-3.5 h-3.5" />
+                          <span>Ma Trận Khu Vực</span>
+                        </button>
+                      </div>
+
+                      {/* Week selector */}
+                      <div className="flex items-center bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs">
+                        <span className="text-slate-400 mr-2 font-bold">Tuần:</span>
+                        <select
+                          value={dutyWeekFilter}
+                          onChange={(e) => setDutyWeekFilter(Number(e.target.value))}
+                          className="bg-transparent text-amber-400 font-bold outline-none cursor-pointer"
+                        >
+                          {weeksConfig.map(w => (
+                            <option key={w.weekNumber} value={w.weekNumber} className="bg-slate-900 text-white">
+                              {w.title} {w.isCurrent ? '(Hiện tại)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setEditingDuty(null);
+                          setDutyForm({
+                            weekNumber: dutyWeekFilter,
+                            day: 'T2',
+                            zone: zones[0]?.name || 'Phòng 8 (tầng 2), Phòng 7 (tầng 2)',
+                            auditorId: auditors[0]?.id || 'codo_12_1_1',
+                            auditorName: auditors[0]?.name || 'Đặng Cát Diệu',
+                            auditorClass: auditors[0]?.classId || '12/1',
+                            shiftTime: '06:45 - 07:15 & 11:15 - 11:45',
+                            isLiveNow: true,
+                            targetClasses: '10/1, 10/2',
+                            session: 'Sáng'
+                          });
+                          setIsDutyModalOpen(true);
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs font-bold shadow-glow flex items-center gap-1.5 transition-all"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Phân Công Mới</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (confirm(`Bạn có chắc muốn áp dụng lịch phân công chuẩn 44 ca cho Tuần ${dutyWeekFilter}?`)) {
+                            generateDefaultDutiesForWeek(dutyWeekFilter);
+                          }
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                        title="Tự động tạo lịch chuẩn 44 ca (32 sáng + 12 chiều) đúng theo văn bản Đoàn Trường"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Tạo Lịch Chuẩn (44 ca)</span>
+                      </button>
+
+                      <button
+                        onClick={handleExportExcel}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 hover:text-white border border-emerald-700/60 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                        title="Xuất bảng phân công ra file Excel"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Xuất Excel</span>
+                      </button>
+
+                      <button
+                        onClick={() => window.print()}
+                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                        title="In văn bản phân công lịch trực"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>In Lịch Trực</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setCopyTargetWeek(dutyWeekFilter + 1);
+                          setIsCopyDutyModalOpen(true);
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Sao Chép Tuần</span>
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs">
-                      <span className="text-slate-400 mr-2 font-bold">Xem Tuần:</span>
+                  {/* Filter & Search Toolbar */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+                    {/* Search */}
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={dutySearch}
+                        onChange={(e) => setDutySearch(e.target.value)}
+                        placeholder="Tìm cờ đỏ, lớp trực, lớp chấm, phòng..."
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-red-500"
+                      />
+                      {dutySearch && (
+                        <button onClick={() => setDutySearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filter Buổi */}
+                    <div className="flex items-center bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1 text-xs">
+                      <span className="text-slate-400 mr-2 font-bold">Buổi:</span>
                       <select
-                        value={dutyWeekFilter}
-                        onChange={(e) => setDutyWeekFilter(Number(e.target.value))}
-                        className="bg-transparent text-amber-400 font-bold outline-none cursor-pointer"
+                        value={dutySessionFilter}
+                        onChange={(e) => setDutySessionFilter(e.target.value as any)}
+                        className="bg-transparent text-white font-bold outline-none cursor-pointer flex-1"
                       >
-                        {weeksConfig.map(w => (
-                          <option key={w.weekNumber} value={w.weekNumber} className="bg-slate-900 text-white">
-                            {w.title} {w.isCurrent ? '(Hiện tại)' : ''}
+                        <option value="ALL" className="bg-slate-900">Tất cả các buổi ({currentWeekDuties.length})</option>
+                        <option value="Sáng" className="bg-slate-900">Buổi Sáng (32 ca)</option>
+                        <option value="Chiều" className="bg-slate-900">Buổi Chiều (12 ca)</option>
+                      </select>
+                    </div>
+
+                    {/* Filter Thứ */}
+                    <div className="flex items-center bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1 text-xs">
+                      <span className="text-slate-400 mr-2 font-bold">Thứ:</span>
+                      <select
+                        value={dutyDayFilter}
+                        onChange={(e) => setDutyDayFilter(e.target.value as any)}
+                        className="bg-transparent text-white font-bold outline-none cursor-pointer flex-1"
+                      >
+                        <option value="ALL" className="bg-slate-900">Tất cả các ngày (T2 - T7)</option>
+                        {dayOrder.map(d => (
+                          <option key={d} value={d} className="bg-slate-900">
+                            {getDayLabel(d)} ({currentWeekDuties.filter(x => x.day === d).length} ca)
                           </option>
                         ))}
                       </select>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        setEditingDuty(null);
-                        setDutyForm({
-                          weekNumber: dutyWeekFilter,
-                          day: 'T2',
-                          zone: 'Khối 10',
-                          auditorId: users.find(u => u.role === 'auditor')?.id || 'codo_nam',
-                          auditorName: users.find(u => u.role === 'auditor')?.name || 'Nguyễn Văn Nam',
-                          auditorClass: '11/2',
-                          shiftTime: '06:45 - 07:15 & 11:15 - 11:45',
-                          isLiveNow: true
-                        });
-                        setIsDutyModalOpen(true);
-                      }}
-                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs font-bold shadow-glow flex items-center gap-1.5 transition-all"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Phân Công Mới</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        if (confirm(`Bạn có chắc muốn tự động tạo lịch phân công mẫu cho Tuần ${dutyWeekFilter} không?`)) {
-                          generateDefaultDutiesForWeek(dutyWeekFilter);
-                        }
-                      }}
-                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
-                    >
-                      <span>⚡ Tạo Lịch Chuẩn</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setCopyTargetWeek(dutyWeekFilter + 1);
-                        setIsCopyDutyModalOpen(true);
-                      }}
-                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Sao Chép Tuần</span>
-                    </button>
+                    {/* Quick Stats Counter */}
+                    <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px]">
+                      <span className="text-slate-400">Đang hiển thị:</span>
+                      <span className="font-bold text-amber-400">{filteredDuties.length} / {currentWeekDuties.length} ca</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Matrix Table: Zones x Days (T2-T7) */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-950 text-slate-300 border-b border-slate-800">
-                        <th className="p-3 font-bold w-44">Khu Vực Giám Sát</th>
-                        {(['T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as DayOfWeek[]).map(d => (
-                          <th key={d} className="p-3 font-bold text-center">
-                            <span className="text-amber-400">{d}</span>
-                            <span className="block text-[10px] text-slate-400 font-normal">
-                              {d === 'T2' ? 'Thứ Hai' : d === 'T3' ? 'Thứ Ba' : d === 'T4' ? 'Thứ Tư' : d === 'T5' ? 'Thứ Năm' : d === 'T6' ? 'Thứ Sáu' : 'Thứ Bảy'}
-                            </span>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {zones.map(zoneObj => {
-                        const zone = zoneObj.name;
-                        return (
-                          <tr key={zoneObj.id} className="hover:bg-slate-800/20">
-                            <td className="p-3 font-bold text-white bg-slate-900/80 border-r border-slate-800/80">
-                              <div className="flex items-center gap-2">
-                                <span className="p-1.5 rounded-lg bg-slate-800 text-amber-400 text-sm">
-                                  {zoneObj.icon || '📍'}
-                                </span>
-                                <div>
-                                  <p className="font-bold text-white">{zone}</p>
-                                  {zoneObj.description && (
-                                    <p className="text-[10px] text-slate-400 font-normal">{zoneObj.description}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            {(['T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as DayOfWeek[]).map(day => {
-                              const shift = duties.find(d => d.weekNumber === dutyWeekFilter && d.day === day && d.zone === zone);
-                              return (
-                                <td key={day} className="p-2 align-top">
-                                  {shift ? (
-                                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all space-y-1.5">
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-bold text-white text-xs">{shift.auditorName}</span>
-                                        <div className="flex items-center gap-1">
+                {/* ================= VIEW MODE 1: OFFICIAL DOCUMENT TABLE ================= */}
+                {dutyViewMode === 'official' && (
+                  <div className="space-y-6">
+                    {/* Document Header Representation */}
+                    <div className="glass-panel p-6 rounded-3xl border border-slate-800 bg-slate-950/90 text-center space-y-2 relative overflow-hidden">
+                      <div className="absolute -top-12 -right-12 w-48 h-48 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-800/80 pb-4 text-xs">
+                        <div className="text-left font-bold text-slate-300">
+                          <p className="uppercase">ĐOÀN XÃ ĐÔNG GIANG</p>
+                          <p className="uppercase text-red-400 font-extrabold">BCH ĐOÀN TRƯỜNG THPT QUANG TRUNG – ĐÔNG GIANG</p>
+                          <p className="text-slate-500 font-normal">***</p>
+                        </div>
+                        <div className="text-right font-bold text-slate-300">
+                          <p className="uppercase text-red-400 font-extrabold">ĐOÀN TNCS HỒ CHÍ MINH</p>
+                          <p className="text-slate-400 font-normal">Đông Giang, Năm học 2026 - 2027</p>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 pb-1">
+                        <h3 className="text-lg sm:text-xl font-black text-white tracking-wide uppercase">
+                          LỊCH PHÂN CÔNG TRỰC CỜ ĐỎ
+                        </h3>
+                        <p className="text-amber-400 text-xs font-bold mt-0.5">
+                          Áp Dụng: Tuần {dutyWeekFilter} (Năm học 2026 - 2027)
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* PART I: BUỔI SÁNG */}
+                    {(dutySessionFilter === 'ALL' || dutySessionFilter === 'Sáng') && (
+                      <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-xl space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                            <h4 className="text-sm font-black text-amber-400 uppercase tracking-wide">
+                              I. LỊCH TRỰC PHÂN CÔNG BUỔI SÁNG (32 ca / tuần)
+                            </h4>
+                          </div>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            Khung giờ: 06:45 - 07:15 & 11:15 - 11:45
+                          </span>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="bg-slate-900/90 text-slate-300 border-b border-slate-700">
+                                <th className="p-3 font-bold w-24 text-center">Thời Gian</th>
+                                <th className="p-3 font-bold w-20 text-center">Lớp Trực</th>
+                                <th className="p-3 font-bold">Người Trực (Cờ Đỏ)</th>
+                                <th className="p-3 font-bold w-32 text-center">Chấm Điểm Lớp</th>
+                                <th className="p-3 font-bold">Khu Vực Trực</th>
+                                <th className="p-3 font-bold w-28 text-center">Trạng Thái</th>
+                                <th className="p-3 font-bold w-24 text-center">Thao Tác</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/60">
+                              {morningDuties.length === 0 ? (
+                                <tr>
+                                  <td colSpan={7} className="p-6 text-center text-slate-500">
+                                    Không tìm thấy ca trực buổi sáng nào khớp với bộ lọc.
+                                  </td>
+                                </tr>
+                              ) : (
+                                dayOrder.map(day => {
+                                  const dayShifts = morningDuties.filter(d => d.day === day);
+                                  if (dayShifts.length === 0) return null;
+
+                                  return dayShifts.map((shift, idx) => (
+                                    <tr key={shift.id} className="hover:bg-slate-800/30 transition-colors">
+                                      {idx === 0 && (
+                                        <td
+                                          rowSpan={dayShifts.length}
+                                          className="p-3 font-bold text-center text-amber-300 bg-slate-900/60 border-r border-slate-800 align-middle"
+                                        >
+                                          <span className="text-sm font-extrabold block">{getDayLabel(day)}</span>
+                                          <span className="text-[10px] text-slate-400 block font-normal">({dayShifts.length} ca)</span>
+                                        </td>
+                                      )}
+                                      <td className="p-3 font-bold text-center text-white bg-slate-900/20">
+                                        <span className="px-2 py-0.5 rounded-md bg-slate-800 text-amber-400 font-bold border border-slate-700">
+                                          {shift.auditorClass}
+                                        </span>
+                                      </td>
+                                      <td className="p-3 font-bold text-white">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-amber-400">👤</span>
+                                          <span>{shift.auditorName}</span>
+                                        </div>
+                                      </td>
+                                      <td className="p-3 font-bold text-center">
+                                        <span className="px-2 py-1 rounded-lg bg-red-950/80 text-red-300 border border-red-800/80 text-[11px] font-bold">
+                                          {shift.targetClasses || 'Toàn trường'}
+                                        </span>
+                                      </td>
+                                      <td className="p-3 text-slate-300 font-medium">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs">📍</span>
+                                          <span>{shift.zone}</span>
+                                        </div>
+                                      </td>
+                                      <td className="p-3 text-center">
+                                        {shift.isLiveNow ? (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                                            Đang trực
+                                          </span>
+                                        ) : (
+                                          <span className="text-slate-500 text-[10px]">Đã lên lịch</span>
+                                        )}
+                                      </td>
+                                      <td className="p-3 text-center">
+                                        <div className="flex items-center justify-center gap-1">
                                           <button
                                             onClick={() => {
                                               setEditingDuty(shift);
@@ -4523,73 +5395,316 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                                                 auditorName: shift.auditorName,
                                                 auditorClass: shift.auditorClass,
                                                 shiftTime: shift.shiftTime,
-                                                isLiveNow: !!shift.isLiveNow
+                                                isLiveNow: !!shift.isLiveNow,
+                                                targetClasses: shift.targetClasses || '',
+                                                session: shift.session || 'Sáng'
                                               });
                                               setIsDutyModalOpen(true);
                                             }}
-                                            className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors"
+                                            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors"
                                             title="Sửa ca trực"
                                           >
-                                            <Edit3 className="w-3 h-3" />
+                                            <Edit3 className="w-3.5 h-3.5" />
                                           </button>
                                           <button
                                             onClick={() => {
-                                              if (confirm(`Xóa phân công của ${shift.auditorName} tại ${shift.zone} (${shift.day})?`)) {
+                                              if (confirm(`Xóa phân công của ${shift.auditorName} lớp ${shift.auditorClass} (${getDayLabel(shift.day)})?`)) {
                                                 deleteDutyAssignment(shift.id);
                                               }
                                             }}
-                                            className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition-colors"
+                                            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition-colors"
                                             title="Xóa ca trực"
                                           >
-                                            <Trash2 className="w-3 h-3" />
+                                            <Trash2 className="w-3.5 h-3.5" />
                                           </button>
                                         </div>
-                                      </div>
-                                      <div className="flex items-center justify-between text-[10px] text-slate-400">
-                                        <span className="text-amber-400 font-semibold">Chi đoàn {shift.auditorClass}</span>
-                                        {shift.isLiveNow && (
-                                          <span className="text-emerald-400 font-bold flex items-center gap-0.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                                      </td>
+                                    </tr>
+                                  ));
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PART II: BUỔI CHIỀU */}
+                    {(dutySessionFilter === 'ALL' || dutySessionFilter === 'Chiều') && (
+                      <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-xl space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse" />
+                            <h4 className="text-sm font-black text-indigo-400 uppercase tracking-wide">
+                              II. LỊCH TRỰC PHÂN CÔNG BUỔI CHIỀU (12 ca: Thứ 2, Thứ 3, Thứ 4, Thứ 6)
+                            </h4>
+                          </div>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            Khung giờ: 12:45 - 13:15 & 16:45 - 17:15
+                          </span>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="bg-slate-900/90 text-slate-300 border-b border-slate-700">
+                                <th className="p-3 font-bold w-24 text-center">Thời Gian</th>
+                                <th className="p-3 font-bold w-20 text-center">Lớp Trực</th>
+                                <th className="p-3 font-bold">Người Trực (Cờ Đỏ)</th>
+                                <th className="p-3 font-bold w-32 text-center">Chấm Điểm Lớp</th>
+                                <th className="p-3 font-bold">Khu Vực Trực</th>
+                                <th className="p-3 font-bold w-28 text-center">Trạng Thái</th>
+                                <th className="p-3 font-bold w-24 text-center">Thao Tác</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/60">
+                              {afternoonDuties.length === 0 ? (
+                                <tr>
+                                  <td colSpan={7} className="p-6 text-center text-slate-500">
+                                    Không tìm thấy ca trực buổi chiều nào khớp với bộ lọc.
+                                  </td>
+                                </tr>
+                              ) : (
+                                dayOrder.map(day => {
+                                  const dayShifts = afternoonDuties.filter(d => d.day === day);
+                                  if (dayShifts.length === 0) return null;
+
+                                  return dayShifts.map((shift, idx) => (
+                                    <tr key={shift.id} className="hover:bg-slate-800/30 transition-colors">
+                                      {idx === 0 && (
+                                        <td
+                                          rowSpan={dayShifts.length}
+                                          className="p-3 font-bold text-center text-indigo-300 bg-slate-900/60 border-r border-slate-800 align-middle"
+                                        >
+                                          <span className="text-sm font-extrabold block">{getDayLabel(day)}</span>
+                                          <span className="text-[10px] text-slate-400 block font-normal">({dayShifts.length} ca)</span>
+                                        </td>
+                                      )}
+                                      <td className="p-3 font-bold text-center text-white bg-slate-900/20">
+                                        <span className="px-2 py-0.5 rounded-md bg-slate-800 text-indigo-300 font-bold border border-slate-700">
+                                          {shift.auditorClass}
+                                        </span>
+                                      </td>
+                                      <td className="p-3 font-bold text-white">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-indigo-400">👤</span>
+                                          <span>{shift.auditorName}</span>
+                                        </div>
+                                      </td>
+                                      <td className="p-3 font-bold text-center">
+                                        <span className="px-2 py-1 rounded-lg bg-indigo-950/80 text-indigo-300 border border-indigo-800/80 text-[11px] font-bold">
+                                          {shift.targetClasses || 'Toàn trường'}
+                                        </span>
+                                      </td>
+                                      <td className="p-3 text-slate-300 font-medium">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs">📍</span>
+                                          <span>{shift.zone}</span>
+                                        </div>
+                                      </td>
+                                      <td className="p-3 text-center">
+                                        {shift.isLiveNow ? (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                                             Đang trực
                                           </span>
+                                        ) : (
+                                          <span className="text-slate-500 text-[10px]">Đã lên lịch</span>
                                         )}
-                                      </div>
-                                      <p className="text-[10px] text-slate-500 font-mono line-clamp-1">{shift.shiftTime}</p>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      onClick={() => {
-                                        setEditingDuty(null);
-                                        setDutyForm({
-                                          weekNumber: dutyWeekFilter,
-                                          day: day,
-                                          zone: zone,
-                                          auditorId: users.find(u => u.role === 'auditor')?.id || 'codo_nam',
-                                          auditorName: users.find(u => u.role === 'auditor')?.name || 'Nguyễn Văn Nam',
-                                          auditorClass: '11/2',
-                                          shiftTime: '06:45 - 07:15 & 11:15 - 11:45',
-                                          isLiveNow: true
-                                        });
-                                        setIsDutyModalOpen(true);
-                                      }}
-                                      className="w-full py-3.5 border border-dashed border-slate-800 hover:border-slate-600 rounded-xl text-[10px] text-slate-600 hover:text-slate-400 hover:bg-slate-900/50 flex flex-col items-center justify-center transition-all"
-                                    >
-                                      <span>+ Phân công</span>
-                                    </button>
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                                      </td>
+                                      <td className="p-3 text-center">
+                                        <div className="flex items-center justify-center gap-1">
+                                          <button
+                                            onClick={() => {
+                                              setEditingDuty(shift);
+                                              setDutyForm({
+                                                weekNumber: shift.weekNumber,
+                                                day: shift.day,
+                                                zone: shift.zone,
+                                                auditorId: shift.auditorId,
+                                                auditorName: shift.auditorName,
+                                                auditorClass: shift.auditorClass,
+                                                shiftTime: shift.shiftTime,
+                                                isLiveNow: !!shift.isLiveNow,
+                                                targetClasses: shift.targetClasses || '',
+                                                session: shift.session || 'Chiều'
+                                              });
+                                              setIsDutyModalOpen(true);
+                                            }}
+                                            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors"
+                                            title="Sửa ca trực"
+                                          >
+                                            <Edit3 className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              if (confirm(`Xóa phân công của ${shift.auditorName} lớp ${shift.auditorClass} (${getDayLabel(shift.day)})?`)) {
+                                                deleteDutyAssignment(shift.id);
+                                              }
+                                            }}
+                                            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition-colors"
+                                            title="Xóa ca trực"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ));
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              {/* AUDITORS MEMBERS & ZONES CRUD SECTION */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* ================= VIEW MODE 2: MATRIX BY ZONE & DAY ================= */}
+                {dutyViewMode === 'matrix' && (
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <h4 className="text-xs font-black text-white uppercase">
+                        MA TRẬN PHÂN BỔ CA TRỰC THEO KHU VỰC VÀ THỨ TRONG TUẦN
+                      </h4>
+                      <span className="text-[11px] text-slate-400">
+                        Hiển thị tất cả ca trực Sáng / Chiều theo khu vực
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-950 text-slate-300 border-b border-slate-800">
+                            <th className="p-3 font-bold w-52">Khu Vực Giám Sát</th>
+                            {dayOrder.map(d => (
+                              <th key={d} className="p-3 font-bold text-center">
+                                <span className="text-amber-400">{d}</span>
+                                <span className="block text-[10px] text-slate-400 font-normal">
+                                  {getDayLabel(d)}
+                                </span>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60">
+                          {zones.map(zoneObj => {
+                            const zone = zoneObj.name;
+                            return (
+                              <tr key={zoneObj.id} className="hover:bg-slate-800/20">
+                                <td className="p-3 font-bold text-white bg-slate-900/80 border-r border-slate-800/80 align-top">
+                                  <div className="flex items-center gap-2">
+                                    <span className="p-1.5 rounded-lg bg-slate-800 text-amber-400 text-sm">
+                                      {zoneObj.icon || '📍'}
+                                    </span>
+                                    <div>
+                                      <p className="font-bold text-white">{zone}</p>
+                                      {zoneObj.description && (
+                                        <p className="text-[10px] text-slate-400 font-normal">{zoneObj.description}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                {dayOrder.map(day => {
+                                  const cellShifts = currentWeekDuties.filter(d => 
+                                    d.day === day && (d.zone === zone || d.zone.includes(zone) || zone.includes(d.zone))
+                                  );
+
+                                  return (
+                                    <td key={day} className="p-2 align-top">
+                                      <div className="space-y-1.5">
+                                        {cellShifts.map(shift => (
+                                          <div
+                                            key={shift.id}
+                                            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all space-y-1 text-[11px]"
+                                          >
+                                            <div className="flex items-center justify-between gap-1">
+                                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                                shift.session === 'Chiều' 
+                                                  ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' 
+                                                  : 'bg-amber-950 text-amber-300 border border-amber-800'
+                                              }`}>
+                                                {shift.session || 'Sáng'}
+                                              </span>
+                                              <div className="flex items-center gap-0.5">
+                                                <button
+                                                  onClick={() => {
+                                                    setEditingDuty(shift);
+                                                    setDutyForm({
+                                                      weekNumber: shift.weekNumber,
+                                                      day: shift.day,
+                                                      zone: shift.zone,
+                                                      auditorId: shift.auditorId,
+                                                      auditorName: shift.auditorName,
+                                                      auditorClass: shift.auditorClass,
+                                                      shiftTime: shift.shiftTime,
+                                                      isLiveNow: !!shift.isLiveNow,
+                                                      targetClasses: shift.targetClasses || '',
+                                                      session: shift.session || 'Sáng'
+                                                    });
+                                                    setIsDutyModalOpen(true);
+                                                  }}
+                                                  className="p-0.5 rounded text-slate-400 hover:text-amber-400"
+                                                >
+                                                  <Edit3 className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                  onClick={() => {
+                                                    if (confirm(`Xóa ca trực của ${shift.auditorName}?`)) {
+                                                      deleteDutyAssignment(shift.id);
+                                                    }
+                                                  }}
+                                                  className="p-0.5 rounded text-slate-400 hover:text-rose-400"
+                                                >
+                                                  <Trash2 className="w-3 h-3" />
+                                                </button>
+                                              </div>
+                                            </div>
+                                            <p className="font-bold text-white truncate">{shift.auditorName}</p>
+                                            <p className="text-[10px] text-amber-400 font-semibold">Lớp {shift.auditorClass}</p>
+                                            {shift.targetClasses && (
+                                              <p className="text-[9px] text-red-300 font-mono truncate">Chấm: {shift.targetClasses}</p>
+                                            )}
+                                          </div>
+                                        ))}
+
+                                        <button
+                                          onClick={() => {
+                                            setEditingDuty(null);
+                                            setDutyForm({
+                                              weekNumber: dutyWeekFilter,
+                                              day: day,
+                                              zone: zone,
+                                              auditorId: auditors[0]?.id || 'codo_12_1_1',
+                                              auditorName: auditors[0]?.name || 'Đặng Cát Diệu',
+                                              auditorClass: auditors[0]?.classId || '12/1',
+                                              shiftTime: '06:45 - 07:15 & 11:15 - 11:45',
+                                              isLiveNow: true,
+                                              targetClasses: '10/1, 10/2',
+                                              session: 'Sáng'
+                                            });
+                                            setIsDutyModalOpen(true);
+                                          }}
+                                          className="w-full py-2 border border-dashed border-slate-800 hover:border-slate-600 rounded-xl text-[10px] text-slate-500 hover:text-slate-300 hover:bg-slate-900/50 flex items-center justify-center transition-all"
+                                        >
+                                          <span>+ Thêm ca</span>
+                                        </button>
+                                      </div>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* AUDITORS MEMBERS & ZONES CRUD SECTION */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* 1. Auditors List CRUD */}
                 <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -4613,7 +5728,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1 shadow-glow"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>+ Thêm Cán Bộ</span>
+                      <span>Thêm Cán Bộ</span>
                     </button>
                   </div>
 
@@ -4702,7 +5817,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1 shadow-glow"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>+ Thêm Khu Vực</span>
+                      <span>Thêm Khu Vực</span>
                     </button>
                   </div>
 
@@ -4760,7 +5875,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 </div>
               </div>
             </div>
-          )}
+          );
+        })()}
 
           {/* Master Sub-Tab 4: WEEKS */}
           {operationsSubTab === 'weeks' && (
@@ -4897,7 +6013,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow transition-all active:scale-95"
                         >
                           <Plus className="w-4 h-4" />
-                          <span>+ Thêm Tuần</span>
+                          <span>Thêm Tuần</span>
                         </button>
                       </div>
                     </div>
@@ -5409,13 +6525,26 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             <div className="flex flex-wrap bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold gap-1">
               <button
                 type="button"
-                onClick={() => setMediaHubSubTab('news')}
-                className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${mediaHubSubTab === 'news'
-                  ? 'bg-blue-600 text-white shadow-glow'
+                onClick={() => setMediaHubSubTab('documents')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${mediaHubSubTab === 'documents'
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-glow'
+                  : 'text-amber-400 hover:text-white hover:bg-amber-950/40'
+                  }`}
+              >
+                <Folder className="w-3.5 h-3.5" />
+                <span>📁 Kho Văn Bản & Biểu Mẫu ({documentFiles?.length || 0})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMediaHubSubTab('news_events')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${(mediaHubSubTab === 'news_events' || mediaHubSubTab === 'news' || mediaHubSubTab === 'events')
+                  ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 text-white shadow-glow'
                   : 'text-slate-400 hover:text-white'
                   }`}
               >
-                <span>📰 Bản Tin Phong Trào ({news.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length})</span>
+                <Newspaper className="w-3.5 h-3.5" />
+                <span>📰🏆 Bản Tin & Sự Kiện ({news.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length + events.length})</span>
               </button>
 
               <button
@@ -5442,17 +6571,6 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
               <button
                 type="button"
-                onClick={() => setMediaHubSubTab('events')}
-                className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${mediaHubSubTab === 'events'
-                  ? 'bg-emerald-600 text-white shadow-glow'
-                  : 'text-slate-400 hover:text-white'
-                  }`}
-              >
-                <span>🏆 Sự Kiện Phong Trào ({events.length})</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setMediaHubSubTab('activity_reports')}
                 className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${mediaHubSubTab === 'activity_reports'
                   ? 'bg-purple-600 text-white shadow-glow'
@@ -5467,126 +6585,350 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   </span>
                 )}
               </button>
+
+              <button
+                type="button"
+                onClick={() => setMediaHubSubTab('media_library')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${mediaHubSubTab === 'media_library'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-glow'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                <span>🖼️ Kho Media & Ảnh ({mediaAssets?.length || 0})</span>
+              </button>
             </div>
           </div>
 
-          {/* Sub-Tab 3.1: News CRUD */}
-          {mediaHubSubTab === 'news' && (
-            <div className="space-y-4 animate-fadeIn">
-              <div className="flex items-center justify-between pb-1">
+          {/* Sub-Tab 3.1: Merged News & Events Hub */}
+          {(mediaHubSubTab === 'news_events' || mediaHubSubTab === 'news' || mediaHubSubTab === 'events') && (
+            <div className="space-y-5 animate-fadeIn">
+              {/* Header & Action Buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
                 <div>
-                  <h4 className="text-xs font-bold text-slate-300">BÀI VIẾT PHONG TRÀO & HOẠT ĐỘNG THANH NIÊN</h4>
-                  <p className="text-[11px] text-slate-400">Đăng bài viết phong trào, hoạt động tình nguyện, đại hội và hình ảnh sự kiện</p>
+                  <h4 className="text-sm font-black text-white flex items-center gap-2">
+                    <Newspaper className="w-4 h-4 text-emerald-400" />
+                    <span>BẢN TIN & SỰ KIỆN PHONG TRÀO ĐOÀN TRƯỜNG</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Quản lý toàn bộ bài viết truyền thông, phong trào thanh niên, giải thể thao và mã QR điểm danh học sinh
+                  </p>
                 </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingNews(null);
+                      setNewsForm({
+                        title: '',
+                        excerpt: '',
+                        content: '',
+                        thumbnail: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&auto=format&fit=crop&q=80',
+                        tags: '#PhongTrao, #HoatDongDoan',
+                        isPinned: false,
+                        attachments: []
+                      });
+                      setIsNewsModalOpen(true);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow active:scale-95 transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Thêm Bản Tin Mới</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingEvent(null);
+                      setEventForm({
+                        title: '',
+                        description: '',
+                        category: 'Phong trào',
+                        thumbnail: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&auto=format&fit=crop&q=80',
+                        location: 'Sân lễ trường THPT Quang Trung',
+                        startDate: '2026-09-05',
+                        endDate: '2026-09-05',
+                        bonusPoints: 15,
+                        maxSlots: 50,
+                        isRegistrationOpen: true,
+                        qrCodeValue: `EVT-${Date.now()}`
+                      });
+                      setIsEventModalOpen(true);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow active:scale-95 transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Thêm Sự Kiện Mới</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-Filter Segments Switcher */}
+              <div className="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 w-fit text-xs font-bold">
                 <button
-                  onClick={() => {
-                    setEditingNews(null);
-                    setNewsForm({
-                      title: '',
-                      excerpt: '',
-                      content: '',
-                      thumbnail: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&auto=format&fit=crop&q=80',
-                      tags: '#PhongTrao, #HoatDongDoan',
-                      isPinned: false,
-                      attachments: []
-                    });
-                    setIsNewsModalOpen(true);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow"
+                  type="button"
+                  onClick={() => setNewsEventsViewFilter('ALL')}
+                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${newsEventsViewFilter === 'ALL'
+                    ? 'bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-glow'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>+ Thêm Bản Tin Mới</span>
+                  <span>🌟 Tất Cả</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/30 text-white/90">
+                    {news.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length + events.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNewsEventsViewFilter('events')}
+                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${newsEventsViewFilter === 'events'
+                    ? 'bg-emerald-600 text-white shadow-glow'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  <span>🏆 Sự Kiện Phong Trào</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800">
+                    {events.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNewsEventsViewFilter('news')}
+                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${newsEventsViewFilter === 'news'
+                    ? 'bg-blue-600 text-white shadow-glow'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  <span>📰 Bài Viết & Bản Tin</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-950 text-blue-300 border border-blue-800">
+                    {news.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length}
+                  </span>
                 </button>
               </div>
 
-              <div className="space-y-3">
-                {news.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).map(article => (
-                  <div
-                    key={article.id}
-                    className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs transition-all"
-                  >
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={article.thumbnail}
-                        alt={article.title}
-                        className="w-20 h-16 object-cover rounded-xl border border-slate-700 shrink-0"
-                      />
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="px-2 py-0.5 rounded bg-blue-950 text-blue-300 font-extrabold text-[9px] border border-blue-800">
-                            📰 BẢN TIN
-                          </span>
-                          {article.isPinned && (
-                            <span className="px-2 py-0.5 rounded bg-red-600 text-white font-black text-[9px] flex items-center gap-1">
-                              <Pin className="w-2.5 h-2.5" /> GHIM
-                            </span>
-                          )}
-                          {article.isHidden && (
-                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-bold text-[9px]">
-                              ẨN
-                            </span>
-                          )}
-                          {article.attachments && article.attachments.length > 0 && (
-                            <span className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 font-bold text-[9px] flex items-center gap-1 border border-slate-700">
-                              <Paperclip className="w-2.5 h-2.5" /> {article.attachments.length} file đính kèm
-                            </span>
-                          )}
-                          <span className="text-slate-400 text-[10px]">• {article.publishDate}</span>
-                          <span className="text-amber-400 text-[10px]">Bởi: {article.author}</span>
+              {/* Section: SỰ KIỆN PHONG TRÀO */}
+              {(newsEventsViewFilter === 'ALL' || newsEventsViewFilter === 'events') && (
+                <div className="space-y-3">
+                  {newsEventsViewFilter === 'ALL' && (
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                      <h5 className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <span>🏆 SỰ KIỆN & HOẠT ĐỘNG PHONG TRÀO ({events.length})</span>
+                      </h5>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {events.map(ev => (
+                      <div
+                        key={ev.id}
+                        className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-emerald-500/40 space-y-3 transition-all flex flex-col justify-between"
+                      >
+                        <div className="space-y-3">
+                          <div className="relative h-36 rounded-xl overflow-hidden border border-slate-700">
+                            <img
+                              src={ev.thumbnail}
+                              alt={ev.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-950/90 text-emerald-300 font-extrabold text-[10px] border border-emerald-700">
+                                {ev.category}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-amber-950/90 text-amber-300 font-extrabold text-[10px] border border-amber-700">
+                                +{ev.bonusPoints}đ Phong trào
+                              </span>
+                            </div>
+                            <div className="absolute top-2 right-2">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${ev.isRegistrationOpen
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-slate-800 text-slate-400'
+                                }`}>
+                                {ev.isRegistrationOpen ? 'Đang Mở Đăng Ký' : 'Đã Đóng'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <h4 className="font-extrabold text-white text-sm">{ev.title}</h4>
+                            <p className="text-slate-300 text-xs line-clamp-2">{ev.description}</p>
+
+                            <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-400 pt-1">
+                              <span>📍 {ev.location}</span>
+                              <span>📅 {ev.startDate}</span>
+                            </div>
+                          </div>
                         </div>
 
-                        <h4 className="font-extrabold text-white text-sm line-clamp-1">{article.title}</h4>
-                        <p className="text-slate-400 text-[11px] line-clamp-1">{article.excerpt}</p>
+                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                          <div className="space-y-0.5">
+                            <span className="text-[11px] text-slate-300">
+                              Đăng ký: <strong>{ev.registeredCount}/{ev.maxSlots}</strong> HS
+                            </span>
+                            <div className="text-[10px] text-emerald-400 font-mono">
+                              Mã QR: {ev.qrCodeValue}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-1.5">
+                            <button
+                              onClick={() => {
+                                setEditingEvent(ev);
+                                setEventForm({
+                                  title: ev.title,
+                                  description: ev.description,
+                                  category: ev.category,
+                                  thumbnail: ev.thumbnail,
+                                  location: ev.location,
+                                  startDate: ev.startDate,
+                                  endDate: ev.endDate,
+                                  bonusPoints: ev.bonusPoints,
+                                  maxSlots: ev.maxSlots,
+                                  isRegistrationOpen: ev.isRegistrationOpen,
+                                  qrCodeValue: ev.qrCodeValue
+                                });
+                                setIsEventModalOpen(true);
+                              }}
+                              title="Chỉnh sửa sự kiện"
+                              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition-colors"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                if (confirm(`Bạn có chắc muốn xóa sự kiện "${ev.title}"?`)) {
+                                  deleteEvent(ev.id);
+                                }
+                              }}
+                              title="Xóa sự kiện"
+                              className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950 text-rose-400 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
 
-                    <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
-                      <button
-                        onClick={() => toggleNewsVisibility(article.id)}
-                        title={article.isHidden ? 'Hiển thị ra trang chủ' : 'Ẩn khỏi trang chủ'}
-                        className={`p-2 rounded-xl border text-xs font-bold transition-colors ${article.isHidden
-                          ? 'bg-slate-900 border-slate-700 text-slate-400'
-                          : 'bg-emerald-950 border-emerald-800 text-emerald-300'
-                          }`}
-                      >
-                        {article.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setEditingNews(article);
-                          setNewsForm({
-                            title: article.title,
-                            excerpt: article.excerpt,
-                            content: article.content,
-                            thumbnail: article.thumbnail,
-                            tags: article.tags.join(', '),
-                            isPinned: article.isPinned,
-                            attachments: article.attachments || []
-                          });
-                          setIsNewsModalOpen(true);
-                        }}
-                        title="Chỉnh sửa bản tin"
-                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition-colors"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          if (confirm(`Bạn có chắc muốn xóa bản tin "${article.title}"?`)) {
-                            deleteNewsPost(article.id);
-                          }
-                        }}
-                        title="Xóa bản tin"
-                        className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950 text-rose-400 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    {events.length === 0 && (
+                      <div className="col-span-2 p-8 text-center bg-slate-950 rounded-2xl border border-slate-800 text-slate-400 text-xs">
+                        Chưa có sự kiện phong trào nào. Nhấn "Thêm Sự Kiện Mới" để tạo.
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {/* Section: BẢN TIN PHONG TRÀO */}
+              {(newsEventsViewFilter === 'ALL' || newsEventsViewFilter === 'news') && (
+                <div className="space-y-3">
+                  {newsEventsViewFilter === 'ALL' && (
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-800/80">
+                      <h5 className="text-xs font-black uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                        <span>📰 BÀI VIẾT & BẢN TIN HOẠT ĐỘNG ({news.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length})</span>
+                      </h5>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    {news.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).map(article => (
+                      <div
+                        key={article.id}
+                        className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-blue-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs transition-all"
+                      >
+                        <div className="flex items-start gap-3">
+                          <img
+                            src={article.thumbnail}
+                            alt={article.title}
+                            className="w-20 h-16 object-cover rounded-xl border border-slate-700 shrink-0"
+                          />
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded bg-blue-950 text-blue-300 font-extrabold text-[9px] border border-blue-800">
+                                📰 BẢN TIN
+                              </span>
+                              {article.isPinned && (
+                                <span className="px-2 py-0.5 rounded bg-red-600 text-white font-black text-[9px] flex items-center gap-1">
+                                  <Pin className="w-2.5 h-2.5" /> GHIM
+                                </span>
+                              )}
+                              {article.isHidden && (
+                                <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-bold text-[9px]">
+                                  ẨN
+                                </span>
+                              )}
+                              {article.attachments && article.attachments.length > 0 && (
+                                <span className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 font-bold text-[9px] flex items-center gap-1 border border-slate-700">
+                                  <Paperclip className="w-2.5 h-2.5" /> {article.attachments.length} file đính kèm
+                                </span>
+                              )}
+                              <span className="text-slate-400 text-[10px]">• {article.publishDate}</span>
+                              <span className="text-amber-400 text-[10px]">Bởi: {article.author}</span>
+                            </div>
+
+                            <h4 className="font-extrabold text-white text-sm line-clamp-1">{article.title}</h4>
+                            <p className="text-slate-400 text-[11px] line-clamp-1">{article.excerpt}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                          <button
+                            onClick={() => toggleNewsVisibility(article.id)}
+                            title={article.isHidden ? 'Hiển thị ra trang chủ' : 'Ẩn khỏi trang chủ'}
+                            className={`p-2 rounded-xl border text-xs font-bold transition-colors ${article.isHidden
+                              ? 'bg-slate-900 border-slate-700 text-slate-400'
+                              : 'bg-emerald-950 border-emerald-800 text-emerald-300'
+                              }`}
+                          >
+                            {article.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setEditingNews(article);
+                              setNewsForm({
+                                title: article.title,
+                                excerpt: article.excerpt,
+                                content: article.content,
+                                thumbnail: article.thumbnail,
+                                tags: article.tags.join(', '),
+                                isPinned: article.isPinned,
+                                attachments: article.attachments || []
+                              });
+                              setIsNewsModalOpen(true);
+                            }}
+                            title="Chỉnh sửa bản tin"
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (confirm(`Bạn có chắc muốn xóa bản tin "${article.title}"?`)) {
+                                deleteNewsPost(article.id);
+                              }
+                            }}
+                            title="Xóa bản tin"
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950 text-rose-400 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {news.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length === 0 && (
+                      <div className="p-8 text-center bg-slate-950 rounded-2xl border border-slate-800 text-slate-400 text-xs">
+                        Chưa có bản tin bài viết nào. Nhấn "Thêm Bản Tin Mới" để đăng bài.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -5616,7 +6958,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>+ Ban Hành Thông Báo Mới</span>
+                  <span>Ban Hành Thông Báo Mới</span>
                 </button>
               </div>
 
@@ -5736,7 +7078,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>+ Phát Lệnh Điều Động Mới</span>
+                  <span>Phát Lệnh Điều Động Mới</span>
                 </button>
               </div>
 
@@ -5768,9 +7110,9 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         </div>
 
                         <h4 className="font-extrabold text-white text-sm">{item.title}</h4>
-                        <p className="text-slate-300 text-[11px] leading-relaxed bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/80">
-                          {item.content}
-                        </p>
+                        <div className="text-slate-300 text-[11px] leading-relaxed bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/80">
+                          <RichTextViewer content={item.content} compact />
+                        </div>
                         <p className="text-[10px] text-slate-400 pt-0.5">
                           Người phát lệnh: <strong>{item.assignedBy}</strong> • Tạo lúc: {item.createdAt}
                         </p>
@@ -5829,147 +7171,14 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
                 {notices.length === 0 && (
                   <div className="p-8 text-center bg-slate-950 rounded-2xl border border-slate-800 text-slate-400 text-xs">
-                    Chưa có lệnh điều động hoặc nhiệm vụ lao động nào. Nhấn "+ Phát Lệnh Điều Động Mới" để tạo.
+                    Chưa có lệnh điều động hoặc nhiệm vụ lao động nào. Nhấn "Phát Lệnh Điều Động Mới" để tạo.
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Sub-Tab 3.4: Youth Events Admin */}
-          {mediaHubSubTab === 'events' && (
-            <div className="space-y-4 animate-fadeIn">
-              <div className="flex items-center justify-between pb-1">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-300">SỰ KIỆN & HOẠT ĐỘNG PHONG TRÀO ĐOÀN TRƯỜNG</h4>
-                  <p className="text-[11px] text-slate-400">Tổ chức các phong trào thi đua, hội đồng diễn, giải thể thao và quản lý điểm danh QR Code</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setEditingEvent(null);
-                    setEventForm({
-                      title: '',
-                      description: '',
-                      category: 'Phong trào',
-                      thumbnail: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&auto=format&fit=crop&q=80',
-                      location: 'Sân lễ trường THPT Quang Trung',
-                      startDate: '2026-09-05',
-                      endDate: '2026-09-05',
-                      bonusPoints: 15,
-                      maxSlots: 50,
-                      isRegistrationOpen: true,
-                      qrCodeValue: `EVT-${Date.now()}`
-                    });
-                    setIsEventModalOpen(true);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+ Thêm Sự Kiện Mới</span>
-                </button>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {events.map(ev => (
-                  <div
-                    key={ev.id}
-                    className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 space-y-3 transition-all flex flex-col justify-between"
-                  >
-                    <div className="space-y-3">
-                      <div className="relative h-36 rounded-xl overflow-hidden border border-slate-700">
-                        <img
-                          src={ev.thumbnail}
-                          alt={ev.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                          <span className="px-2 py-0.5 rounded-md bg-emerald-950/90 text-emerald-300 font-extrabold text-[10px] border border-emerald-700">
-                            {ev.category}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-md bg-amber-950/90 text-amber-300 font-extrabold text-[10px] border border-amber-700">
-                            +{ev.bonusPoints}đ Phong trào
-                          </span>
-                        </div>
-                        <div className="absolute top-2 right-2">
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${ev.isRegistrationOpen
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-slate-800 text-slate-400'
-                            }`}>
-                            {ev.isRegistrationOpen ? 'Đang Mở Đăng Ký' : 'Đã Đóng'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-extrabold text-white text-sm">{ev.title}</h4>
-                        <p className="text-slate-300 text-xs line-clamp-2">{ev.description}</p>
-
-                        <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-400 pt-1">
-                          <span>📍 {ev.location}</span>
-                          <span>📅 {ev.startDate}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                      <div className="space-y-0.5">
-                        <span className="text-[11px] text-slate-300">
-                          Đăng ký: <strong>{ev.registeredCount}/{ev.maxSlots}</strong> HS
-                        </span>
-                        <div className="text-[10px] text-emerald-400 font-mono">
-                          Mã QR: {ev.qrCodeValue}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-1.5">
-                        <button
-                          onClick={() => {
-                            setEditingEvent(ev);
-                            setEventForm({
-                              title: ev.title,
-                              description: ev.description,
-                              category: ev.category,
-                              thumbnail: ev.thumbnail,
-                              location: ev.location,
-                              startDate: ev.startDate,
-                              endDate: ev.endDate,
-                              bonusPoints: ev.bonusPoints,
-                              maxSlots: ev.maxSlots,
-                              isRegistrationOpen: ev.isRegistrationOpen,
-                              qrCodeValue: ev.qrCodeValue
-                            });
-                            setIsEventModalOpen(true);
-                          }}
-                          title="Chỉnh sửa sự kiện"
-                          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition-colors"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            if (confirm(`Bạn có chắc muốn xóa sự kiện "${ev.title}"?`)) {
-                              deleteEvent(ev.id);
-                            }
-                          }}
-                          title="Xóa sự kiện"
-                          className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950 text-rose-400 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {events.length === 0 && (
-                  <div className="col-span-2 p-8 text-center bg-slate-950 rounded-2xl border border-slate-800 text-slate-400 text-xs">
-                    Chưa có sự kiện phong trào nào. Nhấn "+ Thêm Sự Kiện Mới" để tạo.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Sub-Tab 3.5: Activity Participant Reports from Youth Secretaries */}
           {mediaHubSubTab === 'activity_reports' && (
@@ -6322,6 +7531,357 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
               </div>
             </div>
           )}
+
+          {/* Sub-Tab 3.6: Centralized Media & Image Library Hub */}
+          {mediaHubSubTab === 'media_library' && (
+            <div className="space-y-4 animate-fadeIn">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                <div>
+                  <h4 className="text-sm font-black text-white flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-pink-400" />
+                    <span>QUẢN TRỊ TÀI NGUYÊN & KHO MEDIA TOÀN TRƯỜNG</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Quản lý tập trung toàn bộ thư mục hình ảnh, tư liệu minh chứng, tài nguyên công khai & nội bộ theo cấu trúc cây thư mục
+                  </p>
+                </div>
+              </div>
+              <ResourceManagerView isEmbedded={true} />
+            </div>
+          )}
+
+          {/* Sub-Tab 3.7: Document & Folder Repository Management */}
+          {mediaHubSubTab === 'documents' && (
+            <div className="space-y-5 animate-fadeIn">
+              {/* Header & Quick Action */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-2">
+                    <Folder className="w-4 h-4 text-amber-500" />
+                    <span>KHO VĂN BẢN, BIỂU MẪU & TÀI LIỆU ĐOÀN THANH NIÊN</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Quản trị cây thư mục phân cấp, văn bản chỉ đạo, nghị quyết, biểu mẫu sinh hoạt Đoàn và cẩm nang công tác
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsGlobalDocumentModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold flex items-center gap-2 shadow-glow transition-all active:scale-95"
+                  >
+                    <FolderPlus className="w-4 h-4" />
+                    <span>Mở Trình Quản Lý Thư Mục Toàn Diện</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* KPI Stat Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-2xl flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Tổng văn bản</p>
+                    <p className="text-lg font-black text-white">{documentFiles?.length || 0}</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-2xl flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                    <Folder className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Thư mục phân cấp</p>
+                    <p className="text-lg font-black text-blue-400">{documentFolders?.length || 0}</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-2xl flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Công khai cổng Đoàn</p>
+                    <p className="text-lg font-black text-emerald-400">
+                      {documentFiles?.filter((d) => d.isPublic).length || 0}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-2xl flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+                    <Download className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Tổng lượt tải</p>
+                    <p className="text-lg font-black text-purple-400">
+                      {documentFiles?.reduce((acc, f) => acc + (f.downloadCount || 0), 0) || 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Folder Quick Filter Bar */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                <button
+                  type="button"
+                  onClick={() => setDocFolderFilter('ALL')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                    docFolderFilter === 'ALL'
+                      ? 'bg-amber-600 text-white shadow-glow'
+                      : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Folder className="w-3.5 h-3.5" />
+                  <span>Tất cả thư mục ({documentFiles?.length || 0})</span>
+                </button>
+                {documentFolders?.map((folder) => {
+                  const count = documentFiles?.filter((f) => f.folderId === folder.id).length || 0;
+                  return (
+                    <button
+                      key={folder.id}
+                      type="button"
+                      onClick={() => setDocFolderFilter(folder.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                        docFolderFilter === folder.id
+                          ? 'bg-amber-600 text-white shadow-glow'
+                          : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Folder className="w-3.5 h-3.5" style={{ color: folder.color || '#f59e0b' }} />
+                      <span>{folder.name}</span>
+                      <span className="text-[10px] opacity-75 bg-black/30 px-1.5 py-0.2 rounded-full">
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search & Category Filter */}
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <div className="relative flex-1 w-full">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    value={docSearchQuery}
+                    onChange={(e) => setDocSearchQuery(e.target.value)}
+                    placeholder="Tìm theo tên tài liệu, số hiệu văn bản (Số: ...), người ký hoặc thẻ tag..."
+                    className="w-full pl-9 pr-8 py-2 bg-slate-900/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                  {docSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setDocSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <select
+                    value={docCategoryFilter}
+                    onChange={(e) => setDocCategoryFilter(e.target.value)}
+                    className="px-3 py-2 bg-slate-900/80 border border-slate-800 rounded-xl text-xs text-slate-300 focus:outline-none focus:border-amber-500 w-full sm:w-auto"
+                  >
+                    <option value="ALL">Tất cả chuyên mục</option>
+                    <option value="form">📋 Biểu mẫu & Đơn từ</option>
+                    <option value="directive">⚖️ Chỉ đạo & Nghị quyết</option>
+                    <option value="plan">📅 Kế hoạch & Chương trình</option>
+                    <option value="report">📊 Báo cáo & Tổng kết</option>
+                    <option value="handbook">📘 Cẩm nang & Hướng dẫn</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Document List Display */}
+              {(() => {
+                const filteredDocs = (documentFiles || []).filter((doc) => {
+                  const matchFolder = docFolderFilter === 'ALL' || doc.folderId === docFolderFilter;
+                  const matchCategory = docCategoryFilter === 'ALL' || doc.category === docCategoryFilter;
+                  const matchSearch =
+                    !docSearchQuery ||
+                    doc.title.toLowerCase().includes(docSearchQuery.toLowerCase()) ||
+                    (doc.documentNumber && doc.documentNumber.toLowerCase().includes(docSearchQuery.toLowerCase())) ||
+                    (doc.signer && doc.signer.toLowerCase().includes(docSearchQuery.toLowerCase())) ||
+                    (doc.tags && doc.tags.some((t) => t.toLowerCase().includes(docSearchQuery.toLowerCase()))) ||
+                    (doc.description && doc.description.toLowerCase().includes(docSearchQuery.toLowerCase()));
+                  return matchFolder && matchCategory && matchSearch;
+                });
+
+                if (filteredDocs.length === 0) {
+                  return (
+                    <div className="py-12 text-center rounded-2xl border border-dashed border-slate-800 bg-slate-900/30">
+                      <FileText className="w-10 h-10 text-slate-600 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm font-semibold text-slate-400">Không tìm thấy tài liệu / văn bản phù hợp</p>
+                      <p className="text-xs text-slate-500 mt-1">Thử thay đổi bộ lọc tìm kiếm hoặc mở Trình Quản Lý Thư Mục để tải tệp mới</p>
+                      <button
+                        type="button"
+                        onClick={() => setIsGlobalDocumentModalOpen(true)}
+                        className="mt-4 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-glow"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Tải tệp văn bản mới lên</span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {filteredDocs.map((doc) => {
+                      const folder = documentFolders?.find((f) => f.id === doc.folderId);
+                      const formatConfig: Record<string, { label: string; bg: string; text: string; border: string }> = {
+                        pdf: { label: 'PDF', bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/30' },
+                        docx: { label: 'DOCX', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30' },
+                        doc: { label: 'DOC', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30' },
+                        xlsx: { label: 'XLSX', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+                        xls: { label: 'XLS', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+                        pptx: { label: 'PPTX', bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/30' },
+                        zip: { label: 'ZIP', bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/30' },
+                        image: { label: 'ẢNH', bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/30' },
+                        other: { label: 'FILE', bg: 'bg-slate-500/10', text: 'text-slate-400', border: 'border-slate-500/30' }
+                      };
+                      const fmt = formatConfig[doc.fileType] || formatConfig.other;
+
+                      return (
+                        <div
+                          key={doc.id}
+                          className="bg-slate-900/70 border border-slate-800 hover:border-amber-500/40 rounded-2xl p-3.5 space-y-3 transition-all hover:shadow-lg flex flex-col justify-between group"
+                        >
+                          <div className="space-y-2">
+                            {/* Badges row */}
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border ${fmt.bg} ${fmt.text} ${fmt.border}`}>
+                                {fmt.label}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                {doc.isPinned && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-0.5">
+                                    <Star className="w-2.5 h-2.5 fill-amber-400" /> Ghim
+                                  </span>
+                                )}
+                                {doc.isPublic ? (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-0.5">
+                                    <Globe className="w-2.5 h-2.5" /> Công khai
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                                    Nội bộ
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Title */}
+                            <div>
+                              <h5
+                                onClick={() => {
+                                  incrementDocumentViews(doc.id);
+                                  setPreviewDocumentFile(doc);
+                                }}
+                                className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-2 cursor-pointer leading-relaxed"
+                                title={doc.title}
+                              >
+                                {doc.title}
+                              </h5>
+                              {doc.documentNumber && (
+                                <p className="text-[11px] font-mono text-amber-400/90 mt-0.5">
+                                  {doc.documentNumber}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Folder & Signer Info */}
+                            <div className="text-[11px] text-slate-400 space-y-1">
+                              {folder && (
+                                <div className="flex items-center gap-1">
+                                  <Folder className="w-3 h-3" style={{ color: folder.color || '#f59e0b' }} />
+                                  <span className="truncate">{folder.name}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between text-[10px] text-slate-500">
+                                <span>{doc.signer ? `Ký: ${doc.signer}` : (typeof doc.uploadedBy === 'object' ? (doc.uploadedBy?.name || 'Hệ thống') : (doc.uploadedBy || 'Hệ thống'))}</span>
+                                <span>{doc.fileSize}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action footer */}
+                          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <Download className="w-3 h-3" /> {doc.downloadCount || 0}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Eye className="w-3 h-3" /> {doc.viewCount || 0}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  incrementDocumentViews(doc.id);
+                                  setPreviewDocumentFile(doc);
+                                }}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                                title="Xem chi tiết văn bản"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(doc.fileUrl || doc.url || '');
+                                  alert('📋 Đã sao chép liên kết tài liệu vào bộ nhớ tạm!');
+                                }}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                                title="Sao chép link tải tài liệu"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+
+                              <a
+                                href={doc.fileUrl || doc.url}
+                                download={doc.title}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={() => incrementDocumentDownloads(doc.id)}
+                                className="p-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600 text-amber-400 hover:text-white transition-colors flex items-center gap-1 text-[10px] font-bold px-2"
+                                title="Tải xuống tệp tin"
+                              >
+                                <Download className="w-3 h-3" />
+                                <span>Tải</span>
+                              </a>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm(`Bạn có chắc muốn xóa văn bản "${doc.title}" khỏi hệ thống?`)) {
+                                    deleteDocumentFile(doc.id);
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 transition-colors"
+                                title="Xóa văn bản"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       )}
 
@@ -6357,7 +7917,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
               className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow shrink-0"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Thêm Tiêu Chí Mới</span>
+              <span>Thêm Tiêu Chí Mới</span>
             </button>
           </div>
 
@@ -6676,6 +8236,16 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
               <button
                 type="button"
+                onClick={() => setIsGlobalDocumentModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 bg-gradient-to-r from-amber-600/30 to-orange-600/30 border border-amber-500/50 text-amber-300 hover:text-white hover:from-amber-600 hover:to-orange-600 shadow-sm"
+                title="Mở kho tài liệu, biểu mẫu và cẩm nang Đoàn"
+              >
+                <Folder className="w-3.5 h-3.5 text-amber-400" />
+                <span>📁 Kho Văn Bản ({documentFiles?.length || 0})</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setSystemHubSubTab('export')}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${systemHubSubTab === 'export'
                   ? 'bg-emerald-600 text-white shadow-glow'
@@ -6747,7 +8317,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow shrink-0"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>+ Thêm Tài Khoản Mới</span>
+                  <span>Thêm Tài Khoản Mới</span>
                 </button>
               </div>
 
@@ -6995,14 +8565,16 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
                 {/* SECTION 2: BRANDING IMAGES (LOGO, TOP BANNER, FOOTER BANNER) */}
                 <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
-                  <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-amber-400" />
-                    <span>Hình Ảnh Nhận Diện: Logo, Banner Đầu Trang & Banner Chân Trang</span>
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-amber-400" />
+                      <span>Hình Ảnh Nhận Diện: Logo, Banner Đầu Trang & Banner Chân Trang</span>
+                    </h4>
+                  </div>
 
                   {/* Logo Trường Học */}
                   <div className="space-y-2">
-                    <label className="block font-bold text-slate-300">Logo Trường Học (Hỗ trợ tải trực tiếp từ máy tính):</label>
+                    <label className="block font-bold text-slate-300">Logo Trường Học (Hỗ trợ tải trực tiếp hoặc chọn từ Kho Media):</label>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                       {settingsForm.logoUrl && (
                         <img
@@ -7012,26 +8584,33 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         />
                       )}
                       <div className="flex-1 w-full space-y-2">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap sm:flex-nowrap gap-2">
                           <input
                             type="text"
                             value={settingsForm.logoUrl || ''}
                             onChange={(e) => setSettingsForm({ ...settingsForm, logoUrl: e.target.value })}
-                            placeholder="https://... hoặc bấm nút 'Tải Logo Từ Máy' bên phải"
-                            className="flex-1 p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                            placeholder="https://... hoặc chọn từ Kho Media"
+                            className="flex-1 min-w-[200px] p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                          />
+                          <MediaPickerButton
+                            category="branding"
+                            value={settingsForm.logoUrl}
+                            onSelect={(url) => setSettingsForm(prev => ({ ...prev, logoUrl: Array.isArray(url) ? url[0] : url }))}
+                            label="Kho Media Logo"
+                            className="!py-2"
                           />
                           <button
                             type="button"
                             disabled={isUploadingImage === 'logo'}
                             onClick={() => logoFileInputRef.current?.click()}
-                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-sm"
+                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-sm text-xs"
                           >
                             {isUploadingImage === 'logo' ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                             ) : (
                               <Upload className="w-3.5 h-3.5" />
                             )}
-                            <span>{isUploadingImage === 'logo' ? 'Đang tải lên Supabase...' : 'Tải Logo Từ Máy'}</span>
+                            <span>{isUploadingImage === 'logo' ? 'Đang tải...' : 'Tải File Máy'}</span>
                           </button>
                         </div>
                         <input
@@ -7049,7 +8628,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   <div className="space-y-2 pt-3 border-t border-slate-900">
                     <div className="flex items-center justify-between">
                       <label className="block font-bold text-slate-300">
-                        Logo Đoàn Thanh Niên (Huy hiệu Đoàn - Hỗ trợ tải trực tiếp từ máy tính):
+                        Logo Đoàn Thanh Niên (Huy hiệu Đoàn):
                       </label>
                       <button
                         type="button"
@@ -7075,26 +8654,33 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         />
                       </div>
                       <div className="flex-1 w-full space-y-2">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap sm:flex-nowrap gap-2">
                           <input
                             type="text"
                             value={settingsForm.youthUnionLogoUrl || ''}
                             onChange={(e) => setSettingsForm({ ...settingsForm, youthUnionLogoUrl: e.target.value })}
-                            placeholder="https://... hoặc bấm nút 'Tải Logo Đoàn Từ Máy' bên phải"
-                            className="flex-1 p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                            placeholder="https://... hoặc chọn từ Kho Media"
+                            className="flex-1 min-w-[200px] p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                          />
+                          <MediaPickerButton
+                            category="branding"
+                            value={settingsForm.youthUnionLogoUrl}
+                            onSelect={(url) => setSettingsForm(prev => ({ ...prev, youthUnionLogoUrl: Array.isArray(url) ? url[0] : url }))}
+                            label="Kho Media Huy Hiệu"
+                            className="!py-2"
                           />
                           <button
                             type="button"
                             disabled={isUploadingImage === 'youth_logo'}
                             onClick={() => youthUnionLogoFileInputRef.current?.click()}
-                            className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 shadow-glow cursor-pointer disabled:opacity-50"
+                            className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 shadow-glow cursor-pointer disabled:opacity-50 text-xs"
                           >
                             {isUploadingImage === 'youth_logo' ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                             ) : (
                               <Upload className="w-3.5 h-3.5" />
                             )}
-                            <span>{isUploadingImage === 'youth_logo' ? 'Đang tải lên Supabase...' : 'Tải Logo Đoàn Từ Máy'}</span>
+                            <span>{isUploadingImage === 'youth_logo' ? 'Đang tải...' : 'Tải File Máy'}</span>
                           </button>
                         </div>
                         <input
@@ -7125,26 +8711,33 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         </div>
                       </div>
                     )}
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2">
                       <input
                         type="text"
                         value={settingsForm.bannerTopImage || ''}
                         onChange={(e) => setSettingsForm({ ...settingsForm, bannerTopImage: e.target.value })}
-                        placeholder="https://images.unsplash.com/... hoặc bấm 'Tải Banner Đầu'"
-                        className="flex-1 p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                        placeholder="https://... hoặc chọn từ Kho Media"
+                        className="flex-1 min-w-[200px] p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                      />
+                      <MediaPickerButton
+                        category="branding"
+                        value={settingsForm.bannerTopImage}
+                        onSelect={(url) => setSettingsForm(prev => ({ ...prev, bannerTopImage: Array.isArray(url) ? url[0] : url }))}
+                        label="Kho Media Banner"
+                        className="!py-2"
                       />
                       <button
                         type="button"
                         disabled={isUploadingImage === 'top_banner'}
                         onClick={() => topBannerFileInputRef.current?.click()}
-                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-sm"
+                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-sm text-xs"
                       >
                         {isUploadingImage === 'top_banner' ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                         ) : (
                           <Upload className="w-3.5 h-3.5" />
                         )}
-                        <span>{isUploadingImage === 'top_banner' ? 'Đang tải lên Supabase...' : 'Tải Banner Đầu'}</span>
+                        <span>{isUploadingImage === 'top_banner' ? 'Đang tải...' : 'Tải File Máy'}</span>
                       </button>
                       <input
                         ref={topBannerFileInputRef}
@@ -7173,26 +8766,33 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         </div>
                       </div>
                     )}
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2">
                       <input
                         type="text"
                         value={settingsForm.footerBannerImage || ''}
                         onChange={(e) => setSettingsForm({ ...settingsForm, footerBannerImage: e.target.value })}
-                        placeholder="https://images.unsplash.com/... hoặc bấm 'Tải Banner Cuối'"
-                        className="flex-1 p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                        placeholder="https://... hoặc chọn từ Kho Media"
+                        className="flex-1 min-w-[200px] p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                      />
+                      <MediaPickerButton
+                        category="branding"
+                        value={settingsForm.footerBannerImage}
+                        onSelect={(url) => setSettingsForm(prev => ({ ...prev, footerBannerImage: Array.isArray(url) ? url[0] : url }))}
+                        label="Kho Media Banner"
+                        className="!py-2"
                       />
                       <button
                         type="button"
                         disabled={isUploadingImage === 'footer_banner'}
                         onClick={() => footerBannerFileInputRef.current?.click()}
-                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-sm"
+                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-sm text-xs"
                       >
                         {isUploadingImage === 'footer_banner' ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                         ) : (
                           <Upload className="w-3.5 h-3.5" />
                         )}
-                        <span>{isUploadingImage === 'footer_banner' ? 'Đang tải lên Supabase...' : 'Tải Banner Cuối'}</span>
+                        <span>{isUploadingImage === 'footer_banner' ? 'Đang tải...' : 'Tải File Máy'}</span>
                       </button>
                       <input
                         ref={footerBannerFileInputRef}
@@ -9067,25 +10667,35 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 />
               </div>
 
-              {/* Upload Ảnh Minh Chứng Trực Tiếp Từ Máy Tính */}
+              {/* Upload Ảnh Minh Chứng Trực Tiếp Từ Máy Tính hoặc Kho Media */}
               <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-300">📷 Ảnh Minh Chứng:</label>
-                  <label className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-950 hover:bg-red-900 text-red-300 rounded-lg border border-red-800 cursor-pointer font-bold transition-colors">
-                    <Upload className="w-3 h-3" />
-                    <span>Tải ảnh từ máy tính</span>
-                    <input
-                      ref={violationFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleViolationPhotoUpload}
-                      className="hidden"
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="font-bold text-slate-300">📷 Ảnh Minh Chứng Vi Phạm:</label>
+                  <div className="flex items-center gap-1.5">
+                    <MediaPickerButton
+                      category="violations"
+                      classId={violationForm.classId}
+                      weekNumber={activeWeek}
+                      value={violationForm.proofImage}
+                      onSelect={(url) => setViolationForm(prev => ({ ...prev, proofImage: Array.isArray(url) ? url[0] : url }))}
+                      label="Kho Ảnh Lỗi"
                     />
-                  </label>
+                    <label className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-950 hover:bg-red-900 text-red-300 rounded-xl border border-red-800 cursor-pointer font-bold transition-colors text-xs">
+                      <Upload className="w-3 h-3" />
+                      <span>Tải Máy</span>
+                      <input
+                        ref={violationFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleViolationPhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 {violationForm.proofImage && (
-                  <div className="relative inline-block">
+                  <div className="relative inline-block mt-1">
                     <img
                       src={violationForm.proofImage}
                       alt="Minh chứng vi phạm"
@@ -9328,19 +10938,17 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 />
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Toàn văn nội dung bài viết:</label>
-                <textarea
-                  rows={6}
-                  required
-                  value={newsForm.content}
-                  onChange={(e) => setNewsForm({ ...newsForm, content: e.target.value })}
-                  placeholder="Nội dung chi tiết thông báo, kế hoạch công tác Đoàn..."
-                  className="w-full p-3 rounded-2xl bg-slate-950 border border-slate-700 text-white leading-relaxed"
-                />
-              </div>
+              <RichTextEditor
+                value={newsForm.content}
+                onChange={(content) => setNewsForm({ ...newsForm, content })}
+                label="Toàn văn nội dung bài viết phong trào"
+                placeholder="Soạn thảo bài viết phong trào, định dạng văn bản (tiêu đề, danh sách, bảng biểu, hộp thông báo [KHẨN], [KHEN THƯỞNG]), chèn ảnh từ Thư viện..."
+                category="news_events"
+                toolbarPreset="full"
+                minHeight="240px"
+              />
 
-              {/* Upload Ảnh Thumbnail Từ Máy Tính */}
+              {/* Upload Ảnh Thumbnail Từ Máy Tính Hoặc Chọn Từ Kho Media */}
               <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
                 <label className="block font-bold text-slate-300">🖼️ Ảnh Đại Diện (Thumbnail):</label>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -9348,20 +10956,28 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <img
                       src={newsForm.thumbnail}
                       alt="Thumbnail preview"
-                      className="w-20 h-20 object-cover rounded-xl border border-slate-700"
+                      className="w-20 h-20 object-cover rounded-xl border border-slate-700 shrink-0"
                     />
                   )}
-                  <div className="space-y-1.5 flex-1">
-                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 rounded-xl border border-slate-700 cursor-pointer font-bold transition-colors">
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>Chọn ảnh từ máy tính</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleThumbnailUpload}
-                        className="hidden"
+                  <div className="space-y-2 flex-1 w-full">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <MediaPickerButton
+                        category="news_events"
+                        value={newsForm.thumbnail}
+                        onSelect={(url) => setNewsForm(prev => ({ ...prev, thumbnail: Array.isArray(url) ? url[0] : url }))}
+                        label="Kho Media Bản Tin"
                       />
-                    </label>
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 rounded-xl border border-slate-700 cursor-pointer font-bold transition-colors text-xs">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Chọn từ máy</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleThumbnailUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                     <p className="text-[11px] text-slate-500">Hoặc dán URL ảnh trực tiếp bên dưới:</p>
                     <input
                       type="text"
@@ -9383,7 +10999,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   </label>
                   <label className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-950 hover:bg-blue-900 text-blue-300 rounded-lg border border-blue-800 cursor-pointer font-bold transition-colors">
                     <Upload className="w-3 h-3" />
-                    <span>+ Tải File Lên</span>
+                    <span>Tải File Lên</span>
                     <input
                       type="file"
                       multiple
@@ -9553,17 +11169,15 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 />
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Toàn Văn Nội Dung Chỉ Đạo:</label>
-                <textarea
-                  rows={6}
-                  required
-                  value={announcementForm.content}
-                  onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
-                  placeholder="Nội dung chi tiết thông báo: 1. Mục đích yêu cầu; 2. Nội dung thực hiện; 3. Tổ chức thực hiện..."
-                  className="w-full p-3 rounded-2xl bg-slate-950 border border-slate-700 text-white leading-relaxed"
-                />
-              </div>
+              <RichTextEditor
+                value={announcementForm.content}
+                onChange={(content) => setAnnouncementForm({ ...announcementForm, content })}
+                label="Toàn Văn Nội Dung Chỉ Đạo / Công Văn"
+                placeholder="Nội dung chi tiết thông báo: 1. Mục đích yêu cầu; 2. Nội dung thực hiện; 3. Tổ chức thực hiện (Hỗ trợ định dạng in đậm, danh sách, hộp cảnh báo [KHẨN], bảng biểu)..."
+                category="news_events"
+                toolbarPreset="full"
+                minHeight="240px"
+              />
 
               {/* Upload Tài Liệu / File Đính Kèm Công Văn */}
               <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
@@ -9574,7 +11188,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   </label>
                   <label className="inline-flex items-center gap-1 px-3 py-1 bg-blue-950 hover:bg-blue-900 text-blue-300 rounded-lg border border-blue-800 cursor-pointer font-bold transition-colors">
                     <Upload className="w-3 h-3" />
-                    <span>+ Tải File Văn Bản</span>
+                    <span>Tải File Văn Bản</span>
                     <input
                       ref={announcementAttachmentRef}
                       type="file"
@@ -9655,16 +11269,13 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              if (event.target?.result) {
-                                setAnnouncementForm(prev => ({ ...prev, thumbnail: event.target!.result as string }));
-                              }
-                            };
-                            reader.readAsDataURL(file);
+                            const compressed = await compressImageToDataURL(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82, outputFormat: 'image/webp' });
+                            if (compressed) {
+                              setAnnouncementForm(prev => ({ ...prev, thumbnail: compressed }));
+                            }
                           }
                         }}
                         className="hidden"
@@ -9752,6 +11363,38 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             <form onSubmit={handleSaveStudent} className="space-y-3 text-xs">
               {studentModalTab === 'basic' ? (
                 <div className="space-y-3">
+                  {/* Avatar Picker */}
+                  <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-500 p-0.5 shrink-0 shadow-md">
+                      <img
+                        src={studentForm.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${studentForm.studentId || 'student'}`}
+                        alt="Avatar học sinh"
+                        className="w-full h-full object-cover rounded-[14px] bg-slate-900"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      <label className="block font-bold text-slate-300 text-xs">Ảnh Thẻ / Chân Dung Đoàn Viên:</label>
+                      <div className="flex items-center gap-2">
+                        <MediaPickerButton
+                          category="students"
+                          classId={studentForm.classId}
+                          value={studentForm.avatar}
+                          onSelect={(url) => setStudentForm(prev => ({ ...prev, avatar: Array.isArray(url) ? url[0] : url }))}
+                          label="Chọn / Đổi Ảnh Thẻ"
+                        />
+                        {studentForm.avatar && (
+                          <button
+                            type="button"
+                            onClick={() => setStudentForm(prev => ({ ...prev, avatar: '' }))}
+                            className="text-[11px] text-slate-400 hover:text-rose-400 font-medium"
+                          >
+                            Xóa ảnh
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="block font-bold text-slate-300 mb-1">Mã Học Sinh:</label>
@@ -10061,26 +11704,119 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 </div>
               </div>
 
+              {/* GVCN */}
               <div>
                 <label className="block font-bold text-slate-300 mb-1">Họ Tên Giáo Viên Chủ Nhiệm (GVCN):</label>
                 <input
                   type="text"
                   value={classForm.gvcnName}
                   onChange={(e) => setClassForm({ ...classForm, gvcnName: e.target.value })}
-                  placeholder="VD: Thầy Nguyễn Văn Thành / Cô Lê Thị Mai"
+                  placeholder="VD: Thầy Nguyễn Văn Thành / Cô Rapát Thị Mận"
                   className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold placeholder-slate-500 focus:border-red-500"
                 />
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Họ Tên Bí Thư Chi Đoàn:</label>
-                <input
-                  type="text"
-                  value={classForm.bithuName}
-                  onChange={(e) => setClassForm({ ...classForm, bithuName: e.target.value })}
-                  placeholder="VD: Lê Văn Trưởng"
-                  className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white"
-                />
+              {/* Ban Cán Sự Lớp & BCH Chi Đoàn (4 Vị Trí) */}
+              <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-black text-amber-400 border-b border-slate-800 pb-1.5">
+                  <span>🎖️ BAN CÁN SỰ & BCH CHI ĐOÀN LỚP</span>
+                </div>
+
+                {/* 1. Lớp Trưởng */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Họ Tên Lớp Trưởng:</label>
+                    <input
+                      type="text"
+                      value={classForm.classPresidentName}
+                      onChange={(e) => setClassForm({ ...classForm, classPresidentName: e.target.value })}
+                      placeholder="VD: Lâm Xuân Tín"
+                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Số ĐT Lớp Trưởng:</label>
+                    <input
+                      type="text"
+                      value={classForm.classPresidentPhone}
+                      onChange={(e) => setClassForm({ ...classForm, classPresidentPhone: e.target.value })}
+                      placeholder="VD: 0372076304"
+                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Lớp Phó Học Tập */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Lớp Phó Học Tập:</label>
+                    <input
+                      type="text"
+                      value={classForm.academicVicePresidentName}
+                      onChange={(e) => setClassForm({ ...classForm, academicVicePresidentName: e.target.value })}
+                      placeholder="VD: Phạm Nguyễn Bảo Vi"
+                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Số ĐT Lớp Phó HT:</label>
+                    <input
+                      type="text"
+                      value={classForm.academicVicePresidentPhone}
+                      onChange={(e) => setClassForm({ ...classForm, academicVicePresidentPhone: e.target.value })}
+                      placeholder="VD: 0343226894"
+                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Bí Thư Chi Đoàn */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Bí Thư Chi Đoàn:</label>
+                    <input
+                      type="text"
+                      value={classForm.bithuName}
+                      onChange={(e) => setClassForm({ ...classForm, bithuName: e.target.value })}
+                      placeholder="VD: Nguyễn Thị Bảo Yến"
+                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-emerald-400 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Số ĐT Bí Thư:</label>
+                    <input
+                      type="text"
+                      value={classForm.bithuPhone}
+                      onChange={(e) => setClassForm({ ...classForm, bithuPhone: e.target.value })}
+                      placeholder="VD: 0978819242"
+                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-emerald-300 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Phó Bí Thư */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Phó Bí Thư Chi Đoàn:</label>
+                    <input
+                      type="text"
+                      value={classForm.deputySecretaryName}
+                      onChange={(e) => setClassForm({ ...classForm, deputySecretaryName: e.target.value })}
+                      placeholder="VD: Võ Viết Tới"
+                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Số ĐT Phó Bí Thư:</label>
+                    <input
+                      type="text"
+                      value={classForm.deputySecretaryPhone}
+                      onChange={(e) => setClassForm({ ...classForm, deputySecretaryPhone: e.target.value })}
+                      placeholder="VD: 0923150635"
+                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-mono text-xs"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
@@ -10095,7 +11831,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold shadow-glow"
                 >
-                  {editingClass ? 'Lưu Thay Đổi' : 'Thêm Lớp Mới'}
+                  {editingClass ? 'Cập Nhật Lớp & Ban Cán Sự' : 'Thêm Lớp Mới'}
                 </button>
               </div>
             </form>
@@ -10682,13 +12418,32 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             </div>
 
             <form onSubmit={handleSaveDuty} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Buổi Trực:</label>
+                  <select
+                    value={dutyForm.session}
+                    onChange={(e) => {
+                      const newSession = e.target.value as 'Sáng' | 'Chiều';
+                      setDutyForm({ 
+                        ...dutyForm, 
+                        session: newSession,
+                        shiftTime: newSession === 'Sáng' ? '06:45 - 07:15 & 11:15 - 11:45' : '12:45 - 13:15 & 16:45 - 17:15'
+                      });
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-amber-400 font-bold"
+                  >
+                    <option value="Sáng">Buổi Sáng</option>
+                    <option value="Chiều">Buổi Chiều</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block font-bold text-slate-300 mb-1">Tuần Trực:</label>
                   <select
                     value={dutyForm.weekNumber}
                     onChange={(e) => setDutyForm({ ...dutyForm, weekNumber: Number(e.target.value) })}
-                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-amber-400 font-bold"
+                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
                   >
                     {weeksConfig.map(w => (
                       <option key={w.weekNumber} value={w.weekNumber}>{w.title}</option>
@@ -10713,19 +12468,29 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Khu Vực Giám Sát:</label>
-                <select
-                  value={dutyForm.zone}
-                  onChange={(e) => setDutyForm({ ...dutyForm, zone: e.target.value })}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
-                >
-                  {zones.map(z => (
-                    <option key={z.id} value={z.name}>
-                      {z.icon || '📍'} {z.name} {z.description ? `(${z.description})` : ''}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Khu Vực / Phòng Trực:</label>
+                  <input
+                    type="text"
+                    value={dutyForm.zone}
+                    onChange={(e) => setDutyForm({ ...dutyForm, zone: e.target.value })}
+                    placeholder="VD: Phòng 8 (tầng 2), Phòng 7 (tầng 2)"
+                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-medium"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Chấm Điểm Lớp (Mục Tiêu):</label>
+                  <input
+                    type="text"
+                    value={dutyForm.targetClasses}
+                    onChange={(e) => setDutyForm({ ...dutyForm, targetClasses: e.target.value })}
+                    placeholder="VD: 10/1, 10/2"
+                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-bold"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -11219,19 +12984,26 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   Hình Ảnh Slide <span className="text-red-500">*</span>:
                 </label>
 
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <input
                     type="text"
                     required
                     value={slideForm.imageUrl}
                     onChange={(e) => setSlideForm({ ...slideForm, imageUrl: e.target.value })}
-                    placeholder="Dán link ảnh trực tiếp (https://...)"
+                    placeholder="Dán link ảnh hoặc chọn từ Kho Media..."
                     className="flex-1 p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                  />
+
+                  <MediaPickerButton
+                    category="branding"
+                    value={slideForm.imageUrl}
+                    onSelect={(url) => setSlideForm(prev => ({ ...prev, imageUrl: Array.isArray(url) ? url[0] : url }))}
+                    label="Kho Media Slide"
                   />
 
                   <label className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 border border-slate-700">
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Tải Từ Máy Tính</span>
+                    <span>Tải Từ Máy</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -11391,17 +13163,14 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Nội Dung Chi Tiết Hướng Dẫn *:</label>
-                <textarea
-                  required
-                  rows={4}
-                  value={noticeForm.content}
-                  onChange={(e) => setNoticeForm({ ...noticeForm, content: e.target.value })}
-                  placeholder="Phân công chi đoàn, số lượng đoàn viên, dụng cụ mang theo, địa điểm tập trung và quy định chấm điểm chuyên cần..."
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs leading-relaxed focus:border-red-500"
-                />
-              </div>
+              <RichTextEditor
+                value={noticeForm.content}
+                onChange={(content) => setNoticeForm({ ...noticeForm, content })}
+                label="Nội Dung Chi Tiết Hướng Dẫn / Lệnh Điều Động"
+                placeholder="Phân công chi đoàn, số lượng đoàn viên, dụng cụ mang theo, địa điểm tập trung và quy định chấm điểm chuyên cần..."
+                toolbarPreset="standard"
+                minHeight="180px"
+              />
 
               <div>
                 <label className="block font-bold text-slate-300 mb-1">Đối Tượng Phân Công (Chi Đoàn):</label>
@@ -11566,17 +13335,15 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 </select>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Mô Tả Chi Tiết Hoạt Động *:</label>
-                <textarea
-                  required
-                  rows={3}
-                  value={eventForm.description}
-                  onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
-                  placeholder="Mô tả mục đích, nội dung chương trình, quyền lợi đoàn viên khi tham gia..."
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs leading-relaxed focus:border-emerald-500"
-                />
-              </div>
+              <RichTextEditor
+                value={eventForm.description}
+                onChange={(description) => setEventForm({ ...eventForm, description })}
+                label="Mô Tả Chi Tiết Hoạt Động Đoàn"
+                placeholder="Mô tả mục đích, nội dung chương trình, quyền lợi đoàn viên khi tham gia..."
+                category="news_events"
+                toolbarPreset="standard"
+                minHeight="180px"
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -11631,13 +13398,19 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
               {/* Thumbnail image */}
               <div>
                 <label className="block font-bold text-slate-300 mb-1">Ảnh Bìa Sự Kiện:</label>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <input
                     type="text"
                     value={eventForm.thumbnail}
                     onChange={(e) => setEventForm({ ...eventForm, thumbnail: e.target.value })}
-                    placeholder="URL ảnh hoặc tải từ máy tính..."
-                    className="flex-1 p-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs"
+                    placeholder="URL ảnh hoặc chọn từ Kho Media..."
+                    className="flex-1 min-w-[200px] p-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs"
+                  />
+                  <MediaPickerButton
+                    category="news_events"
+                    value={eventForm.thumbnail}
+                    onSelect={(url) => setEventForm(prev => ({ ...prev, thumbnail: Array.isArray(url) ? url[0] : url }))}
+                    label="Kho Media Sự Kiện"
                   />
                   <label className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer border border-slate-700 shrink-0">
                     <Upload className="w-3.5 h-3.5" />
@@ -12346,6 +14119,53 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
           onClose={() => setViewingPhoto(null)}
           imageUrl={viewingPhoto}
           title="Minh chứng vi phạm / khiếu nại"
+        />
+      )}
+
+      {/* Media Item Detail Lightbox */}
+      {previewMediaItem && (
+        <PhotoViewerModal
+          isOpen={true}
+          onClose={() => setPreviewMediaItem(null)}
+          imageUrl={previewMediaItem.url}
+          title={previewMediaItem.title || 'Chi tiết hình ảnh Media'}
+          caption={
+            previewMediaItem.description ||
+            `Phân loại: ${previewMediaItem.category} • Lớp: ${previewMediaItem.classId || 'Toàn trường'} • Tải bởi: ${typeof previewMediaItem.uploadedBy === 'object' ? (previewMediaItem.uploadedBy?.name || 'Hệ thống') : (previewMediaItem.uploadedBy || 'Hệ thống')}`
+          }
+        />
+      )}
+
+      {/* Global Full Media Manager Modal */}
+      {isGlobalMediaModalOpen && (
+        <MediaManagerModal
+          isOpen={isGlobalMediaModalOpen}
+          onClose={() => setIsGlobalMediaModalOpen(false)}
+          defaultCategory="all"
+          allowSelect={false}
+          title="HỆ THỐNG TRÌNH QUẢN LÝ MEDIA & HÌNH ẢNH TOÀN TRƯỜNG"
+        />
+      )}
+
+      {/* Global Full Document & Folder Manager Modal */}
+      {isGlobalDocumentModalOpen && (
+        <DocumentManagerModal
+          isOpen={isGlobalDocumentModalOpen}
+          onClose={() => setIsGlobalDocumentModalOpen(false)}
+          title="HỆ THỐNG QUẢN TRỊ KHO VĂN BẢN, BIỂU MẪU & THƯ MỤC PHÂN CẤP"
+          allowManageFolders={true}
+          allowUpload={true}
+          allowDelete={true}
+          onPreview={(doc: import('../../types').DocumentFile) => setPreviewDocumentFile(doc)}
+        />
+      )}
+
+      {/* Document Detail / Preview Lightbox */}
+      {previewDocumentFile && (
+        <DocumentViewerModal
+          isOpen={true}
+          onClose={() => setPreviewDocumentFile(null)}
+          document={previewDocumentFile}
         />
       )}
 

@@ -42,6 +42,7 @@ export interface Student {
   unionBookletStatus?: 'submitted' | 'not_submitted'; // Sổ đoàn (Đã nộp / Chưa nộp)
   conductRating?: 'Xuất sắc' | 'Khá' | 'Trung bình' | 'Yếu'; // Đánh giá xếp loại Đoàn viên
   customNotes?: string; // Ghi chú quản lý bổ sung
+  avatar?: string; // Ảnh chân dung 3x4 / 4x6 của học sinh / đoàn viên
   points: number; // Điểm phong trào
   rankTitle: string; // Cấp bậc đoàn viên
   violationsCount: number;
@@ -49,18 +50,25 @@ export interface Student {
 }
 
 export interface ClassInfo {
-  id: string; // '10/1', '10/2', ..., '12/6'
+  id: string; // '10/1', '10/2', ..., '12/4'
   name: string; // 'Lớp 10/1'
   grade: 10 | 11 | 12;
   gvcnName: string;
   gvcnId: string;
   bithuName: string;
   bithuId: string;
+  bithuPhone?: string; // Số ĐT Bí thư
+  classPresidentName?: string; // Lớp trưởng
+  classPresidentPhone?: string; // SĐT Lớp trưởng
+  academicVicePresidentName?: string; // Lớp phó Học tập
+  academicVicePresidentPhone?: string; // SĐT Lớp phó HT
+  deputySecretaryName?: string; // Phó Bí thư
+  deputySecretaryPhone?: string; // SĐT Phó Bí thư
   totalStudents: number;
   unionMembers: number; // Số đoàn viên
   standardScore: number; // 1440
   isArchived?: boolean; // Lưu trữ
-  academicYearId?: string; // e.g. "2025_2026"
+  academicYearId?: string; // e.g. "2026_2027"
 }
 
 export type DayOfWeek = 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7';
@@ -98,6 +106,7 @@ export interface Violation {
   bonusPoints?: number; // Điểm thưởng cộng thêm (nếu là điểm thưởng)
   type?: 'deduction' | 'bonus';
   studentNames?: string[]; // Học sinh vi phạm (nếu có)
+  studentIds?: string[]; // Mã học sinh vi phạm (nếu có)
   note?: string;
   proofImages: string[];
   reportedBy: {
@@ -171,6 +180,8 @@ export interface DutyAssignment {
   auditorName: string;
   auditorClass: string;
   shiftTime: string; // e.g. '06:45 - 07:15 & 11:15 - 11:45'
+  targetClasses?: string; // e.g. '10/1, 10/2' (Chấm điểm lớp)
+  session?: 'Sáng' | 'Chiều'; // Buổi trực: Sáng hoặc Chiều
   isLiveNow?: boolean;
 }
 
@@ -371,5 +382,101 @@ export interface RolloverPayload {
   auditorMemberIds: string[];
 }
 
+export type MediaCategory = 'all' | 'violations' | 'activities' | 'news_events' | 'branding' | 'students' | 'general';
 
+export interface MediaFolder {
+  id: string;
+  name: string;
+  description?: string;
+  parentId?: string | null;
+  scope?: 'public' | 'internal'; // 'public': Thư mục công khai, 'internal': Thư mục nội bộ
+  color?: string; // Hex code (e.g. '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899')
+  icon?: string; // 'folder' | 'camera' | 'image' | 'star' | 'sparkles' | 'trophy' | 'users' | 'tag'
+  coverImage?: string;
+  category?: MediaCategory;
+  isSystem?: boolean;
+  order?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
+export interface MediaItem {
+  id: string;
+  url: string;
+  title: string;
+  description?: string;
+  category: MediaCategory;
+  folderId?: string; // ID của Thư mục / Album ảnh
+  albumId?: string;  // Alias tương đương folderId
+  bucket?: 'media' | 'proof_images';
+  size?: number; // Dung lượng bytes (ví dụ: 85200)
+  sizeFormatted?: string; // Ví dụ: "85 KB"
+  width?: number;
+  height?: number;
+  format?: string; // 'webp' | 'png' | 'jpg' | 'svg'
+  uploadedAt: string;
+  uploadedBy?: string | {
+    id?: string;
+    name?: string;
+    role?: string;
+  };
+  classId?: string; // Lớp liên quan (nếu có, e.g. '10/1')
+  weekNumber?: number; // Tuần liên quan (nếu có)
+  tags?: string[];
+  isSystemAsset?: boolean; // Ảnh hệ thống cố định
+}
+
+export type DocumentFileType = 'pdf' | 'docx' | 'xlsx' | 'pptx' | 'zip' | 'image' | 'other';
+export type DocumentCategory = 'form' | 'directive' | 'plan' | 'report' | 'handbook' | 'other';
+
+export interface DocumentFolder {
+  id: string;
+  name: string;
+  code?: string;
+  description?: string;
+  parentId: string | null;
+  icon?: string;
+  color?: string;
+  isSystem?: boolean;
+  order?: number;
+  allowedRoles?: ('admin' | 'manager' | 'youth_secretary' | 'auditor' | 'user' | 'public')[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentFile {
+  id: string;
+  title: string;
+  fileNumber?: string;
+  documentNumber?: string; // Alias for fileNumber
+  fileName: string;
+  fileUrl: string;
+  url?: string; // Alias for fileUrl
+  fileSize: string;
+  fileSizeBytes?: number;
+  fileType: DocumentFileType;
+  mimeType?: string;
+  folderId: string;
+  category: DocumentCategory;
+  publishDate: string;
+  issueDate?: string; // Alias for publishDate
+  signDate?: string;
+  signer?: string;
+  signerRole?: string;
+  tags: string[];
+  downloadsCount: number;
+  downloadCount?: number; // Alias for downloadsCount
+  viewsCount: number;
+  viewCount?: number; // Alias for viewsCount
+  isPublic: boolean;
+  isPinned?: boolean;
+  description?: string;
+  version?: string;
+  uploadedBy: string | {
+    id?: string;
+    name?: string;
+    role?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
