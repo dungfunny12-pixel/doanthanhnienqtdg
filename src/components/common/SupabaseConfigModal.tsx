@@ -129,11 +129,11 @@ export const SupabaseConfigModal: React.FC<SupabaseConfigModalProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto">
-      <div className="glass-modal relative my-auto max-w-2xl w-full rounded-3xl p-5 sm:p-6 border border-slate-700 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto pt-6 sm:pt-10 pb-8">
+      <div className="glass-modal relative max-w-2xl w-full rounded-3xl p-5 sm:p-6 border border-slate-700 shadow-2xl space-y-4 max-h-[88vh] overflow-y-auto">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3 sm:pb-4 sticky -top-5 sm:-top-6 bg-slate-900/95 backdrop-blur-md pt-1 z-10">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3 sm:pb-4 sticky -top-5 sm:-top-6 bg-slate-900/95 backdrop-blur-md pt-1 z-20">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-glow shrink-0">
               <Database className="w-5 h-5" />

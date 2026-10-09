@@ -786,34 +786,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
 
-      // Thuật toán Merge bảo toàn dữ liệu: Ưu tiên Cloud nhưng giữ lại toàn bộ dữ liệu mới tạo trên Local chưa kịp lên Cloud
-      const mergeById = <T extends { id: string }>(localList: T[], cloudList?: T[]): T[] => {
-        if (!cloudList || cloudList.length === 0) return localList;
-        const map = new Map<string, T>();
-        cloudList.forEach(item => {
-          if (item?.id) map.set(item.id, item);
-        });
-        localList.forEach(item => {
-          if (item?.id && !map.has(item.id)) {
-            map.set(item.id, item);
-          }
-        });
-        return Array.from(map.values());
-      };
-
-      if (cloudData.classes && cloudData.classes.length > 0) setClasses(prev => mergeById(prev, cloudData.classes));
-      if (cloudData.criteria && cloudData.criteria.length > 0) setCriteria(prev => mergeById(prev, cloudData.criteria));
-      if (cloudData.students && cloudData.students.length > 0) setStudents(prev => mergeById(prev, sanitizeStudentList(cloudData.students!)));
-      if (cloudData.violations) setViolations(prev => mergeById(prev, cloudData.violations!));
-      if (cloudData.news && cloudData.news.length > 0) setNews(prev => mergeById(prev, cloudData.news));
-      if (cloudData.notices && cloudData.notices.length > 0) setNotices(prev => mergeById(prev, cloudData.notices));
+      if (cloudData.classes && cloudData.classes.length > 0) setClasses(cloudData.classes);
+      if (cloudData.criteria && cloudData.criteria.length > 0) setCriteria(cloudData.criteria);
+      if (cloudData.students && cloudData.students.length > 0) setStudents(sanitizeStudentList(cloudData.students));
+      if (cloudData.violations !== undefined) setViolations(cloudData.violations);
+      if (cloudData.news && cloudData.news.length > 0) setNews(cloudData.news);
+      if (cloudData.notices !== undefined) setNotices(cloudData.notices);
       if (cloudData.schoolSettings) setSchoolSettings(cloudData.schoolSettings);
-      if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(prev => mergeById(prev, cloudData.activitySlides));
-      if (cloudData.events && cloudData.events.length > 0) setEvents(prev => mergeById(prev, cloudData.events));
-      if (cloudData.documentFolders && cloudData.documentFolders.length > 0) setDocumentFolders(prev => mergeById(prev, cloudData.documentFolders));
-      if (cloudData.documentFiles && cloudData.documentFiles.length > 0) setDocumentFiles(prev => mergeById(prev, cloudData.documentFiles));
-      if (cloudData.mediaFolders && cloudData.mediaFolders.length > 0) setMediaFolders(prev => mergeById(prev, cloudData.mediaFolders));
-      if (cloudData.mediaAssets && cloudData.mediaAssets.length > 0) setMediaAssets(prev => mergeById(prev, sanitizeMediaAssets(cloudData.mediaAssets!)));
+      if (cloudData.activitySlides && cloudData.activitySlides.length > 0) setActivitySlides(cloudData.activitySlides);
+      if (cloudData.events !== undefined) setEvents(cloudData.events);
+      if (cloudData.documentFolders && cloudData.documentFolders.length > 0) setDocumentFolders(cloudData.documentFolders);
+      if (cloudData.documentFiles !== undefined) setDocumentFiles(cloudData.documentFiles);
+      if (cloudData.mediaFolders && cloudData.mediaFolders.length > 0) setMediaFolders(cloudData.mediaFolders);
+      if (cloudData.mediaAssets !== undefined) setMediaAssets(sanitizeMediaAssets(cloudData.mediaAssets));
       if (cloudData.weeksConfig && cloudData.weeksConfig.length > 0) {
         setWeeksConfig(cloudData.weeksConfig);
         const currentWeek = cloudData.weeksConfig.find(w => w.isCurrent);
@@ -823,7 +808,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       if (cloudData.users && cloudData.users.length > 0) {
-        setUsers(prev => mergeById(prev, cloudData.users));
+        setUsers(cloudData.users);
         // Cập nhật tài khoản hiện tại với thông tin mới nhất từ Cloud
         setCurrentUser(prevUser => {
           if (!prevUser) return null;
@@ -832,19 +817,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
       if (cloudData.duties && cloudData.duties.length > 0) {
-        setDuties(prev => mergeById(prev, cloudData.duties));
+        setDuties(cloudData.duties);
       }
       if (cloudData.academicYears && cloudData.academicYears.length > 0) {
-        setAcademicYears(prev => mergeById(prev, cloudData.academicYears));
+        setAcademicYears(cloudData.academicYears);
       }
       if (cloudData.feeLocks) {
-        setFeeLocks(prev => ({ ...prev, ...cloudData.feeLocks }));
+        setFeeLocks(cloudData.feeLocks);
       }
       if (cloudData.auditLogs && cloudData.auditLogs.length > 0) {
-        setAuditLogs(prev => mergeById(prev, cloudData.auditLogs));
+        setAuditLogs(cloudData.auditLogs);
       }
-      if (cloudData.activityReports && cloudData.activityReports.length > 0) {
-        setActivityReports(prev => mergeById(prev, cloudData.activityReports));
+      if (cloudData.activityReports !== undefined) {
+        setActivityReports(cloudData.activityReports);
       }
       console.log('✅ [Multi-Device Sync] Đồng bộ dữ liệu thành công từ Supabase Cloud!');
     } catch (err) {
