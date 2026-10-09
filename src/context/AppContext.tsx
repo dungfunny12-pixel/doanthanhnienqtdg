@@ -58,6 +58,7 @@ import {
 } from '../data/initialData';
 import { SupabaseService } from '../services/supabaseService';
 import { isSupabaseConfigured, getSupabaseClient } from '../lib/supabase';
+import { generateUUID } from '../utils/uuid';
 import { 
   saveIndexedDBItem, 
   saveIndexedDBBatch, 
@@ -962,7 +963,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addLog = (action: string, details: string) => {
     const newLog: AuditLog = {
-      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       timestamp: new Date().toLocaleString('vi-VN'),
       userId: currentUser?.id || 'anonymous',
       userName: currentUser?.name || 'Khách truy cập',
@@ -1055,7 +1056,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addMediaFolder = (folderData: Omit<MediaFolder, 'id' | 'createdAt' | 'updatedAt'>): MediaFolder => {
     const newFolder: MediaFolder = {
       ...folderData,
-      id: `album-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
       updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
     };
@@ -1224,7 +1225,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addDocumentFolder = (folderData: Omit<DocumentFolder, 'id' | 'createdAt' | 'updatedAt'>): DocumentFolder => {
     const newFolder: DocumentFolder = {
       ...folderData,
-      id: `folder-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      id: generateUUID(),
       createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
       updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
     };
@@ -1279,7 +1280,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addDocumentFile = (fileData: Omit<DocumentFile, 'id' | 'downloadsCount' | 'viewsCount' | 'createdAt' | 'updatedAt'>): DocumentFile => {
     const newDoc: DocumentFile = {
       ...fileData,
-      id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      id: generateUUID(),
       downloadsCount: 0,
       viewsCount: 0,
       createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
@@ -1810,7 +1811,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addViolation = (data: Omit<Violation, 'id' | 'reportedAt' | 'status' | 'locked'>): Violation => {
     const newVio: Violation = {
       ...data,
-      id: `vio-${Date.now()}`,
+      id: generateUUID(),
       reportedAt: new Date().toLocaleString('vi-VN'),
       status: 'pending',
       locked: isWeekLocked
@@ -2075,7 +2076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addUser = (userData: Omit<User, 'id'>) => {
     const newUser: User = {
       ...userData,
-      id: `user-${Date.now()}`
+      id: generateUUID()
     };
     setUsers(prev => [...prev, newUser]);
     if (isSupabaseConfigured()) {
@@ -2177,7 +2178,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addDutyAssignment = (duty: Omit<DutyAssignment, 'id'>) => {
     const newDuty: DutyAssignment = {
       ...duty,
-      id: `duty-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`
+      id: generateUUID()
     };
     setDuties(prev => [...prev, newDuty]);
     if (isSupabaseConfigured()) {
@@ -2225,9 +2226,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const sourceDuties = duties.filter(d => d.weekNumber === fromWeek);
     if (sourceDuties.length === 0) return;
 
-    const copiedDuties: DutyAssignment[] = sourceDuties.map((d, idx) => ({
+    const copiedDuties: DutyAssignment[] = sourceDuties.map(d => ({
       ...d,
-      id: `duty-w${toWeek}-${idx}-${Date.now()}`,
+      id: generateUUID(),
       weekNumber: toWeek
     }));
 
@@ -2465,7 +2466,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addEvent = (eventData: Omit<YouthEvent, 'id' | 'registeredCount' | 'registeredStudentIds' | 'checkedInStudentIds'>) => {
     const newEvent: YouthEvent = {
       ...eventData,
-      id: `evt-${Date.now()}`,
+      id: generateUUID(),
       registeredCount: 0,
       registeredStudentIds: [],
       checkedInStudentIds: []
@@ -2504,7 +2505,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addNewsPost = (postData: Omit<NewsPost, 'id' | 'views'>) => {
     const newPost: NewsPost = {
       ...postData,
-      id: `news-${Date.now()}`,
+      id: generateUUID(),
       views: 1,
       isHidden: false
     };
@@ -2548,7 +2549,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addTaskNotice = (noticeData: Omit<TaskNotice, 'id' | 'createdAt' | 'status'>) => {
     const newNotice: TaskNotice = {
       ...noticeData,
-      id: `not-${Date.now()}`,
+      id: generateUUID(),
       createdAt: new Date().toLocaleString('vi-VN'),
       status: 'pending'
     };
@@ -2560,7 +2561,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addNotice = (noticeData: Omit<TaskNotice, 'id' | 'createdAt'>) => {
     const newNotice: TaskNotice = {
       ...noticeData,
-      id: `not-${Date.now()}`,
+      id: generateUUID(),
       createdAt: new Date().toLocaleString('vi-VN'),
       status: noticeData.status || 'pending'
     };
@@ -2592,7 +2593,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addActivitySlide = (slideData: Omit<ActivitySlide, 'id'>) => {
     const newSlide: ActivitySlide = {
       ...slideData,
-      id: `slide-${Date.now()}`
+      id: generateUUID()
     };
     setActivitySlides(prev => [...prev, newSlide]);
     if (isSupabaseConfigured()) SupabaseService.saveActivitySlide(newSlide);
@@ -2712,7 +2713,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const submitActivityReport = (reportData: Omit<ActivityReport, 'id' | 'reportedAt' | 'status'>) => {
     const newReport: ActivityReport = {
       ...reportData,
-      id: `act-rep-${Date.now()}`,
+      id: generateUUID(),
       reportedAt: new Date().toLocaleDateString('vi-VN') + ' ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       status: 'submitted'
     };

@@ -367,6 +367,7 @@ export interface AcademicYear {
   isCurrent: boolean; // Duy nhất 1 năm mang giá trị true
   isFrozen: boolean;
   createdAt: string;
+  totalWeeks?: number;
   notes?: string;
 }
 

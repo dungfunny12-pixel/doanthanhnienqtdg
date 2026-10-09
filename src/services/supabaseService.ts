@@ -1,6 +1,7 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { compressImage, dataURLtoFile, compressImageToDataURL } from '../utils/imageCompressor';
 import { saveIndexedDBItem, deleteIndexedDBItem, STORES } from '../utils/indexedDBStorage';
+import { generateUUID } from '../utils/uuid';
 import { 
   ClassInfo, 
   Student, 
@@ -90,7 +91,7 @@ export const SupabaseService = {
         client.from('weeks').select('*').order('week_number', { ascending: true }),
         client.from('users').select('*').eq('is_deleted', false),
         client.from('duty_schedule').select('*'),
-        client.from('academic_years').select('*').order('year_id', { ascending: false }),
+        client.from('academic_years').select('*').order('created_at', { ascending: false }),
         client.from('fee_locks').select('*'),
         client.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100),
         client.from('activity_reports').select('*').eq('is_deleted', false),
@@ -162,6 +163,17 @@ export const SupabaseService = {
         description: cr.description || ''
       }));
 
+      const critMap = new Map<string, Criterion>();
+      criteria.forEach(cr => {
+        critMap.set(cr.id, cr);
+        critMap.set(cr.code, cr);
+      });
+
+      const classMap = new Map<string, ClassInfo>();
+      classes.forEach(cl => {
+        classMap.set(cl.id, cl);
+      });
+
       const students: Student[] = (rawStudents || []).map(s => ({
         id: s.student_id,
         studentId: s.student_id,
@@ -211,27 +223,32 @@ export const SupabaseService = {
           }
         }
 
+        const cr = critMap.get(v.criteria_code);
+        const isBonus = cr ? (cr.type === 'bonus') : false;
+        const totalPoints = Number(v.points_applied) || (cr ? cr.points * (Number(v.quantity) || 1) : 0);
+        const cl = classMap.get(v.class_id);
+
         return {
           id: v.violation_id,
           classId: v.class_id,
-          className: v.class_name || `Lớp ${v.class_id}`,
+          className: cl?.name || `Lớp ${v.class_id}`,
           day: v.day,
           session: v.session || 'Sáng',
           date: v.date_recorded || (v.created_at ? v.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
           weekNumber: v.week_number,
-          criterionId: v.criterion_id || v.criteria_code,
-          criterionName: v.criterion_name || 'Vi phạm nề nếp',
-          groupName: v.criterion_group || 'Nề nếp & Tác phong',
+          criterionId: v.criteria_code,
+          criterionName: cr?.name || 'Vi phạm nề nếp',
+          groupName: cr?.groupName || 'Nề nếp & Tác phong',
           quantity: Number(v.quantity) || 1,
-          pointsDeducted: Number(v.score_deducted) || 0,
-          bonusPoints: Number(v.bonus_points) || 0,
-          type: Number(v.bonus_points) > 0 ? 'bonus' : 'deduction',
+          pointsDeducted: isBonus ? 0 : totalPoints,
+          bonusPoints: isBonus ? totalPoints : 0,
+          type: isBonus ? 'bonus' : 'deduction',
           studentNames,
           studentIds,
           note: v.note || '',
-          proofImages: v.proof_images || [],
+          proofImages: Array.isArray(v.proof_images) ? v.proof_images : [],
           reportedBy: {
-            id: v.reporter_id || v.reported_by_id || 'system',
+            id: v.reported_by_id || 'system',
             name: v.reported_by_name || 'Ban Cờ Đỏ',
             role: v.reported_by_role || 'auditor'
           },
@@ -239,10 +256,10 @@ export const SupabaseService = {
           status: v.status || 'pending',
           appeal: v.appeal_reason ? {
             reason: v.appeal_reason,
-            proofImages: v.appeal_proofs || [],
+            proofImages: v.appeal_evidence_url ? [v.appeal_evidence_url] : [],
             appealedBy: 'Bí thư / GVCN',
             appealedAt: v.appeal_created_at || v.created_at || new Date().toISOString(),
-            adminResponse: v.admin_response
+            adminResponse: v.appeal_response_note
           } : undefined,
           locked: v.is_locked || false
         };
@@ -347,7 +364,7 @@ export const SupabaseService = {
 
       const duties: DutyAssignment[] | undefined = (rawDuties && rawDuties.length > 0)
         ? rawDuties.map(d => ({
-            id: d.custom_duty_id || d.duty_id || `duty-${d.week_number}-${d.day}-${d.zone}`,
+            id: d.duty_id || `duty-${d.week_number}-${d.day}-${d.zone}`,
             weekNumber: d.week_number,
             day: d.day,
             zone: d.zone,
@@ -363,7 +380,7 @@ export const SupabaseService = {
 
       const academicYears: AcademicYear[] | undefined = (rawYears && rawYears.length > 0)
         ? rawYears.map(y => ({
-            id: y.year_id,
+            id: y.id,
             name: y.name,
             startDate: y.start_date || '2026-09-07',
             endDate: y.end_date || '2027-05-31',
@@ -382,141 +399,138 @@ export const SupabaseService = {
 
       const auditLogs: AuditLog[] | undefined = (rawLogs && rawLogs.length > 0)
         ? rawLogs.map(l => ({
-            id: l.log_id,
-            timestamp: l.timestamp || new Date(l.created_at).toLocaleString('vi-VN'),
+            id: l.id,
+            timestamp: new Date(l.created_at).toLocaleString('vi-VN'),
             userId: l.user_id || 'system',
             userName: l.user_name || 'Hệ thống',
             userRole: (l.user_role || 'user') as any,
             action: l.action,
-            details: l.details || '',
-            ipAddress: l.ip_address || '192.168.1.50'
+            details: typeof l.details === 'object' ? (l.details?.info || JSON.stringify(l.details)) : String(l.details || ''),
+            ipAddress: '192.168.1.50'
           }))
         : undefined;
 
       const activityReports: ActivityReport[] | undefined = (rawReports && rawReports.length > 0)
         ? rawReports.map(r => ({
-            id: r.report_id || r.id,
-            activityId: r.activity_id || undefined,
-            activityTitle: r.activity_title || '',
-            activityType: r.activity_type || 'phong_trao',
+            id: r.id,
+            activityId: undefined,
+            activityTitle: r.title || '',
+            activityType: 'phong_trao',
             classId: r.class_id || '',
-            className: r.class_name || '',
-            secretaryName: r.secretary_name || '',
+            className: `Lớp ${r.class_id}`,
+            secretaryName: r.submitted_by || '',
             reportedAt: r.created_at || new Date().toISOString(),
-            participantCount: r.participant_count || 0,
-            participants: r.participants || [],
-            nonParticipants: r.non_participants || [],
+            participantCount: 0,
+            participants: [],
+            nonParticipants: [],
             status: r.status || 'submitted',
-            adminFeedback: r.admin_feedback || undefined,
-            proofImages: r.proof_images || [],
-            academicYearId: r.academic_year || '2026_2027'
+            adminFeedback: undefined,
+            proofImages: r.images || [],
+            academicYearId: '2026_2027'
           }))
         : undefined;
 
       const events: YouthEvent[] | undefined = (rawEvents && rawEvents.length > 0)
         ? rawEvents.map(e => ({
-            id: e.event_id || e.id,
+            id: e.id,
             title: e.title,
             description: e.description || '',
-            category: (e.category || 'Phong trào') as any,
-            thumbnail: e.thumbnail || e.cover_image || 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&auto=format&fit=crop',
+            category: 'Phong trào' as any,
+            thumbnail: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&auto=format&fit=crop',
             location: e.location || 'Sân trường THPT Quang Trung',
-            startDate: e.start_date || e.date || new Date().toISOString().split('T')[0],
-            endDate: e.end_date || e.date || new Date().toISOString().split('T')[0],
-            bonusPoints: Number(e.bonus_points) || 10,
-            maxSlots: Number(e.max_slots) || 100,
-            registeredCount: Number(e.registered_count) || (e.registered_student_ids?.length || 0),
-            registeredStudentIds: e.registered_student_ids || [],
-            checkedInStudentIds: e.checked_in_student_ids || [],
-            isRegistrationOpen: e.is_registration_open ?? true,
-            qrCodeValue: e.qr_code_value || `EVT-${e.event_id || e.id}`
+            startDate: e.start_date || new Date().toISOString().split('T')[0],
+            endDate: e.end_date || new Date().toISOString().split('T')[0],
+            bonusPoints: 10,
+            maxSlots: 100,
+            registeredCount: 0,
+            registeredStudentIds: [],
+            checkedInStudentIds: [],
+            isRegistrationOpen: e.is_active ?? true,
+            qrCodeValue: `EVT-${e.id}`
           }))
         : undefined;
 
       const documentFolders: DocumentFolder[] | undefined = (rawFolders && rawFolders.length > 0)
         ? rawFolders.map(f => ({
-            id: f.folder_id || f.id,
+            id: f.id,
             name: f.name,
-            code: f.code || undefined,
-            description: f.description || undefined,
+            code: undefined,
+            description: undefined,
             parentId: f.parent_id || null,
-            icon: f.icon || undefined,
-            color: f.color || undefined,
-            isSystem: Boolean(f.is_system),
-            order: Number(f.order) || 0,
-            allowedRoles: f.allowed_roles || undefined,
+            icon: 'folder',
+            color: '#3b82f6',
+            isSystem: false,
+            order: 0,
+            allowedRoles: undefined,
             createdAt: f.created_at || new Date().toISOString(),
-            updatedAt: f.updated_at || new Date().toISOString()
+            updatedAt: f.created_at || new Date().toISOString()
           }))
         : undefined;
 
       const documentFiles: DocumentFile[] | undefined = (rawFiles && rawFiles.length > 0)
         ? rawFiles.map(f => ({
-            id: f.file_id || f.id,
-            title: f.title,
-            fileNumber: f.file_number || undefined,
-            documentNumber: f.document_number || f.file_number || undefined,
-            fileName: f.file_name || f.title || 'Tai_lieu.pdf',
-            fileUrl: f.file_url,
-            url: f.file_url,
-            fileSize: f.file_size || '1 MB',
-            fileSizeBytes: Number(f.file_size_bytes) || 1024000,
-            fileType: f.file_type || 'pdf',
-            mimeType: f.mime_type || undefined,
+            id: f.id,
+            title: f.name,
+            fileNumber: undefined,
+            documentNumber: undefined,
+            fileName: f.name,
+            fileUrl: f.content_base64 || '',
+            url: f.content_base64 || '',
+            fileSize: f.size || '1 MB',
+            fileSizeBytes: 1024000,
+            fileType: f.file_type || 'PDF',
+            mimeType: undefined,
             folderId: f.folder_id,
-            category: f.category || 'form',
-            publishDate: f.publish_date || f.issue_date || (f.created_at ? f.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
-            issueDate: f.issue_date || f.publish_date || undefined,
-            signer: f.signer || undefined,
-            signerRole: f.signer_role || undefined,
-            tags: f.tags || [],
-            downloadsCount: Number(f.downloads_count) || 0,
-            downloadCount: Number(f.downloads_count) || 0,
-            viewsCount: Number(f.views_count) || 0,
-            viewCount: Number(f.views_count) || 0,
-            isPublic: f.is_public ?? true,
-            isPinned: Boolean(f.is_pinned),
-            description: f.description || undefined,
-            version: f.version || undefined,
-            uploadedBy: f.uploaded_by || 'BCH Đoàn Trường',
+            category: f.category || 'ALL',
+            publishDate: f.created_at ? f.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+            issueDate: undefined,
+            signer: undefined,
+            signerRole: undefined,
+            tags: [],
+            downloadsCount: Number(f.downloads) || 0,
+            downloadCount: Number(f.downloads) || 0,
+            viewsCount: Number(f.views) || 0,
+            viewCount: Number(f.views) || 0,
+            isPublic: true,
+            isPinned: false,
+            description: undefined,
+            version: undefined,
+            uploadedBy: 'BCH Đoàn Trường',
             createdAt: f.created_at || new Date().toISOString(),
-            updatedAt: f.updated_at || new Date().toISOString()
+            updatedAt: f.created_at || new Date().toISOString()
           }))
         : undefined;
 
       const mediaFolders: MediaFolder[] | undefined = (rawMediaFolders && rawMediaFolders.length > 0)
         ? rawMediaFolders.map(f => ({
-            id: f.folder_id || f.id,
+            id: f.id,
             name: f.name,
-            description: f.description || undefined,
-            color: f.color || '#3b82f6',
-            icon: f.icon || 'folder',
-            coverImage: f.cover_image || undefined,
-            category: f.category || 'activities',
-            isSystem: Boolean(f.is_system),
-            order: Number(f.order_num) || 0,
+            description: undefined,
+            color: '#3b82f6',
+            icon: 'folder',
+            coverImage: undefined,
+            category: 'activities',
+            isSystem: false,
+            order: 0,
             createdAt: f.created_at || new Date().toISOString(),
-            updatedAt: f.updated_at || new Date().toISOString()
+            updatedAt: f.created_at || new Date().toISOString()
           }))
         : undefined;
 
       const mediaAssets: MediaItem[] | undefined = (rawMedia && rawMedia.length > 0)
         ? rawMedia.map(m => ({
             id: m.id,
-            title: m.title || 'Ảnh Media',
+            title: m.name || 'Ảnh Media',
             url: m.url,
             category: m.category || 'general',
-            folderId: m.folder_id || m.album_id || undefined,
-            albumId: m.folder_id || m.album_id || undefined,
-            bucket: m.bucket || 'media',
+            folderId: m.folder_id || undefined,
+            albumId: m.folder_id || undefined,
+            bucket: 'media',
             size: Number(m.size_bytes) || 85000,
-            sizeFormatted: m.size_formatted || 'Đã tối ưu',
-            format: m.format || 'webp',
+            sizeFormatted: 'Đã tối ưu',
+            format: 'webp',
             uploadedAt: m.created_at || new Date().toISOString(),
-            uploadedBy: m.uploaded_by,
-            classId: m.class_id,
-            weekNumber: m.week_number,
-            tags: m.tags || []
+            tags: []
           }))
         : undefined;
 
@@ -787,7 +801,7 @@ export const SupabaseService = {
         if (uploaded) footerBannerImage = uploaded;
       }
 
-      await client.from('school_settings').upsert({
+      const { error } = await client.from('school_settings').upsert({
         id: 'current',
         school_name: settings.schoolName,
         youth_union_name: settings.youthUnionName,
@@ -800,11 +814,12 @@ export const SupabaseService = {
         youth_union_logo_url: youthUnionLogoUrl,
         banner_top_image: bannerTopImage,
         footer_banner_image: footerBannerImage,
-        semester_1_end_week: settings.semester1EndWeek || 18,
-        semester_1_name: settings.semester1Name || 'Học Kỳ 1',
-        semester_2_name: settings.semester2Name || 'Học Kỳ 2',
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
+      if (error) {
+        console.warn('Lỗi lưu school_settings lên Supabase:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi lưu school_settings lên Supabase:', err);
@@ -825,7 +840,7 @@ export const SupabaseService = {
         if (uploaded) imageUrl = uploaded;
       }
 
-      await client.from('activity_slides').upsert({
+      const { error } = await client.from('activity_slides').upsert({
         slide_id: slide.id,
         title: slide.title,
         subtitle: slide.subtitle,
@@ -837,6 +852,10 @@ export const SupabaseService = {
         is_deleted: false,
         updated_at: new Date().toISOString()
       }, { onConflict: 'slide_id' });
+      if (error) {
+        console.warn('Lỗi lưu activity_slide lên Supabase:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi lưu activity_slide lên Supabase:', err);
@@ -866,22 +885,25 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('classes').upsert({
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const { error } = await client.from('classes').upsert({
         class_id: c.id,
         class_name: c.name,
         grade: c.grade,
-        gvcn_name: c.gvcnName,
-        gvcn_id: c.gvcnId || null,
-        bithu_name: c.bithuName,
-        bithu_id: c.bithuId || null,
+        gvcn_id: (c.gvcnId && uuidRegex.test(c.gvcnId)) ? c.gvcnId : null,
+        bithu_id: (c.bithuId && uuidRegex.test(c.bithuId)) ? c.bithuId : null,
         total_students: c.totalStudents,
         union_members_count: c.unionMembers,
-        standard_score: c.standardScore,
-        is_archived: c.isArchived,
-        academic_year: c.academicYearId || '2025_2026',
+        standard_score: c.standardScore || 1440,
+        is_archived: c.isArchived || false,
+        academic_year: c.academicYearId || '2026-2027',
         is_deleted: false,
         updated_at: new Date().toISOString()
       }, { onConflict: 'class_id' });
+      if (error) {
+        console.warn('Lỗi lưu class:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi lưu class:', err);
@@ -911,33 +933,37 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('students').upsert({
+      const { error } = await client.from('students').upsert({
         student_id: s.studentId || s.id,
         class_id: s.classId,
         full_name: s.name,
-        name: s.name,
-        grade: s.grade,
-        gender: s.gender,
-        dob: s.dob,
+        grade: s.grade || 10,
+        gender: s.gender || 'Nam',
+        dob: s.dob || '2009-01-01',
         ethnicity: s.ethnicity || 'Kinh',
         phone_number: s.phone || null,
-        phone: s.phone || null,
         address: s.address || null,
-        is_union_member: s.isUnionMember,
+        member_type: s.isUnionMember ? 'Đoàn viên' : 'Học sinh',
+        is_union_member: Boolean(s.isUnionMember),
         union_joined_date: s.unionJoinedDate || null,
         union_joined_place: s.unionJoinedPlace || null,
         union_card_number: s.unionCardNumber || null,
-        union_position: s.unionPosition || (s.isUnionMember ? 'Đoàn viên' : 'Học sinh'),
+        title: s.unionPosition || (s.isUnionMember ? 'Đoàn viên' : 'Học sinh'),
         union_fee_status: s.unionFeeStatus || 'paid',
         union_booklet_status: s.unionBookletStatus || 'submitted',
         conduct_rating: s.conductRating || 'Xuất sắc',
-        custom_notes: s.customNotes || '',
-        activity_points: s.points || 100,
+        custom_notes: s.customNotes || null,
         points: s.points || 100,
         rank_title: s.rankTitle || 'Đoàn viên',
+        violations_count: s.violationsCount || 0,
         status: s.status || 'active',
-        is_deleted: s.status === 'inactive'
+        is_deleted: s.status === 'inactive',
+        updated_at: new Date().toISOString()
       }, { onConflict: 'student_id' });
+      if (error) {
+        console.warn('Lỗi lưu student:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi lưu student:', err);
@@ -1205,36 +1231,49 @@ export const SupabaseService = {
         );
       }
 
-      await client.from('violations').upsert({
-        violation_id: violation.id,
-        week_number: violation.weekNumber,
-        day: violation.day,
+      // Ensure violation_id is a valid UUID
+      let vioId = violation.id;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!vioId || !uuidRegex.test(vioId)) {
+        vioId = generateUUID();
+      }
+
+      // Ensure reported_by_id is a valid UUID
+      let reporterId = violation.reportedBy?.id;
+      if (!reporterId || !uuidRegex.test(reporterId)) {
+        reporterId = '8b901eb8-5a1a-4398-928f-3dd10d1d2cbf';
+      }
+
+      const { error } = await client.from('violations').upsert({
+        violation_id: vioId,
+        week_number: violation.weekNumber || 1,
+        day: violation.day || 'T2',
         session: violation.session || 'Sáng',
         date_recorded: violation.date || (violation.reportedAt ? violation.reportedAt.split(' ')[0] : new Date().toISOString().split('T')[0]),
         class_id: violation.classId,
-        class_name: violation.className,
-        criterion_id: violation.criterionId,
         criteria_code: violation.criterionId,
-        criterion_name: violation.criterionName,
-        criterion_group: violation.groupName,
         quantity: violation.quantity || 1,
         points_applied: violation.type === 'bonus' ? (violation.bonusPoints || violation.pointsDeducted) : violation.pointsDeducted,
-        score_deducted: violation.type === 'bonus' ? 0 : violation.pointsDeducted,
-        bonus_points: violation.type === 'bonus' ? (violation.bonusPoints || violation.pointsDeducted) : 0,
         student_names: violation.studentNames || [],
         student_ids: violation.studentIds || [],
-        reporter_id: violation.reportedBy?.id || 'system',
+        reported_by_id: reporterId,
         reported_by_name: violation.reportedBy?.name || 'Ban Cờ Đỏ',
         reported_by_role: violation.reportedBy?.role || 'auditor',
         note: violation.note || null,
         proof_images: proofImages,
-        status: violation.status,
+        status: violation.status || 'pending',
         appeal_reason: violation.appeal?.reason || null,
-        appeal_proofs: appealProofs,
-        admin_response: violation.appeal?.adminResponse || null,
-        is_locked: violation.locked || false,
-        is_deleted: false
+        appeal_evidence_url: violation.appeal?.proofImages?.[0] || null,
+        appeal_created_at: violation.appeal?.appealedAt || null,
+        appeal_response_note: violation.appeal?.adminResponse || null,
+        is_deleted: false,
+        updated_at: new Date().toISOString()
       }, { onConflict: 'violation_id' });
+
+      if (error) {
+        console.warn('Lỗi ghi vi phạm lên Supabase:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi ghi vi phạm lên Supabase:', err);
@@ -1664,18 +1703,27 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('duty_schedule').upsert({
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const dutyId = (duty.id && uuidRegex.test(duty.id)) ? duty.id : generateUUID();
+      const auditorId = (duty.auditorId && uuidRegex.test(duty.auditorId)) ? duty.auditorId : '17160b51-204f-45e2-98e1-3f01d59d4953';
+
+      const { error } = await client.from('duty_schedule').upsert({
+        duty_id: dutyId,
         week_number: duty.weekNumber,
         day: duty.day,
         zone: duty.zone,
+        auditor_id: auditorId,
         auditor_name: duty.auditorName,
         auditor_class: duty.auditorClass,
         shift_time: duty.shiftTime || '06:45 - 07:15 (Đầu giờ)',
         is_live_now: Boolean(duty.isLiveNow),
         target_classes: duty.targetClasses || null,
-        session: duty.session || 'Sáng',
-        custom_duty_id: duty.id
-      });
+        session: duty.session || 'Sáng'
+      }, { onConflict: 'duty_id' });
+      if (error) {
+        console.warn('Lỗi lưu duty_schedule:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi lưu duty_schedule:', err);
@@ -1690,19 +1738,25 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client || dutiesList.length === 0) return false;
     try {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const mapped = dutiesList.map(d => ({
+        duty_id: (d.id && uuidRegex.test(d.id)) ? d.id : generateUUID(),
         week_number: d.weekNumber,
         day: d.day,
         zone: d.zone,
+        auditor_id: (d.auditorId && uuidRegex.test(d.auditorId)) ? d.auditorId : '17160b51-204f-45e2-98e1-3f01d59d4953',
         auditor_name: d.auditorName,
         auditor_class: d.auditorClass,
         shift_time: d.shiftTime || '06:45 - 07:15 (Đầu giờ)',
         is_live_now: Boolean(d.isLiveNow),
         target_classes: d.targetClasses || null,
-        session: d.session || 'Sáng',
-        custom_duty_id: d.id
+        session: d.session || 'Sáng'
       }));
-      await client.from('duty_schedule').upsert(mapped);
+      const { error } = await client.from('duty_schedule').upsert(mapped, { onConflict: 'duty_id' });
+      if (error) {
+        console.warn('Lỗi lưu duties batch:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi lưu duties batch:', err);
@@ -1717,7 +1771,7 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('duty_schedule').delete().eq('custom_duty_id', dutyId);
+      await client.from('duty_schedule').delete().eq('duty_id', dutyId);
       return true;
     } catch (err) {
       console.warn('Lỗi xóa duty:', err);
@@ -1735,7 +1789,7 @@ export const SupabaseService = {
       await client.from('fee_locks').upsert({
         class_id: classId,
         is_locked: isLocked,
-        updated_at: new Date().toISOString()
+        locked_at: new Date().toISOString()
       }, { onConflict: 'class_id' });
       return true;
     } catch (err) {
@@ -1751,15 +1805,19 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('academic_years').upsert({
-        year_id: year.id,
+      const { error } = await client.from('academic_years').upsert({
+        id: year.id,
         name: year.name,
         start_date: year.startDate,
         end_date: year.endDate,
         is_current: year.isCurrent,
         is_archived: year.isFrozen,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'year_id' });
+        total_weeks: year.totalWeeks || 35
+      }, { onConflict: 'id' });
+      if (error) {
+        console.warn('Lỗi lưu academic_year:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi lưu academic_year:', err);
@@ -1774,17 +1832,19 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('audit_logs').upsert({
-        log_id: log.id,
+      const { error } = await client.from('audit_logs').upsert({
+        id: log.id,
         user_id: log.userId,
-        user_name: log.userName,
-        user_role: log.userRole,
+        user_name: log.userName || null,
+        user_role: log.userRole || null,
         action: log.action,
-        details: log.details,
-        ip_address: log.ipAddress || null,
-        timestamp: log.timestamp || new Date().toISOString(),
+        details: log.details ? { info: log.details } : {},
         created_at: new Date().toISOString()
-      }, { onConflict: 'log_id' });
+      }, { onConflict: 'id' });
+      if (error) {
+        console.warn('Lỗi lưu audit_log:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi lưu audit_log:', err);
@@ -1846,33 +1906,18 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      let thumb = event.thumbnail;
-      if (thumb && thumb.startsWith('data:image/')) {
-        const uploaded = await this.uploadImage(thumb, 'media');
-        if (uploaded) thumb = uploaded;
-      }
-      await client.from('events').upsert({
-        event_id: event.id,
+      await client.from('youth_events').upsert({
+        id: event.id,
         title: event.title,
-        description: event.description,
-        category: event.category,
-        thumbnail: thumb || null,
-        location: event.location,
-        start_date: event.startDate,
-        end_date: event.endDate,
-        bonus_points: event.bonusPoints,
-        max_slots: event.maxSlots,
-        registered_count: event.registeredCount,
-        registered_student_ids: event.registeredStudentIds,
-        checked_in_student_ids: event.checkedInStudentIds,
-        is_registration_open: event.isRegistrationOpen,
-        qr_code_value: event.qrCodeValue,
-        is_deleted: false,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'event_id' });
+        description: event.description || '',
+        start_date: event.startDate ? event.startDate.split(' ')[0] : new Date().toISOString().split('T')[0],
+        end_date: event.endDate ? event.endDate.split(' ')[0] : null,
+        location: event.location || 'Sân trường',
+        is_active: event.isRegistrationOpen ?? true
+      }, { onConflict: 'id' });
       return true;
     } catch (err) {
-      console.warn('Lỗi lưu event lên Supabase:', err);
+      console.warn('Lỗi lưu youth_events lên Supabase:', err);
       return false;
     }
   },
@@ -1884,10 +1929,10 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('events').update({ is_deleted: true }).eq('event_id', eventId);
+      await client.from('youth_events').delete().eq('id', eventId);
       return true;
     } catch (err) {
-      console.warn('Lỗi xóa event trên Supabase:', err);
+      console.warn('Lỗi xóa youth_events trên Supabase:', err);
       return false;
     }
   },
@@ -1900,20 +1945,10 @@ export const SupabaseService = {
     if (!client) return false;
     try {
       await client.from('document_folders').upsert({
-        folder_id: folder.id,
+        id: folder.id,
         name: folder.name,
-        code: folder.code || null,
-        description: folder.description || null,
-        parent_id: folder.parentId,
-        icon: folder.icon || null,
-        color: folder.color || null,
-        is_system: folder.isSystem || false,
-        order_num: folder.order || 0,
-        allowed_roles: folder.allowedRoles || null,
-        created_at: folder.createdAt || new Date().toISOString(),
-        updated_at: folder.updatedAt || new Date().toISOString(),
-        is_deleted: false
-      }, { onConflict: 'folder_id' });
+        parent_id: folder.parentId || null
+      }, { onConflict: 'id' });
       return true;
     } catch (err) {
       console.warn('Lỗi lưu document_folder lên Supabase:', err);
@@ -1928,7 +1963,7 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('document_folders').update({ is_deleted: true }).eq('folder_id', folderId);
+      await client.from('document_folders').delete().eq('id', folderId);
       return true;
     } catch (err) {
       console.warn('Lỗi xóa document_folder trên Supabase:', err);
@@ -1944,33 +1979,16 @@ export const SupabaseService = {
     if (!client) return false;
     try {
       await client.from('document_files').upsert({
-        file_id: doc.id,
-        title: doc.title,
-        file_number: doc.fileNumber || doc.documentNumber || null,
-        file_name: doc.fileName || doc.title,
-        file_url: doc.fileUrl || doc.url,
-        file_size: doc.fileSize,
-        file_size_bytes: doc.fileSizeBytes || null,
-        file_type: doc.fileType,
-        mime_type: doc.mimeType || null,
-        folder_id: doc.folderId,
-        category: doc.category,
-        publish_date: doc.publishDate || doc.issueDate || new Date().toISOString().split('T')[0],
-        sign_date: doc.signDate || null,
-        signer: doc.signer || null,
-        signer_role: doc.signerRole || null,
-        tags: doc.tags || [],
-        downloads_count: doc.downloadsCount || doc.downloadCount || 0,
-        views_count: doc.viewsCount || doc.viewCount || 0,
-        is_public: doc.isPublic,
-        is_pinned: doc.isPinned || false,
-        description: doc.description || null,
-        version: doc.version || null,
-        uploaded_by: doc.uploadedBy,
-        created_at: doc.createdAt || new Date().toISOString(),
-        updated_at: doc.updatedAt || new Date().toISOString(),
-        is_deleted: false
-      }, { onConflict: 'file_id' });
+        id: doc.id,
+        name: doc.title || doc.fileName || 'Tài liệu',
+        file_type: doc.fileType || 'PDF',
+        size: doc.fileSize || '1 MB',
+        folder_id: doc.folderId || null,
+        category: doc.category || 'ALL',
+        content_base64: doc.fileUrl || doc.url || null,
+        downloads: doc.downloadsCount || 0,
+        views: doc.viewsCount || 0
+      }, { onConflict: 'id' });
       return true;
     } catch (err) {
       console.warn('Lỗi lưu document_file lên Supabase:', err);
@@ -1985,7 +2003,7 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('document_files').update({ is_deleted: true }).eq('file_id', fileId);
+      await client.from('document_files').delete().eq('id', fileId);
       return true;
     } catch (err) {
       console.warn('Lỗi xóa document_file trên Supabase:', err);
@@ -2002,19 +2020,10 @@ export const SupabaseService = {
     if (!client) return true;
     try {
       await client.from('media_folders').upsert({
-        folder_id: folder.id,
+        id: folder.id,
         name: folder.name,
-        description: folder.description || null,
-        color: folder.color || '#3b82f6',
-        icon: folder.icon || 'folder',
-        cover_image: folder.coverImage || null,
-        category: folder.category || 'activities',
-        is_system: folder.isSystem || false,
-        order_num: folder.order || 0,
-        created_at: folder.createdAt || new Date().toISOString(),
-        updated_at: folder.updatedAt || new Date().toISOString(),
-        is_deleted: false
-      }, { onConflict: 'folder_id' });
+        parent_id: null
+      }, { onConflict: 'id' });
       return true;
     } catch (err) {
       console.warn('Lỗi lưu media_folder lên Supabase:', err);
@@ -2030,7 +2039,7 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return true;
     try {
-      await client.from('media_folders').update({ is_deleted: true }).eq('folder_id', folderId);
+      await client.from('media_folders').delete().eq('id', folderId);
       return true;
     } catch (err) {
       console.warn('Lỗi xóa media_folder trên Supabase:', err);
@@ -2048,22 +2057,11 @@ export const SupabaseService = {
     try {
       await client.from('media_assets').upsert({
         id: item.id,
-        title: item.title,
-        description: item.description || null,
+        name: item.title || 'Ảnh Media',
         url: item.url,
-        category: item.category || 'general',
         folder_id: item.folderId || item.albumId || null,
-        bucket: item.bucket || 'media',
-        size_bytes: item.size || null,
-        size_formatted: item.sizeFormatted || null,
-        format: item.format || 'webp',
-        uploaded_by: item.uploadedBy || null,
-        class_id: item.classId || null,
-        week_number: item.weekNumber || null,
-        tags: item.tags || [],
-        is_system_asset: item.isSystemAsset || false,
-        created_at: item.uploadedAt || new Date().toISOString(),
-        is_deleted: false
+        category: item.category || 'general',
+        size_bytes: item.size || 85000
       }, { onConflict: 'id' });
       return true;
     } catch (err) {
