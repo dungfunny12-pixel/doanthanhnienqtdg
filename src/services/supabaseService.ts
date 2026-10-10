@@ -2,6 +2,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { compressImage, dataURLtoFile, compressImageToDataURL } from '../utils/imageCompressor';
 import { saveIndexedDBItem, deleteIndexedDBItem, STORES } from '../utils/indexedDBStorage';
 import { generateUUID } from '../utils/uuid';
+import { INITIAL_USERS } from '../data/initialData';
 import { 
   ClassInfo, 
   Student, 
@@ -343,23 +344,43 @@ export const SupabaseService = {
         : undefined;
 
       const users: User[] | undefined = (rawUsers && rawUsers.length > 0)
-        ? rawUsers.map(u => ({
-            id: u.custom_id || u.user_id || u.username,
-            username: u.username,
-            name: u.full_name || u.name || u.username,
-            role: (u.role || 'user') as any,
-            roleTitle: u.role_title || '',
-            avatar: u.avatar_url || '',
-            email: u.email || '',
-            phone: u.phone_number || u.phone || '',
-            classId: u.class_id || undefined,
-            studentId: u.student_id || undefined,
-            gender: u.gender || undefined,
-            dob: u.dob || undefined,
-            isActive: u.is_active ?? true,
-            assignedZone: u.assigned_zone || undefined,
-            password: u.password_plain || undefined
-          }))
+        ? rawUsers.map(u => {
+            let classId = u.class_id;
+            if (!classId && u.username) {
+              const uname = u.username.toLowerCase();
+              if (uname.startsWith('bithu_')) {
+                const parts = uname.replace('bithu_', '').split('_');
+                if (parts.length >= 2) classId = `${parts[0]}/${parts[1]}`;
+              } else if (uname.startsWith('gvcn_')) {
+                const parts = uname.replace('gvcn_', '').split('_');
+                if (parts.length >= 2) classId = `${parts[0]}/${parts[1]}`;
+              } else if (uname.startsWith('codo_')) {
+                const parts = uname.replace('codo_', '').split('_');
+                if (parts.length >= 2 && !isNaN(Number(parts[0]))) classId = `${parts[0]}/${parts[1]}`;
+              }
+              if (!classId) {
+                const fallbackUser = INITIAL_USERS.find(iu => iu.username.toLowerCase() === uname || iu.id === u.user_id);
+                if (fallbackUser?.classId) classId = fallbackUser.classId;
+              }
+            }
+            return {
+              id: u.custom_id || u.user_id || u.username,
+              username: u.username,
+              name: u.full_name || u.name || u.username,
+              role: (u.role || 'user') as any,
+              roleTitle: u.role_title || '',
+              avatar: u.avatar_url || '',
+              email: u.email || '',
+              phone: u.phone_number || u.phone || '',
+              classId: classId || undefined,
+              studentId: u.student_id || undefined,
+              gender: u.gender || undefined,
+              dob: u.dob || undefined,
+              isActive: u.is_active ?? true,
+              assignedZone: u.assigned_zone || undefined,
+              password: u.password_plain || undefined
+            };
+          })
         : undefined;
 
       const duties: DutyAssignment[] | undefined = (rawDuties && rawDuties.length > 0)
@@ -411,23 +432,30 @@ export const SupabaseService = {
         : undefined;
 
       const activityReports: ActivityReport[] | undefined = (rawReports && rawReports.length > 0)
-        ? rawReports.map(r => ({
-            id: r.id,
-            activityId: undefined,
-            activityTitle: r.title || '',
-            activityType: 'phong_trao',
-            classId: r.class_id || '',
-            className: `Lớp ${r.class_id}`,
-            secretaryName: r.submitted_by || '',
-            reportedAt: r.created_at || new Date().toISOString(),
-            participantCount: 0,
-            participants: [],
-            nonParticipants: [],
-            status: r.status || 'submitted',
-            adminFeedback: undefined,
-            proofImages: r.images || [],
-            academicYearId: '2026_2027'
-          }))
+        ? rawReports.map(r => {
+            let parsedContent: any = {};
+            if (r.content && typeof r.content === 'string' && r.content.startsWith('{')) {
+              try { parsedContent = JSON.parse(r.content); } catch { parsedContent = {}; }
+            }
+            const cl = classMap.get(r.class_id);
+            return {
+              id: r.id,
+              activityId: parsedContent.activityId || undefined,
+              activityTitle: r.title || '',
+              activityType: (r.summary as any) || 'phong_trao',
+              classId: r.class_id || '',
+              className: cl?.name || `Lớp ${r.class_id}`,
+              secretaryName: r.submitted_by || '',
+              reportedAt: r.submitted_at || r.created_at || new Date().toISOString(),
+              participantCount: parsedContent.count || (Array.isArray(parsedContent.participants) ? parsedContent.participants.length : 0),
+              participants: Array.isArray(parsedContent.participants) ? parsedContent.participants : [],
+              nonParticipants: Array.isArray(parsedContent.nonParticipants) ? parsedContent.nonParticipants : [],
+              status: r.status || 'submitted',
+              adminFeedback: parsedContent.feedback || undefined,
+              proofImages: Array.isArray(r.images) ? r.images : [],
+              academicYearId: '2026_2027'
+            };
+          })
         : undefined;
 
       const events: YouthEvent[] | undefined = (rawEvents && rawEvents.length > 0)
@@ -1859,24 +1887,31 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('activity_reports').upsert({
-        report_id: report.id,
-        activity_id: report.activityId || null,
-        activity_title: report.activityTitle,
-        activity_type: report.activityType,
+      const payloadContent = JSON.stringify({
+        activityId: report.activityId || null,
+        participants: report.participants || [],
+        nonParticipants: report.nonParticipants || [],
+        count: report.participantCount || 0,
+        feedback: report.adminFeedback || null
+      });
+
+      const { error } = await client.from('activity_reports').upsert({
+        id: report.id,
         class_id: report.classId,
-        class_name: report.className,
-        secretary_name: report.secretaryName,
-        participant_count: report.participantCount,
-        participants: report.participants,
-        non_participants: report.nonParticipants || [],
-        status: report.status,
-        admin_feedback: report.adminFeedback || null,
-        proof_images: report.proofImages || [],
-        academic_year: report.academicYearId || '2026_2027',
-        is_deleted: false,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'report_id' });
+        title: report.activityTitle,
+        summary: report.activityType || 'phong_trao',
+        content: payloadContent,
+        images: report.proofImages || [],
+        submitted_by: report.secretaryName,
+        submitted_at: new Date().toISOString(),
+        status: report.status || 'submitted',
+        score_awarded: 0
+      }, { onConflict: 'id' });
+
+      if (error) {
+        console.warn('Lỗi lưu activity_report:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi lưu activity_report:', err);
@@ -1891,7 +1926,11 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      await client.from('activity_reports').update({ is_deleted: true, updated_at: new Date().toISOString() }).eq('report_id', id);
+      const { error } = await client.from('activity_reports').delete().eq('id', id);
+      if (error) {
+        console.warn('Lỗi xóa activity_report:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
       console.warn('Lỗi xóa activity_report:', err);
