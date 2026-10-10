@@ -229,16 +229,14 @@ export const PublicPortal: React.FC = () => {
         </div>
       )}
 
-      {/* Main Layout: Left & Center Main Section (8 cols on lg, 9 cols on xl) + Right Sidebar (4 cols on lg, 3 cols on xl) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* ================= ROW 1: TOP ANNOUNCEMENTS (LEFT) + ACCOUNT / LOGIN (RIGHT) ================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
-        {/* ================= LEFT & CENTER MAIN SECTION ================= */}
-        <div className="lg:col-span-8 xl:col-span-9 space-y-6">
-
-          {/* Pinned Urgent Announcement Hub (Sleek Compact Carousel & Controls) */}
-          {pinnedNews.length > 0 && (
+        {/* Left: Pinned Urgent Announcement Hub */}
+        <div className="lg:col-span-8 xl:col-span-9">
+          {pinnedNews.length > 0 ? (
             <div
-              className="glass-panel rounded-2xl p-4 sm:p-5 border-2 border-red-600/70 bg-gradient-to-r from-red-950/95 via-slate-900/95 to-amber-950/90 shadow-glow relative overflow-hidden group transition-all"
+              className="glass-panel rounded-2xl p-4 sm:p-5 border-2 border-red-600/70 bg-gradient-to-r from-red-950/95 via-slate-900/95 to-amber-950/90 shadow-glow relative overflow-hidden group transition-all h-full flex flex-col justify-center"
               onMouseEnter={() => setIsPinnedPaused(true)}
               onMouseLeave={() => setIsPinnedPaused(false)}
             >
@@ -335,13 +333,146 @@ export const PublicPortal: React.FC = () => {
                 );
               })()}
             </div>
+          ) : (
+            <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-slate-800 bg-gradient-to-r from-red-950/40 via-slate-900 to-indigo-950/40 flex items-center gap-4 h-full">
+              <div className="p-3 rounded-2xl bg-red-600/20 text-red-400 border border-red-600/30 text-2xl shrink-0">
+                🏛️
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm sm:text-base font-black text-white">
+                  CỔNG THÔNG TIN ĐIỆN TỬ - {schoolSettings.schoolName?.toUpperCase()}
+                </h3>
+                <p className="text-xs text-slate-300">
+                  Hệ thống quản lý nề nếp, thi đua học đường và phong trào đoàn viên thanh niên trực tuyến.
+                </p>
+              </div>
+            </div>
           )}
+        </div>
 
-          {/* Subgrid: Column 1 (Leaderboard + Slides) & Column 2 (Duty + Newsfeed) */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-            
-            {/* ================= SUB-COLUMN 1: PUBLIC LEADERBOARD & ACTIVITY PHOTOS ================= */}
-            <div className="md:col-span-5 space-y-5">
+        {/* Right: User Profile Card (if logged in) OR Login Form (if guest) */}
+        <div className="lg:col-span-4 xl:col-span-3">
+          {currentUser ? (
+            <div className="glass-panel rounded-2xl p-4 border border-red-500/40 shadow-glow bg-gradient-to-b from-red-950/30 via-slate-900 to-slate-950 space-y-3 h-full flex flex-col justify-between">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg border border-emerald-600/30">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-black text-white">TÀI KHOẢN ĐÃ ĐĂNG NHẬP</h3>
+                    <p className="text-[10px] text-slate-400">Phiên làm việc hiện tại</p>
+                  </div>
+                </div>
+                <button
+                  onClick={logout}
+                  className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 text-[10px] font-bold border border-slate-800 transition-colors flex items-center gap-1"
+                  title="Đăng xuất"
+                >
+                  <LogOut className="w-3 h-3 text-rose-400" />
+                  <span>Đăng xuất</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-2 bg-slate-950 rounded-xl border border-slate-800">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-red-600 to-amber-500 text-white font-black text-sm flex items-center justify-center shadow-md shrink-0">
+                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-white text-xs truncate">{currentUser.name}</h4>
+                  <p className="text-[10px] text-amber-400 font-semibold truncate">
+                    {currentUser.roleTitle || (currentUser.role === 'admin' ? 'Bí thư Đoàn Trường' : currentUser.role === 'manager' ? `GVCN Lớp ${currentUser.classId}` : currentUser.role === 'auditor' ? 'Cán bộ Đội Cờ Đỏ' : currentUser.role === 'youth_secretary' ? `Bí thư Chi đoàn ${currentUser.classId}` : 'Đoàn viên / Học sinh')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <button
+                  onClick={() => {
+                    if (currentUser.role === 'admin') setActiveView('admin');
+                    else if (currentUser.role === 'manager') setActiveView('manager');
+                    else if (currentUser.role === 'auditor') setActiveView('auditor');
+                    else if (currentUser.role === 'youth_secretary') setActiveView('secretary');
+                    else setActiveView('student');
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-glow transition-all active:scale-95"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span>
+                    {currentUser.role === 'admin' ? 'Bảng Điều Hành Quản Trị' : currentUser.role === 'manager' ? 'Cổng GVCN Lớp' : currentUser.role === 'auditor' ? 'Bảng Chấm Điểm Cờ Đỏ' : 'Không Gian Chi Đoàn'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsChangePasswordOpen(true)}
+                  className="w-full py-1.5 px-2.5 rounded-lg bg-slate-900 hover:bg-amber-950/60 text-amber-300 hover:text-amber-200 text-[11px] font-bold flex items-center justify-center gap-1 border border-slate-800 transition-colors"
+                >
+                  <KeyRound className="w-3 h-3 text-amber-400" />
+                  <span>Đổi Mật Khẩu</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="glass-panel rounded-2xl p-4 border border-slate-800 shadow-card space-y-2.5 h-full flex flex-col justify-between">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
+                <div className="p-1.5 bg-red-600/20 text-red-400 rounded-lg border border-red-600/30">
+                  <LogIn className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-black text-white">ĐĂNG NHẬP HỆ THỐNG</h3>
+                  <p className="text-[10px] text-slate-400">Đăng nhập tài khoản</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleLoginSubmit} className="space-y-2">
+                {loginError && (
+                  <div className="p-2 rounded-lg bg-red-950/80 border border-red-800 text-red-300 text-[10px] flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{loginError}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <input
+                      type="text"
+                      required
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      placeholder="Tên đăng nhập"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 transition-colors font-mono"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="Mật khẩu"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 transition-colors font-mono"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold shadow-glow transition-all active:scale-95"
+                >
+                  Xác Thực & Đăng Nhập
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* ================= ROW 2: 3 BALANCED COLUMNS (LEADERBOARD | DUTY & SLIDES | RULES & WEATHER) ================= */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* ================= COLUMN 1 (lg:col-span-4): PUBLIC LEADERBOARD ================= */}
+        <div className="lg:col-span-4 space-y-5">
           <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
             
             {/* Header & Filter */}
@@ -459,7 +590,6 @@ export const PublicPortal: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {/* Trend Icon */}
                     {item.trend === 'up' && (
                       <span className="flex items-center text-[11px] text-emerald-400 font-bold gap-0.5" title="Tăng hạng so với tuần trước">
                         <TrendingUp className="w-3.5 h-3.5" />
@@ -493,8 +623,86 @@ export const PublicPortal: React.FC = () => {
               </p>
             </div>
           </div>
+        </div>
 
-          {/* ================= ACTIVITY PHOTO SLIDESHOW WIDGET ================= */}
+        {/* ================= COLUMN 2 (lg:col-span-4): ĐỘI CỜ ĐỎ TRỰC BAN & ẢNH HOẠT ĐỘNG ================= */}
+        <div className="lg:col-span-4 space-y-5">
+          {/* CỜ ĐỎ DUTY SCHEDULE WIDGET */}
+          <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-red-600/20 text-red-400 border border-red-600/30">
+                  🛡️
+                </span>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-white">ĐỘI CỜ ĐỎ TRỰC BAN</h3>
+                  <p className="text-[11px] text-slate-400">Minh bạch nhân sự giám sát</p>
+                </div>
+              </div>
+
+              {/* Toggle Tab */}
+              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                <button
+                  onClick={() => setDutyTab('today')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                    dutyTab === 'today' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Hôm nay
+                </button>
+                <button
+                  onClick={() => setIsWeeklyDutyModalOpen(true)}
+                  className="px-3 py-1 rounded-lg font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
+                >
+                  <span>Cả tuần</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Today Duty Mini Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {todayDuties.map(duty => (
+                <div
+                  key={duty.id}
+                  className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2"
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                      duty.session === 'Chiều' 
+                        ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' 
+                        : 'bg-amber-950 text-amber-300 border border-amber-800'
+                    }`}>
+                      {duty.session || 'Sáng'}
+                    </span>
+                    {duty.isLiveNow && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        Đang trực
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-base">🚩</span>
+                    <div className="space-y-0.5 flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="font-bold text-white text-xs truncate">{duty.auditorName}</p>
+                        <span className="text-[10px] text-amber-400 font-bold shrink-0">Lớp {duty.auditorClass}</span>
+                      </div>
+                      {duty.targetClasses && (
+                        <p className="text-[11px] text-red-300 font-semibold truncate">
+                          Chấm điểm: <span className="font-bold text-red-200">{duty.targetClasses}</span>
+                        </p>
+                      )}
+                      <p className="text-[10px] text-slate-400 truncate">📍 {duty.zone}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ACTIVITY PHOTO SLIDESHOW WIDGET */}
           {activeSlideList.length > 0 && (
             <div 
               className="glass-panel rounded-3xl p-4 border border-slate-800 shadow-card space-y-3 relative overflow-hidden group"
@@ -609,442 +817,244 @@ export const PublicPortal: React.FC = () => {
           )}
         </div>
 
-        {/* ================= SUB-COLUMN 2: NEWSFEED & CỜ ĐỎ DUTY ================= */}
-        <div className="md:col-span-7 space-y-6">
-          
-          {/* CỜ ĐỎ DUTY SCHEDULE WIDGET */}
-          <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-red-600/20 text-red-400 border border-red-600/30">
-                  🛡️
-                </span>
-                <div>
-                  <h3 className="text-sm sm:text-base font-black text-white">ĐỘI CỜ ĐỎ TRỰC BAN</h3>
-                  <p className="text-[11px] text-slate-400">Minh bạch nhân sự giám sát nề nếp</p>
-                </div>
-              </div>
-
-              {/* Toggle Tab */}
-              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-                <button
-                  onClick={() => setDutyTab('today')}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                    dutyTab === 'today' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Hôm nay
-                </button>
-                <button
-                  onClick={() => setIsWeeklyDutyModalOpen(true)}
-                  className="px-3 py-1 rounded-lg font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
-                >
-                  <span>Cả tuần</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
-              </div>
+        {/* ================= COLUMN 3 (lg:col-span-4): RULES & WEATHER ================= */}
+        <div className="lg:col-span-4 space-y-5">
+          {/* Quick Infobox */}
+          <div className="p-4 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 text-xs space-y-2.5 shadow-card">
+            <div className="flex items-center gap-2 text-amber-400 font-bold pb-2 border-b border-slate-800">
+              <Info className="w-4 h-4 text-amber-400" />
+              <span className="text-xs sm:text-sm font-black text-white">QUY ĐỊNH NỀ NẾP TUẦN</span>
             </div>
-
-            {/* Today Duty Mini Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {todayDuties.map(duty => (
-                <div
-                  key={duty.id}
-                  className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2"
-                >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                      duty.session === 'Chiều' 
-                        ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' 
-                        : 'bg-amber-950 text-amber-300 border border-amber-800'
-                    }`}>
-                      {duty.session || 'Sáng'}
-                    </span>
-                    {duty.isLiveNow && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                        Đang trực
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-base">🚩</span>
-                    <div className="space-y-0.5 flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <p className="font-bold text-white text-xs truncate">{duty.auditorName}</p>
-                        <span className="text-[10px] text-amber-400 font-bold shrink-0">Lớp {duty.auditorClass}</span>
-                      </div>
-                      {duty.targetClasses && (
-                        <p className="text-[11px] text-red-300 font-semibold truncate">
-                          Chấm điểm: <span className="font-bold text-red-200">{duty.targetClasses}</span>
-                        </p>
-                      )}
-                      <p className="text-[10px] text-slate-400 truncate">📍 {duty.zone}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ul className="space-y-1.5 text-[11px] text-slate-300 list-disc list-inside leading-relaxed">
+              <li>Khóa sổ chấm điểm: <span className="font-bold text-amber-300">17h00 Thứ 7</span> hàng tuần</li>
+              <li>Thời hạn gửi phúc khảo của GVCN: <span className="font-bold text-sky-300">Trong vòng 24h</span></li>
+              <li>Học sinh quét mã QR nhận điểm danh nề nếp & cộng điểm thi đua</li>
+            </ul>
           </div>
 
-          {/* NEWSFEED & ANNOUNCEMENTS (2-COLUMN MODERN GRID) */}
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-800">
+          {/* WEATHER WIDGET (ĐÔNG GIANG - ĐÀ NẴNG) */}
+          <div className="glass-panel rounded-3xl p-5 border border-sky-500/20 bg-gradient-to-br from-slate-900 via-sky-950/20 to-slate-950 shadow-card space-y-3.5 relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
               <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-600/30">
-                  📰
-                </span>
+                <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                  <CloudSun className="w-4 h-4 animate-pulse" />
+                </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-black text-white">
-                    BẢN TIN & THÔNG BÁO ĐOÀN
-                  </h3>
-                  <p className="text-[11px] text-slate-400">Thông tin cập nhật chính thức từ BCH Đoàn</p>
+                  <h4 className="text-xs font-black text-white tracking-wide">THỜI TIẾT HÔM NAY</h4>
+                  <p className="text-[10px] text-sky-400 font-medium">Đông Giang, TP Đà Nẵng</p>
                 </div>
               </div>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                Trời đẹp
+              </span>
+            </div>
 
-              {/* Filter Tabs */}
-              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => setNewsCategoryFilter('ALL')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                    newsCategoryFilter === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Tất cả ({visibleNews.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewsCategoryFilter('announcement')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                    newsCategoryFilter === 'announcement' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Thông báo ({visibleNews.filter(n => n.category === 'announcement' || n.id.startsWith('ann-')).length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewsCategoryFilter('news')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                    newsCategoryFilter === 'news' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Bản tin ({visibleNews.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length})
-                </button>
+            {/* Main Weather Display */}
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl shadow-inner">
+                  ☀️
+                </div>
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-white">29°C</span>
+                    <span className="text-[11px] text-slate-400 font-medium">/ 32°C</span>
+                  </div>
+                  <p className="text-xs font-bold text-sky-300">Nắng nhẹ, mây thoáng</p>
+                </div>
+              </div>
+              <div className="text-right text-[10px] text-slate-400 space-y-0.5">
+                <p>Cảm nhận: <span className="font-bold text-slate-200">31°C</span></p>
+                <p>Chỉ số UV: <span className="font-bold text-amber-400">5 (TB)</span></p>
               </div>
             </div>
 
-            {/* 2-Column Grid of News / Announcement Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {filteredNewsList.map(article => {
-                const isAnn = article.category === 'announcement' || article.id.startsWith('ann-');
-                return (
-                  <div
-                    key={article.id}
-                    onClick={() => setSelectedArticleModal(article)}
-                    className={`glass-panel glass-panel-hover rounded-2xl p-3.5 border cursor-pointer group flex flex-col justify-between gap-3 transition-all hover:border-red-500/50 hover:shadow-glow ${
-                      isAnn 
-                        ? 'border-amber-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20' 
-                        : 'border-slate-800 bg-slate-900/90'
-                    }`}
-                  >
-                    <div className="space-y-2.5">
-                      <div className="w-full h-36 relative shrink-0 rounded-xl overflow-hidden border border-slate-700 bg-slate-950">
-                        <img
-                          src={article.thumbnail}
-                          alt={article.title}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm ${
-                          isAnn ? 'bg-amber-600/90' : 'bg-blue-600/90'
-                        }`}>
-                          {isAnn ? '📢 THÔNG BÁO' : '📰 BẢN TIN'}
-                        </span>
-                        {isAnn && article.urgency && article.urgency !== 'normal' && (
-                          <span className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                            article.urgency === 'critical' ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-500 text-slate-950 font-black'
-                          }`}>
-                            {article.urgency === 'critical' ? '🔥 HỎA TỐC' : '⚠️ KHẨN'}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400">
-                          {article.tags.slice(0, 2).map(tag => (
-                            <span key={tag} className="font-bold text-red-400 bg-red-950/60 px-1.5 py-0.2 rounded border border-red-900/50">
-                              {tag}
-                            </span>
-                          ))}
-                          <span>• {article.publishDate}</span>
-                        </div>
-
-                        <h4 className="font-bold text-white text-xs sm:text-sm group-hover:text-red-400 transition-colors line-clamp-2 leading-snug">
-                          {article.title}
-                        </h4>
-
-                        <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
-                          {article.excerpt}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
-                      <span className="truncate max-w-[120px]">Bởi: <strong className="text-slate-200">{article.author}</strong></span>
-                      <span className="text-red-400 font-bold group-hover:underline flex items-center gap-0.5 shrink-0">
-                        Xem tin <ChevronRight className="w-3 h-3" />
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {filteredNewsList.length === 0 && (
-                <div className="col-span-full text-center py-10 glass-panel rounded-2xl border border-slate-800">
-                  <p className="text-slate-400 text-sm">Chưa có bài viết hoặc thông báo nào trong mục này.</p>
+            {/* Weather Stats Grid */}
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                <div className="flex items-center justify-center gap-1 text-sky-400 text-[10px] font-bold mb-0.5">
+                  <Droplets className="w-3 h-3" />
+                  <span>Độ ẩm</span>
                 </div>
-              )}
+                <span className="text-xs font-black text-white">76%</span>
+              </div>
+
+              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                <div className="flex items-center justify-center gap-1 text-teal-400 text-[10px] font-bold mb-0.5">
+                  <Wind className="w-3 h-3" />
+                  <span>Gió ĐN</span>
+                </div>
+                <span className="text-xs font-black text-white">12 km/h</span>
+              </div>
+
+              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                <div className="flex items-center justify-center gap-1 text-indigo-400 text-[10px] font-bold mb-0.5">
+                  <CloudRain className="w-3 h-3" />
+                  <span>Mưa</span>
+                </div>
+                <span className="text-xs font-black text-white">10%</span>
+              </div>
+            </div>
+
+            {/* 3-Period Micro Forecast */}
+            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[10px]">
+              <div className="text-center">
+                <span className="text-slate-400 block font-medium">Sáng</span>
+                <span className="font-bold text-amber-300">27°C ☀️</span>
+              </div>
+              <div className="h-6 w-px bg-slate-800"></div>
+              <div className="text-center">
+                <span className="text-slate-400 block font-medium">Chiều</span>
+                <span className="font-bold text-sky-300">31°C ⛅</span>
+              </div>
+              <div className="h-6 w-px bg-slate-800"></div>
+              <div className="text-center">
+                <span className="text-slate-400 block font-medium">Tối</span>
+                <span className="font-bold text-indigo-300">25°C 🌙</span>
+              </div>
+            </div>
+
+            {/* Youth Union Context Note */}
+            <div className="p-2.5 rounded-xl bg-sky-950/40 border border-sky-800/40 text-[10px] text-sky-200/90 leading-relaxed flex items-start gap-2">
+              <span className="text-xs mt-0.5">✨</span>
+              <span>Thời tiết thuận lợi cho các hoạt động chào cờ, thể dục & nhiệm vụ trực tuần của Đội Cờ Đỏ.</span>
             </div>
           </div>
         </div>
 
       </div>
-    </div>
 
-    {/* ================= RIGHT SIDEBAR: ACCOUNT / LOGIN / RULES / WEATHER ================= */}
-    {/* Positioned directly at the top right, seamlessly level with the Top Pinned Announcements */}
-    <div className="lg:col-span-4 xl:col-span-3 space-y-4">
-      <div className="sticky top-20 space-y-4">
-            
-            {/* User Profile & Launchpad Card (If logged in) OR Login Form (If guest) */}
-            {currentUser ? (
-              <div className="glass-panel rounded-3xl p-5 border border-red-500/40 shadow-glow bg-gradient-to-b from-red-950/30 via-slate-900 to-slate-950 space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
-                  <div className="p-2 bg-emerald-600/20 text-emerald-400 rounded-xl border border-emerald-600/30">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-black text-white">TÀI KHOẢN ĐÃ ĐĂNG NHẬP</h3>
-                    <p className="text-[11px] text-slate-400">Phiên làm việc hiện tại của bạn</p>
-                  </div>
-                </div>
+      {/* ================= ROW 3: BẢN TIN & THÔNG BÁO HOẠT ĐỘNG ĐOÀN (FULL-WIDTH 100%) ================= */}
+      <div className="glass-panel rounded-3xl p-5 sm:p-6 border border-slate-800 bg-gradient-to-b from-slate-900/95 via-slate-900/70 to-slate-950 shadow-card space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-600/30 flex items-center justify-center text-xl shadow-inner shrink-0">
+              📰
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-black text-white">
+                  BẢN TIN & THÔNG BÁO ĐOÀN TRƯỜNG
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                  {visibleNews.length} bài viết
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Cổng thông tin tuyên truyền, sự kiện phong trào và thông báo chính thức từ BCH Đoàn Trường
+              </p>
+            </div>
+          </div>
 
-                <div className="flex items-center gap-3 p-3 bg-slate-950 rounded-2xl border border-slate-800">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 text-white font-black text-base flex items-center justify-center shadow-md shrink-0">
-                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+          {/* Filter Tabs */}
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+            <button
+              type="button"
+              onClick={() => setNewsCategoryFilter('ALL')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                newsCategoryFilter === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Tất cả ({visibleNews.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setNewsCategoryFilter('announcement')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                newsCategoryFilter === 'announcement' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Thông báo ({visibleNews.filter(n => n.category === 'announcement' || n.id.startsWith('ann-')).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setNewsCategoryFilter('news')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                newsCategoryFilter === 'news' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Bản tin ({visibleNews.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length})
+            </button>
+          </div>
+        </div>
+
+        {/* 4-Column Responsive Magazine Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+          {filteredNewsList.map(article => {
+            const isAnn = article.category === 'announcement' || article.id.startsWith('ann-');
+            return (
+              <div
+                key={article.id}
+                onClick={() => setSelectedArticleModal(article)}
+                className={`glass-panel glass-panel-hover rounded-2xl p-3.5 border cursor-pointer group flex flex-col justify-between gap-3 transition-all hover:border-red-500/50 hover:shadow-glow ${
+                  isAnn 
+                    ? 'border-amber-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20' 
+                    : 'border-slate-800 bg-slate-900/90'
+                }`}
+              >
+                <div className="space-y-2.5">
+                  <div className="w-full h-40 relative shrink-0 rounded-xl overflow-hidden border border-slate-700 bg-slate-950">
+                    <img
+                      src={article.thumbnail}
+                      alt={article.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm ${
+                      isAnn ? 'bg-amber-600/90' : 'bg-blue-600/90'
+                    }`}>
+                      {isAnn ? '📢 THÔNG BÁO' : '📰 BẢN TIN'}
+                    </span>
+                    {isAnn && article.urgency && article.urgency !== 'normal' && (
+                      <span className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                        article.urgency === 'critical' ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-500 text-slate-950 font-black'
+                      }`}>
+                        {article.urgency === 'critical' ? '🔥 HỎA TỐC' : '⚠️ KHẨN'}
+                      </span>
+                    )}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider">Đang hoạt động</span>
+
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400">
+                      {article.tags.slice(0, 2).map(tag => (
+                        <span key={tag} className="font-bold text-red-400 bg-red-950/60 px-1.5 py-0.2 rounded border border-red-900/50">
+                          {tag}
+                        </span>
+                      ))}
+                      <span>• {article.publishDate}</span>
                     </div>
-                    <h4 className="font-bold text-white text-xs sm:text-sm truncate">{currentUser.name}</h4>
-                    <p className="text-[11px] text-amber-400 font-semibold truncate">
-                      {currentUser.roleTitle || (currentUser.role === 'admin' ? 'Bí thư Đoàn Trường / Quản trị' : currentUser.role === 'manager' ? `GVCN Lớp ${currentUser.classId}` : currentUser.role === 'auditor' ? 'Cán bộ Đội Cờ Đỏ' : currentUser.role === 'youth_secretary' ? `Bí thư Chi đoàn ${currentUser.classId}` : 'Đoàn viên / Học sinh')}
+
+                    <h4 className="font-bold text-white text-xs sm:text-sm group-hover:text-red-400 transition-colors line-clamp-2 leading-snug">
+                      {article.title}
+                    </h4>
+
+                    <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
+                      {article.excerpt}
                     </p>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <button
-                    onClick={() => {
-                      if (currentUser.role === 'admin') setActiveView('admin');
-                      else if (currentUser.role === 'manager') setActiveView('manager');
-                      else if (currentUser.role === 'auditor') setActiveView('auditor');
-                      else if (currentUser.role === 'youth_secretary') setActiveView('secretary');
-                      else setActiveView('student');
-                    }}
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-glow transition-all active:scale-95"
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span>
-                      {currentUser.role === 'admin' ? 'Vào Bảng Điều Hành Quản Trị' : currentUser.role === 'manager' ? 'Vào Cổng Giáo Viên Chủ Nhiệm' : currentUser.role === 'auditor' ? 'Vào Bảng Chấm Điểm Cờ Đỏ' : 'Vào Không Gian Chi Đoàn'}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsChangePasswordOpen(true)}
-                    className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-amber-950/60 text-amber-300 hover:text-amber-200 text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-800 hover:border-amber-700/60 transition-colors active:scale-95"
-                  >
-                    <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Đổi Mật Khẩu Tài Khoản</span>
-                  </button>
-
-                  <button
-                    onClick={logout}
-                    className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-800 hover:border-rose-700/60 transition-colors active:scale-95"
-                  >
-                    <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                    <span>Đăng Xuất Khỏi Hệ Thống</span>
-                  </button>
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                  <span className="truncate max-w-[120px]">Bởi: <strong className="text-slate-200">{article.author}</strong></span>
+                  <span className="text-red-400 font-bold group-hover:underline flex items-center gap-0.5 shrink-0">
+                    Xem tin <ChevronRight className="w-3 h-3" />
+                  </span>
                 </div>
               </div>
-            ) : (
-              /* Login Card */
-              <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
-                <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-800">
-                  <div className="p-2 bg-red-600/20 text-red-400 rounded-xl border border-red-600/30">
-                    <LogIn className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-black text-white">ĐĂNG NHẬP HỆ THỐNG</h3>
-                    <p className="text-[11px] text-slate-400">Đăng nhập tài khoản & mật khẩu</p>
-                  </div>
-                </div>
+            );
+          })}
 
-                <form onSubmit={handleLoginSubmit} className="space-y-3">
-                  {loginError && (
-                    <div className="p-2.5 rounded-xl bg-red-950/80 border border-red-800 text-red-300 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{loginError}</span>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Tên Đăng Nhập / Mã Tài Khoản</label>
-                    <input
-                      type="text"
-                      required
-                      value={loginUsername}
-                      onChange={(e) => setLoginUsername(e.target.value)}
-                      placeholder="vd: admin, gvcn_10_1, codo_nam..."
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 transition-colors font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Mật Khẩu Truy Cập</label>
-                    <input
-                      type="password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      placeholder="Mặc định: 123456@Password"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-red-500 transition-colors font-mono"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold shadow-glow transition-all active:scale-95"
-                  >
-                    Xác Thực & Vào Hệ Thống
-                  </button>
-                </form>
-              </div>
-            )}
-
-            {/* Quick Infobox */}
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 text-xs space-y-2">
-              <div className="flex items-center gap-1.5 text-amber-400 font-bold">
-                <Info className="w-4 h-4" />
-                <span>Quy định nề nếp tuần:</span>
-              </div>
-              <ul className="space-y-1 text-[11px] text-slate-400 list-disc list-inside">
-                <li>Khóa sổ chấm điểm: 17h00 Thứ 7 hàng tuần</li>
-                <li>Thời hạn gửi phúc khảo của GVCN: 24h</li>
-                <li>Học sinh quét mã QR nhận điểm phong trào</li>
-              </ul>
+          {filteredNewsList.length === 0 && (
+            <div className="col-span-full text-center py-12 glass-panel rounded-2xl border border-slate-800">
+              <p className="text-slate-400 text-sm">Chưa có bài viết hoặc thông báo nào trong mục này.</p>
             </div>
-
-            {/* WEATHER WIDGET (ĐÔNG GIANG - ĐÀ NẴNG) */}
-            <div className="glass-panel rounded-3xl p-5 border border-sky-500/20 bg-gradient-to-br from-slate-900 via-sky-950/20 to-slate-950 shadow-card space-y-3.5 relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
-
-              {/* Header */}
-              <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
-                    <CloudSun className="w-4 h-4 animate-pulse" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-black text-white tracking-wide">THỜI TIẾT HÔM NAY</h4>
-                    <p className="text-[10px] text-sky-400 font-medium">Đông Giang, TP Đà Nẵng</p>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                  Trời đẹp
-                </span>
-              </div>
-
-              {/* Main Weather Display */}
-              <div className="flex items-center justify-between py-1">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl shadow-inner">
-                    ☀️
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-white">29°C</span>
-                      <span className="text-[11px] text-slate-400 font-medium">/ 32°C</span>
-                    </div>
-                    <p className="text-xs font-bold text-sky-300">Nắng nhẹ, mây thoáng</p>
-                  </div>
-                </div>
-                <div className="text-right text-[10px] text-slate-400 space-y-0.5">
-                  <p>Cảm nhận: <span className="font-bold text-slate-200">31°C</span></p>
-                  <p>Chỉ số UV: <span className="font-bold text-amber-400">5 (TB)</span></p>
-                </div>
-              </div>
-
-              {/* Weather Stats Grid */}
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
-                  <div className="flex items-center justify-center gap-1 text-sky-400 text-[10px] font-bold mb-0.5">
-                    <Droplets className="w-3 h-3" />
-                    <span>Độ ẩm</span>
-                  </div>
-                  <span className="text-xs font-black text-white">76%</span>
-                </div>
-
-                <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
-                  <div className="flex items-center justify-center gap-1 text-teal-400 text-[10px] font-bold mb-0.5">
-                    <Wind className="w-3 h-3" />
-                    <span>Gió ĐN</span>
-                  </div>
-                  <span className="text-xs font-black text-white">12 km/h</span>
-                </div>
-
-                <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
-                  <div className="flex items-center justify-center gap-1 text-indigo-400 text-[10px] font-bold mb-0.5">
-                    <CloudRain className="w-3 h-3" />
-                    <span>Mưa</span>
-                  </div>
-                  <span className="text-xs font-black text-white">10%</span>
-                </div>
-              </div>
-
-              {/* 3-Period Micro Forecast */}
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[10px]">
-                <div className="text-center">
-                  <span className="text-slate-400 block font-medium">Sáng</span>
-                  <span className="font-bold text-amber-300">27°C ☀️</span>
-                </div>
-                <div className="h-6 w-px bg-slate-800"></div>
-                <div className="text-center">
-                  <span className="text-slate-400 block font-medium">Chiều</span>
-                  <span className="font-bold text-sky-300">31°C ⛅</span>
-                </div>
-                <div className="h-6 w-px bg-slate-800"></div>
-                <div className="text-center">
-                  <span className="text-slate-400 block font-medium">Tối</span>
-                  <span className="font-bold text-indigo-300">25°C 🌙</span>
-                </div>
-              </div>
-
-              {/* Youth Union Context Note */}
-              <div className="p-2.5 rounded-xl bg-sky-950/40 border border-sky-800/40 text-[10px] text-sky-200/90 leading-relaxed flex items-start gap-2">
-                <span className="text-xs mt-0.5">✨</span>
-                <span>Thời tiết thuận lợi cho các hoạt động chào cờ, thể dục & nhiệm vụ trực tuần của Đội Cờ Đỏ.</span>
-              </div>
-            </div>
-
-          </div>
+          )}
         </div>
-
       </div>
 
       {/* ================= PUBLIC DOCUMENT & FORM REPOSITORY ================= */}
