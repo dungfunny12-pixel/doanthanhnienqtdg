@@ -117,6 +117,27 @@ export const PublicPortal: React.FC = () => {
   const visibleNews = news.filter(n => !n.isHidden);
   const pinnedNews = visibleNews.filter(n => n.isPinned);
 
+  // Pinned Announcement state with auto-rotation
+  const [currentPinnedIdx, setCurrentPinnedIdx] = useState(0);
+  const [isPinnedPaused, setIsPinnedPaused] = useState(false);
+
+  // News category filter tab state ('ALL' | 'announcement' | 'news')
+  const [newsCategoryFilter, setNewsCategoryFilter] = useState<'ALL' | 'announcement' | 'news'>('ALL');
+  const filteredNewsList = visibleNews.filter(n => {
+    if (newsCategoryFilter === 'ALL') return true;
+    if (newsCategoryFilter === 'announcement') return n.category === 'announcement' || n.id.startsWith('ann-');
+    if (newsCategoryFilter === 'news') return n.category !== 'announcement' && !n.id.startsWith('ann-');
+    return true;
+  });
+
+  useEffect(() => {
+    if (pinnedNews.length <= 1 || isPinnedPaused) return;
+    const timer = setInterval(() => {
+      setCurrentPinnedIdx(prev => (prev + 1) % pinnedNews.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [pinnedNews.length, isPinnedPaused]);
+
   // Get scores for active week
   const allScores = getWeeklyScores(activeWeek);
   const filteredScores = selectedGrade === 'ALL' 
@@ -214,36 +235,107 @@ export const PublicPortal: React.FC = () => {
         {/* ================= LEFT & CENTER MAIN SECTION ================= */}
         <div className="lg:col-span-8 xl:col-span-9 space-y-6">
 
-          {/* Pinned Urgent Announcement Banners (Rendered at top of Main Section, side-by-side with Right Sidebar) */}
-          {pinnedNews.map(pinned => (
-            <div 
-              key={pinned.id}
-              onClick={() => setSelectedArticleModal(pinned)}
-              className="bg-gradient-to-r from-red-950/90 via-red-900/80 to-amber-950/90 border-2 border-red-600/70 rounded-2xl p-4 sm:p-5 shadow-glow cursor-pointer hover:border-red-500 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          {/* Pinned Urgent Announcement Hub (Sleek Compact Carousel & Controls) */}
+          {pinnedNews.length > 0 && (
+            <div
+              className="glass-panel rounded-2xl p-4 sm:p-5 border-2 border-red-600/70 bg-gradient-to-r from-red-950/95 via-slate-900/95 to-amber-950/90 shadow-glow relative overflow-hidden group transition-all"
+              onMouseEnter={() => setIsPinnedPaused(true)}
+              onMouseLeave={() => setIsPinnedPaused(false)}
             >
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-xl bg-red-600 text-white shrink-0 mt-0.5 animate-pulse">
-                  <AlertCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded text-white text-[10px] font-black uppercase tracking-wider ${
-                      pinned.urgency === 'critical' ? 'bg-red-600 animate-pulse' : 'bg-amber-600'
-                    }`}>
-                      {pinned.category === 'announcement' ? '📢 THÔNG BÁO CHỈ ĐẠO' : '⭐ TIN NỔI BẬT'}
+              {/* Header bar of announcement hub */}
+              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-red-800/40">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-red-600 text-white animate-pulse text-xs">
+                    <AlertCircle className="w-4 h-4" />
+                  </span>
+                  <h3 className="text-xs sm:text-sm font-black text-white tracking-wide uppercase flex items-center gap-1.5">
+                    <span>THÔNG BÁO CHỈ ĐẠO & CÔNG VĂN</span>
+                    <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-red-600 text-white shadow-sm">
+                      {pinnedNews.length} tin
                     </span>
-                    <span className="text-xs text-red-200">{pinned.publishDate}</span>
-                  </div>
-                  <h3 className="font-black text-white text-sm sm:text-base mt-1 line-clamp-1">{pinned.title}</h3>
-                  <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">{pinned.excerpt}</p>
+                  </h3>
                 </div>
+
+                {/* Prev / Next controls and indicator pills */}
+                {pinnedNews.length > 1 && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 mr-1">
+                      {pinnedNews.map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setCurrentPinnedIdx(idx)}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            idx === currentPinnedIdx ? 'w-5 bg-amber-400 shadow-glow' : 'w-1.5 bg-slate-700 hover:bg-slate-500'
+                          }`}
+                          title={`Chuyển đến thông báo ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPinnedIdx(prev => (prev - 1 + pinnedNews.length) % pinnedNews.length)}
+                      className="w-6 h-6 rounded-lg bg-slate-900 hover:bg-red-600 text-white border border-slate-700 flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                      title="Thông báo trước"
+                    >
+                      ‹
+                    </button>
+                    <span className="text-[10px] font-mono text-slate-400 font-bold px-1">
+                      {currentPinnedIdx + 1}/{pinnedNews.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPinnedIdx(prev => (prev + 1) % pinnedNews.length)}
+                      className="w-6 h-6 rounded-lg bg-slate-900 hover:bg-red-600 text-white border border-slate-700 flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                      title="Thông báo kế tiếp"
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
               </div>
-              <button className="shrink-0 px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors inline-flex items-center gap-1">
-                <span>Xem Toàn Văn</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+
+              {/* Active Announcement Content */}
+              {(() => {
+                const activePinned = pinnedNews[currentPinnedIdx] || pinnedNews[0];
+                if (!activePinned) return null;
+                return (
+                  <div
+                    onClick={() => setSelectedArticleModal(activePinned)}
+                    className="cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group/item"
+                  >
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-white text-[10px] font-black uppercase tracking-wider ${
+                          activePinned.urgency === 'critical' ? 'bg-red-600 animate-pulse' : 'bg-amber-600'
+                        }`}>
+                          {activePinned.category === 'announcement' ? '📢 THÔNG BÁO CHỈ ĐẠO' : '⭐ TIN NỔI BẬT'}
+                        </span>
+                        <span className="text-xs text-red-200/90 font-mono">{activePinned.publishDate}</span>
+                        {activePinned.author && (
+                          <span className="text-[11px] text-slate-400 hidden md:inline">• {activePinned.author}</span>
+                        )}
+                      </div>
+                      <h4 className="font-black text-white text-sm sm:text-base group-hover/item:text-amber-300 transition-colors line-clamp-1">
+                        {activePinned.title}
+                      </h4>
+                      <p className="text-xs text-slate-300 line-clamp-1 leading-relaxed">
+                        {activePinned.excerpt}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="shrink-0 px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors inline-flex items-center gap-1 shadow-md cursor-pointer group-hover/item:scale-105"
+                    >
+                      <span>Xem Toàn Văn</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
-          ))}
+          )}
 
           {/* Subgrid: Column 1 (Leaderboard + Slides) & Column 2 (Duty + Newsfeed) */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
@@ -595,9 +687,9 @@ export const PublicPortal: React.FC = () => {
             </div>
           </div>
 
-          {/* NEWSFEED & ANNOUNCEMENTS */}
+          {/* NEWSFEED & ANNOUNCEMENTS (2-COLUMN MODERN GRID) */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="p-2 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-600/30">
                   📰
@@ -610,85 +702,107 @@ export const PublicPortal: React.FC = () => {
                 </div>
               </div>
 
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-900 border border-slate-800 text-blue-400">
-                {visibleNews.length} bài viết
-              </span>
+              {/* Filter Tabs */}
+              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setNewsCategoryFilter('ALL')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    newsCategoryFilter === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Tất cả ({visibleNews.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewsCategoryFilter('announcement')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    newsCategoryFilter === 'announcement' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Thông báo ({visibleNews.filter(n => n.category === 'announcement' || n.id.startsWith('ann-')).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewsCategoryFilter('news')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    newsCategoryFilter === 'news' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Bản tin ({visibleNews.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length})
+                </button>
+              </div>
             </div>
 
-            {/* Rendered Media Cards */}
-            <div className="space-y-3.5">
-              {visibleNews.map(article => {
+            {/* 2-Column Grid of News / Announcement Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {filteredNewsList.map(article => {
                 const isAnn = article.category === 'announcement' || article.id.startsWith('ann-');
                 return (
                   <div
                     key={article.id}
                     onClick={() => setSelectedArticleModal(article)}
-                    className={`glass-panel glass-panel-hover rounded-2xl p-4 border cursor-pointer group flex flex-col sm:flex-row gap-4 items-start transition-all ${
+                    className={`glass-panel glass-panel-hover rounded-2xl p-3.5 border cursor-pointer group flex flex-col justify-between gap-3 transition-all hover:border-red-500/50 hover:shadow-glow ${
                       isAnn 
                         ? 'border-amber-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20' 
-                        : 'border-slate-800'
+                        : 'border-slate-800 bg-slate-900/90'
                     }`}
                   >
-                    <div className="w-full sm:w-36 h-28 relative shrink-0 rounded-xl overflow-hidden border border-slate-700 bg-slate-900">
-                      <img
-                        src={article.thumbnail}
-                        alt={article.title}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                      <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider text-white shadow ${
-                        isAnn ? 'bg-amber-600' : 'bg-blue-600'
-                      }`}>
-                        {isAnn ? '📢 THÔNG BÁO' : '📰 BẢN TIN'}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="space-y-2.5">
+                      <div className="w-full h-36 relative shrink-0 rounded-xl overflow-hidden border border-slate-700 bg-slate-950">
+                        <img
+                          src={article.thumbnail}
+                          alt={article.title}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm ${
+                          isAnn ? 'bg-amber-600/90' : 'bg-blue-600/90'
+                        }`}>
+                          {isAnn ? '📢 THÔNG BÁO' : '📰 BẢN TIN'}
+                        </span>
                         {isAnn && article.urgency && article.urgency !== 'normal' && (
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                          <span className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[9px] font-black uppercase ${
                             article.urgency === 'critical' ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-500 text-slate-950 font-black'
                           }`}>
                             {article.urgency === 'critical' ? '🔥 HỎA TỐC' : '⚠️ KHẨN'}
                           </span>
                         )}
-                        {article.tags.map(tag => (
-                          <span key={tag} className="text-[10px] font-bold text-red-400 bg-red-950/60 px-2 py-0.5 rounded border border-red-900/50">
-                            {tag}
-                          </span>
-                        ))}
-                        <span className="text-[11px] text-slate-400">• {article.publishDate}</span>
                       </div>
 
-                      <h4 className="font-bold text-white text-sm group-hover:text-red-400 transition-colors line-clamp-2 leading-snug">
-                        {article.title}
-                      </h4>
-
-                      <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
-                        {article.excerpt}
-                      </p>
-
-                      <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400">
-                        <div className="flex items-center gap-2">
-                          <span>Bởi: <strong className="text-slate-200">{article.author}</strong></span>
-                          {article.attachments && article.attachments.length > 0 && (
-                            <span className="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 text-[10px] font-bold flex items-center gap-1">
-                              📎 {article.attachments.length} file đính kèm
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400">
+                          {article.tags.slice(0, 2).map(tag => (
+                            <span key={tag} className="font-bold text-red-400 bg-red-950/60 px-1.5 py-0.2 rounded border border-red-900/50">
+                              {tag}
                             </span>
-                          )}
+                          ))}
+                          <span>• {article.publishDate}</span>
                         </div>
-                        <span className="text-red-400 font-semibold group-hover:underline flex items-center gap-1 shrink-0">
-                          Xem chi tiết <ChevronRight className="w-3 h-3" />
-                        </span>
+
+                        <h4 className="font-bold text-white text-xs sm:text-sm group-hover:text-red-400 transition-colors line-clamp-2 leading-snug">
+                          {article.title}
+                        </h4>
+
+                        <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
+                          {article.excerpt}
+                        </p>
                       </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                      <span className="truncate max-w-[120px]">Bởi: <strong className="text-slate-200">{article.author}</strong></span>
+                      <span className="text-red-400 font-bold group-hover:underline flex items-center gap-0.5 shrink-0">
+                        Xem tin <ChevronRight className="w-3 h-3" />
+                      </span>
                     </div>
                   </div>
                 );
               })}
 
-              {visibleNews.length === 0 && (
-                <div className="text-center py-10 glass-panel rounded-2xl border border-slate-800">
+              {filteredNewsList.length === 0 && (
+                <div className="col-span-full text-center py-10 glass-panel rounded-2xl border border-slate-800">
                   <p className="text-slate-400 text-sm">Chưa có bài viết hoặc thông báo nào trong mục này.</p>
                 </div>
               )}
