@@ -1443,6 +1443,7 @@ export const SupabaseService = {
         try {
           await client.from('media_assets').upsert({
             id: mediaItem.id,
+            name: mediaItem.title,
             title: mediaItem.title,
             url: mediaItem.url,
             category: mediaItem.category,
