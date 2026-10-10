@@ -1959,6 +1959,26 @@ Nhằm chấn chỉnh kỷ cương học đường, nâng cao ý thức tự gi�
       { name: 'Ke_Hoach_To_Chuc_Hoi_Trai_2026.pdf', url: '#', size: '512 KB', type: 'application/pdf' }
     ]
   },
+  {
+    id: 'news-daihoi-2026',
+    title: 'ĐẠI HỘI ĐẠI BIỂU ĐOÀN TNCS HỒ CHÍ MINH TRƯỜNG THPT QUANG TRUNG – ĐÔNG GIANG LẦN THỨ II, NHIỆM KỲ 2026–2027',
+    excerpt: '💙 Tuổi trẻ Quang Trung – Đông Giang: Đoàn kết – Tiên phong – Sáng tạo – Phát triển! 💙',
+    content: `[TRỌNG THỂ] ĐẠI HỘI ĐẠI BIỂU ĐOÀN TNCS HỒ CHÍ MINH TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG LẦN THỨ II, NHIỆM KỲ 2026 - 2027 THÀNH CÔNG RỰC RỠ.
+
+Đại hội đã tổng kết công tác Đoàn và phong trào thanh niên nhiệm kỳ 2025 - 2026, đồng thời đề ra phương hướng, mục tiêu và nhiệm vụ công tác Đoàn nhiệm kỳ mới 2026 - 2027.
+
+Khẩu hiệu hành động: Tuổi trẻ THPT Quang Trung - Đông Giang Tiên phong - Bản lĩnh - Đoàn kết - Sáng tạo!`,
+    thumbnail: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&auto=format&fit=crop&q=80',
+    author: 'BCH Đoàn Trường',
+    authorRole: 'Ban Thường Vụ',
+    publishDate: '2026-09-03 08:00',
+    isPinned: true,
+    isHidden: false,
+    category: 'news',
+    urgency: 'critical',
+    tags: ['#DaiHoiDoan', '#TuoiTreQuangTrung', '#NhiemKy2026_2027'],
+    views: 1850
+  },
 
   // 2. BẢN TIN & HOẠT ĐỘNG PHONG TRÀO ĐOÀN
   {

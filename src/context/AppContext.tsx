@@ -787,16 +787,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
 
   // Hàm đồng bộ toàn diện tất cả bảng dữ liệu từ Supabase Cloud với thuật toán gộp thông minh (Smart Merge)
-  const refreshDataFromCloud = async () => {
+  const refreshDataFromCloud = async (silent = false) => {
     if (!isSupabaseConfigured()) return;
     if (isFetchingCloudRef.current) return;
     isFetchingCloudRef.current = true;
-    setIsSyncingCloud(true);
+    if (!silent) setIsSyncingCloud(true);
     try {
       const isFirstSync = !hasCloudSyncedRef.current;
       const cloudData = await SupabaseService.loadAllDataFromSupabase();
       if (!cloudData) {
-        setIsSyncingCloud(false);
+        if (!silent) setIsSyncingCloud(false);
         isFetchingCloudRef.current = false;
         return;
       }
@@ -939,8 +939,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Tự động kích hoạt Realtime Subscription + Event Listeners + Polling để đồng bộ tức thì đa thiết bị
   useEffect(() => {
-    // 1. Đồng bộ dữ liệu ngay khi khởi động
-    refreshDataFromCloud();
+    // 1. Đồng bộ dữ liệu ngay khi khởi động (hiển thị trạng thái nạp)
+    refreshDataFromCloud(false);
 
     // 2. Lắng nghe thay đổi Realtime từ Supabase (Websocket postgres_changes)
     const client = getSupabaseClient();
@@ -951,7 +951,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .channel('public:db-sync-all-devices')
           .on('postgres_changes', { event: '*', schema: 'public' }, () => {
             console.log('⚡ [Realtime] Nhận tín hiệu thay đổi dữ liệu từ thiết bị khác, đang đồng bộ tức thì...');
-            refreshDataFromCloud();
+            refreshDataFromCloud(true);
           })
           .subscribe();
       } catch (err) {
@@ -962,12 +962,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 3. Tự động đồng bộ khi người dùng mở lại tab, chuyển sang ứng dụng trên điện thoại, hoặc kết nối mạng trở lại
     const handleVisibilityOrFocus = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        refreshDataFromCloud();
+        refreshDataFromCloud(true);
       }
     };
     const handleOnline = () => {
       console.log('🌐 [Network] Đã kết nối mạng trở lại, đang đồng bộ dữ liệu...');
-      refreshDataFromCloud();
+      refreshDataFromCloud(true);
     };
     window.addEventListener('focus', handleVisibilityOrFocus);
     window.addEventListener('visibilitychange', handleVisibilityOrFocus);
@@ -975,7 +975,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 4. Định kỳ đồng bộ ngầm siêu tốc mỗi 5 giây để dữ liệu máy tính & điện thoại luôn khớp tức thì 100%
     const pollInterval = setInterval(() => {
-      refreshDataFromCloud();
+      refreshDataFromCloud(true);
     }, 5000);
 
     return () => {
