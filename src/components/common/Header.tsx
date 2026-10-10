@@ -91,7 +91,8 @@ export const Header: React.FC = () => {
   const getThemeGradient = (color?: string) => {
     switch (color) {
       case 'blue': return 'from-blue-800 via-blue-600 to-indigo-600';
-      case 'emerald': return 'from-emerald-800 via-emerald-600 to-teal-600';
+      case 'emerald':
+      case 'green': return 'from-emerald-800 via-emerald-600 to-teal-600';
       case 'amber': return 'from-amber-800 via-amber-600 to-orange-600';
       case 'purple': return 'from-purple-800 via-purple-600 to-pink-600';
       case 'slate': return 'from-slate-900 via-slate-700 to-zinc-600';

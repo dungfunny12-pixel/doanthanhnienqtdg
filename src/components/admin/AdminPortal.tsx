@@ -8523,26 +8523,29 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
                     {[
+                      { id: 'emerald', name: 'Xanh Lá Cây', bg: 'bg-emerald-600', border: 'border-emerald-500' },
                       { id: 'red', name: 'Đỏ Đoàn viên', bg: 'bg-red-600', border: 'border-red-500' },
                       { id: 'blue', name: 'Xanh Dương Thanh Niên', bg: 'bg-blue-600', border: 'border-blue-500' },
-                      { id: 'emerald', name: 'Xanh Lá Cây', bg: 'bg-emerald-600', border: 'border-emerald-500' },
                       { id: 'purple', name: 'Tím Hoàng Gia', bg: 'bg-purple-600', border: 'border-purple-500' },
                       { id: 'amber', name: 'Cam Nhiệt Huyết', bg: 'bg-amber-600', border: 'border-amber-500' },
                       { id: 'slate', name: 'Xám Titan', bg: 'bg-slate-600', border: 'border-slate-500' },
-                    ].map(theme => (
-                      <button
-                        type="button"
-                        key={theme.id}
-                        onClick={() => setSettingsForm({ ...settingsForm, themeColor: theme.id as any })}
-                        className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${settingsForm.themeColor === theme.id
-                          ? `${theme.bg} text-white border-white shadow-glow ring-2 ring-white/50 scale-105`
-                          : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
-                          }`}
-                      >
-                        <div className={`w-5 h-5 rounded-full ${theme.bg} border-2 border-white`} />
-                        <span className="font-bold text-[11px] text-center">{theme.name}</span>
-                      </button>
-                    ))}
+                    ].map(theme => {
+                      const isSelected = settingsForm.themeColor === theme.id || (theme.id === 'emerald' && (settingsForm.themeColor as any) === 'green');
+                      return (
+                        <button
+                          type="button"
+                          key={theme.id}
+                          onClick={() => setSettingsForm({ ...settingsForm, themeColor: theme.id as any })}
+                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${isSelected
+                            ? `${theme.bg} text-white border-white shadow-glow ring-2 ring-white/50 scale-105`
+                            : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
+                            }`}
+                        >
+                          <div className={`w-5 h-5 rounded-full ${theme.bg} border-2 border-white`} />
+                          <span className="font-bold text-[11px] text-center">{theme.name}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

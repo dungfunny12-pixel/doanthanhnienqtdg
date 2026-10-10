@@ -309,10 +309,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const sanitizeSchoolSettings = (settings: SchoolSettings): SchoolSettings => {
     const s = { ...settings };
-    if (!s.logoUrl || s.logoUrl.includes('mvkvfvxfcqxdabxumroz.supabase.co')) s.logoUrl = INITIAL_SCHOOL_SETTINGS.logoUrl;
-    if (!s.youthUnionLogoUrl || s.youthUnionLogoUrl.includes('mvkvfvxfcqxdabxumroz.supabase.co')) s.youthUnionLogoUrl = INITIAL_SCHOOL_SETTINGS.youthUnionLogoUrl;
-    if (!s.bannerTopImage || s.bannerTopImage.includes('mvkvfvxfcqxdabxumroz.supabase.co')) s.bannerTopImage = INITIAL_SCHOOL_SETTINGS.bannerTopImage;
-    if (!s.footerBannerImage || s.footerBannerImage.includes('mvkvfvxfcqxdabxumroz.supabase.co')) s.footerBannerImage = INITIAL_SCHOOL_SETTINGS.footerBannerImage;
+    if (s.themeColor === ('green' as any)) s.themeColor = 'emerald';
+    if (!s.themeColor) s.themeColor = 'emerald';
+    if (!s.logoUrl || s.logoUrl.includes('mvkvfvxfcqxdabxumroz.supabase.co') || s.logoUrl.includes('UklGRh4AAAB')) {
+      s.logoUrl = INITIAL_SCHOOL_SETTINGS.logoUrl;
+    }
+    if (!s.youthUnionLogoUrl || s.youthUnionLogoUrl.includes('mvkvfvxfcqxdabxumroz.supabase.co')) {
+      s.youthUnionLogoUrl = INITIAL_SCHOOL_SETTINGS.youthUnionLogoUrl;
+    }
+    if (!s.bannerTopImage || s.bannerTopImage.includes('mvkvfvxfcqxdabxumroz.supabase.co') || s.bannerTopImage.includes('UklGRh4AAAB')) {
+      s.bannerTopImage = INITIAL_SCHOOL_SETTINGS.bannerTopImage;
+    }
+    if (!s.footerBannerImage || s.footerBannerImage.includes('mvkvfvxfcqxdabxumroz.supabase.co')) {
+      s.footerBannerImage = INITIAL_SCHOOL_SETTINGS.footerBannerImage;
+    }
     return s;
   };
 
@@ -1067,10 +1077,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // School Settings
   const updateSchoolSettings = (updates: Partial<SchoolSettings>) => {
     setSchoolSettings(prev => {
-      const updated = { ...prev, ...updates };
-      try {
-        localStorage.setItem(`${LOCAL_STORAGE_KEY}_schoolSettings`, JSON.stringify(updated));
-      } catch {}
+      const updated = sanitizeSchoolSettings({ ...prev, ...updates });
+      safeSaveLocalStorage('schoolSettings', updated);
+      setIndexedDBKV('app_school_settings', updated);
       if (isSupabaseConfigured()) {
         SupabaseService.saveSchoolSettings(updated).catch(err => {
           console.warn('Lỗi khi lưu schoolSettings lên Supabase:', err);

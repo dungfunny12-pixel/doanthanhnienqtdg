@@ -297,18 +297,24 @@ export const SupabaseService = {
 
       let schoolSettings: SchoolSettings | undefined = undefined;
       if (rawSettings) {
+        const themeCol = rawSettings.theme_color === 'green' ? 'emerald' : (rawSettings.theme_color || 'emerald');
+        const logo = (rawSettings.logo_url && !rawSettings.logo_url.includes('UklGRh4AAAB')) ? rawSettings.logo_url : '/brand/logo_truong.svg';
+        const unionLogo = rawSettings.youth_union_logo_url || '/brand/huy_hieu_doan.svg';
+        const topBanner = (rawSettings.banner_top_image && !rawSettings.banner_top_image.includes('UklGRh4AAAB')) ? rawSettings.banner_top_image : '/brand/banner_top.svg';
+        const footerBanner = rawSettings.footer_banner_image || '/brand/banner_footer.svg';
+
         schoolSettings = {
-          schoolName: rawSettings.school_name,
-          youthUnionName: rawSettings.youth_union_name,
-          slogan: rawSettings.slogan,
-          address: rawSettings.address,
-          email: rawSettings.email,
-          phone: rawSettings.phone,
-          themeColor: rawSettings.theme_color,
-          logoUrl: rawSettings.logo_url,
-          youthUnionLogoUrl: rawSettings.youth_union_logo_url,
-          bannerTopImage: rawSettings.banner_top_image,
-          footerBannerImage: rawSettings.footer_banner_image,
+          schoolName: rawSettings.school_name || 'Trường THPT Quang Trung - Đông Giang',
+          youthUnionName: rawSettings.youth_union_name || 'Đoàn trường THPT Quang Trung - Đông Giang',
+          slogan: rawSettings.slogan || 'Tuổi trẻ Quang Trung – Tiên phong, Gương mẫu, Bản lĩnh, Sáng tạo',
+          address: rawSettings.address || 'Thôn Trung Sơn, xã Đông Giang, TP Đà Nẵng',
+          email: rawSettings.email || 'doantruongquangtrungdonggiang@gmail.com',
+          phone: rawSettings.phone || '0988806194',
+          themeColor: themeCol,
+          logoUrl: logo,
+          youthUnionLogoUrl: unionLogo,
+          bannerTopImage: topBanner,
+          footerBannerImage: footerBanner,
           semester1EndWeek: Number(rawSettings.semester_1_end_week) || 18,
           semester1Name: rawSettings.semester_1_name || 'Học Kỳ 1',
           semester2Name: rawSettings.semester_2_name || 'Học Kỳ 2'
@@ -806,28 +812,11 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
+      const themeColor = ((settings.themeColor as unknown as string) === 'green' ? 'emerald' : settings.themeColor) || 'emerald';
       let logoUrl = settings.logoUrl || null;
       let youthUnionLogoUrl = settings.youthUnionLogoUrl || null;
       let bannerTopImage = settings.bannerTopImage || null;
       let footerBannerImage = settings.footerBannerImage || null;
-
-      // Tự động tải ảnh base64 lên Supabase Storage nếu có
-      if (logoUrl && logoUrl.startsWith('data:image/')) {
-        const uploaded = await this.uploadImage(logoUrl, 'media');
-        if (uploaded) logoUrl = uploaded;
-      }
-      if (youthUnionLogoUrl && youthUnionLogoUrl.startsWith('data:image/')) {
-        const uploaded = await this.uploadImage(youthUnionLogoUrl, 'media');
-        if (uploaded) youthUnionLogoUrl = uploaded;
-      }
-      if (bannerTopImage && bannerTopImage.startsWith('data:image/')) {
-        const uploaded = await this.uploadImage(bannerTopImage, 'media');
-        if (uploaded) bannerTopImage = uploaded;
-      }
-      if (footerBannerImage && footerBannerImage.startsWith('data:image/')) {
-        const uploaded = await this.uploadImage(footerBannerImage, 'media');
-        if (uploaded) footerBannerImage = uploaded;
-      }
 
       const { error } = await client.from('school_settings').upsert({
         id: 'current',
@@ -837,7 +826,7 @@ export const SupabaseService = {
         address: settings.address,
         email: settings.email,
         phone: settings.phone,
-        theme_color: settings.themeColor,
+        theme_color: themeColor,
         logo_url: logoUrl,
         youth_union_logo_url: youthUnionLogoUrl,
         banner_top_image: bannerTopImage,

@@ -142,3 +142,24 @@ CREATE TABLE IF NOT EXISTS public.youth_events (
 ALTER TABLE public.youth_events ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all on youth_events" ON public.youth_events;
 CREATE POLICY "Allow all on youth_events" ON public.youth_events FOR ALL USING (true) WITH CHECK (true);
+
+-- Storage Buckets & Policies
+INSERT INTO storage.buckets (id, name, public) 
+VALUES 
+  ('media', 'media', true), 
+  ('proof_images', 'proof_images', true), 
+  ('violations', 'violations', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public Storage Select" ON storage.objects;
+CREATE POLICY "Public Storage Select" ON storage.objects FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public Storage Insert" ON storage.objects;
+CREATE POLICY "Public Storage Insert" ON storage.objects FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Storage Update" ON storage.objects;
+CREATE POLICY "Public Storage Update" ON storage.objects FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Storage Delete" ON storage.objects;
+CREATE POLICY "Public Storage Delete" ON storage.objects FOR DELETE USING (true);
+

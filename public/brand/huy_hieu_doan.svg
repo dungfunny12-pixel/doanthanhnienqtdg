@@ -1,0 +1,36 @@
+<svg viewBox="0 0 200 200" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="badgeGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stopColor="#ef4444" />
+      <stop offset="70%" stopColor="#dc2626" />
+      <stop offset="100%" stopColor="#991b1b" />
+    </radialGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#fef08a" />
+      <stop offset="50%" stopColor="#facc15" />
+      <stop offset="100%" stopColor="#ca8a04" />
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#34d399" />
+      <stop offset="100%" stopColor="#059669" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer circle with gear cog / golden rim -->
+  <circle cx="100" cy="100" r="96" fill="url(#goldGrad)" stroke="#854d0e" stroke-width="3" />
+  <circle cx="100" cy="100" r="88" fill="url(#greenGrad)" />
+  <circle cx="100" cy="100" r="76" fill="url(#badgeGrad)" stroke="url(#goldGrad)" stroke-width="3" />
+
+  <!-- Golden Star at top left of flag -->
+  <polygon points="70,55 74,67 86,67 76,75 80,87 70,79 60,87 64,75 54,67 66,67" fill="#facc15" stroke="#b45309" stroke-width="1" />
+
+  <!-- Hand holding the flag pole -->
+  <path d="M50 145 C60 130, 85 110, 115 95 L125 105 C95 125, 75 145, 60 155 Z" fill="url(#goldGrad)" stroke="#854d0e" stroke-width="1.5" />
+  <path d="M65 145 C75 135, 90 125, 105 120" stroke="#78350f" stroke-width="2" stroke-linecap="round" />
+
+  <!-- Banner with SẴN SÀNG -->
+  <path d="M30 150 Q100 175 170 150 L165 170 Q100 195 35 170 Z" fill="url(#goldGrad)" stroke="#854d0e" stroke-width="2" />
+  <text x="100" y="167" text-anchor="middle" fill="#7f1d1d" font-weight="900" font-size="14" letter-spacing="2" font-family="Arial, sans-serif">
+    SẴN SÀNG
+  </text>
+</svg>

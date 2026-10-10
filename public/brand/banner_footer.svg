@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 450" width="100%" height="100%">
+  <defs>
+    <!-- Afternoon Warm Sky Gradient -->
+    <linearGradient id="footerSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#0284c7" />
+      <stop offset="45%" stopColor="#38bdf8" />
+      <stop offset="75%" stopColor="#fdba74" />
+      <stop offset="100%" stopColor="#fed7aa" />
+    </linearGradient>
+    <!-- School Building Color Gradients -->
+    <linearGradient id="wallYellow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#fef08a" />
+      <stop offset="60%" stopColor="#fde047" />
+      <stop offset="100%" stopColor="#eab308" />
+    </linearGradient>
+    <linearGradient id="roofRed" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#ef4444" />
+      <stop offset="100%" stopColor="#991b1b" />
+    </linearGradient>
+    <!-- Hill Backdrop -->
+    <linearGradient id="hillBackdrop" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#15803d" />
+      <stop offset="100%" stopColor="#14532d" />
+    </linearGradient>
+    <!-- Tree Gradients -->
+    <linearGradient id="lushTree" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#22c55e" />
+      <stop offset="100%" stopColor="#15803d" />
+    </linearGradient>
+    <linearGradient id="goldSlogan" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#fef08a" />
+      <stop offset="60%" stopColor="#facc15" />
+      <stop offset="100%" stopColor="#ca8a04" />
+    </linearGradient>
+    <!-- Dark Vignette Filter for Slogan Overlay -->
+    <linearGradient id="footerVignette" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#020617" stop-opacity="0.25" />
+      <stop offset="50%" stopColor="#020617" stop-opacity="0.65" />
+      <stop offset="100%" stopColor="#020617" stop-opacity="0.95" />
+    </linearGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1400" height="450" fill="url(#footerSky)" />
+
+  <!-- Mountainous Backdrop of Đông Giang -->
+  <path d="M 0 250 Q 300 120 700 200 T 1400 160 L 1400 450 L 0 450 Z" fill="url(#hillBackdrop)" />
+
+  <!-- Dense Trees Behind School -->
+  <g fill="url(#lushTree)">
+    <circle cx="100" cy="220" r="90" />
+    <circle cx="220" cy="200" r="110" />
+    <circle cx="380" cy="220" r="100" />
+    <circle cx="550" cy="190" r="110" />
+    <circle cx="700" cy="180" r="120" />
+    <circle cx="850" cy="190" r="110" />
+    <circle cx="1020" cy="220" r="100" />
+    <circle cx="1180" cy="200" r="110" />
+    <circle cx="1300" cy="220" r="90" />
+  </g>
+
+  <!-- Main 2-Story Classroom Building (Yellow French-Vietnamese Colonial Style) -->
+  <g id="ClassroomBuilding" transform="translate(150, 140)">
+    <!-- Main Roof Top -->
+    <polygon points="0,50 1100,50 1060,10 40,10" fill="url(#roofRed)" stroke="#7f1d1d" stroke-width="2" />
+    <polygon points="450,10 650,10 630,-15 470,-15" fill="#b91c1c" />
+
+    <!-- 2nd Floor Walls -->
+    <rect x="20" y="50" width="1060" height="85" fill="url(#wallYellow)" stroke="#ca8a04" stroke-width="2" />
+    <!-- 2nd Floor Corridors & Windows -->
+    <g fill="#1e293b" opacity="0.85">
+      <rect x="50" y="65" width="45" height="55" rx="3" />
+      <rect x="130" y="65" width="45" height="55" rx="3" />
+      <rect x="210" y="65" width="45" height="55" rx="3" />
+      <rect x="290" y="65" width="45" height="55" rx="3" />
+      <rect x="370" y="65" width="45" height="55" rx="3" />
+      <!-- Central Hallway -->
+      <rect x="500" y="55" width="100" height="75" fill="#0f172a" rx="4" />
+      <rect x="680" y="65" width="45" height="55" rx="3" />
+      <rect x="760" y="65" width="45" height="55" rx="3" />
+      <rect x="840" y="65" width="45" height="55" rx="3" />
+      <rect x="920" y="65" width="45" height="55" rx="3" />
+      <rect x="1000" y="65" width="45" height="55" rx="3" />
+    </g>
+
+    <!-- Intermediate Cornice Beam -->
+    <rect x="10" y="135" width="1080" height="15" fill="#fef08a" stroke="#ca8a04" stroke-width="2" />
+
+    <!-- 1st Floor Walls -->
+    <rect x="20" y="150" width="1060" height="110" fill="url(#wallYellow)" stroke="#ca8a04" stroke-width="2" />
+    <!-- 1st Floor Classrooms & Entrance -->
+    <g fill="#1e293b" opacity="0.85">
+      <rect x="50" y="165" width="45" height="70" rx="3" />
+      <rect x="130" y="165" width="45" height="70" rx="3" />
+      <rect x="210" y="165" width="45" height="70" rx="3" />
+      <rect x="290" y="165" width="45" height="70" rx="3" />
+      <rect x="370" y="165" width="45" height="70" rx="3" />
+      <!-- Main Entrance Door -->
+      <rect x="490" y="155" width="120" height="95" fill="#0284c7" stroke="#facc15" stroke-width="2" rx="4" />
+      <rect x="680" y="165" width="45" height="70" rx="3" />
+      <rect x="760" y="165" width="45" height="70" rx="3" />
+      <rect x="840" y="165" width="45" height="70" rx="3" />
+      <rect x="920" y="165" width="45" height="70" rx="3" />
+      <rect x="1000" y="165" width="45" height="70" rx="3" />
+    </g>
+
+    <!-- Grand Flagpole & Vietnam National Red Flag with Gold Star -->
+    <g transform="translate(550, -40)">
+      <!-- Flag Pole -->
+      <line x1="0" y1="0" x2="0" y2="280" stroke="#f8fafc" stroke-width="4" />
+      <circle cx="0" cy="0" r="6" fill="#facc15" stroke="#854d0e" stroke-width="1.5" />
+      <!-- Flying Red Flag with Wind Waves -->
+      <path d="M 0 10 Q 35 0 70 12 Q 105 24 140 10 L 140 90 Q 105 104 70 92 Q 35 80 0 90 Z" fill="#dc2626" />
+      <!-- Golden Star on Flag -->
+      <polygon points="70,35 74,47 86,47 76,55 80,67 70,59 60,67 64,55 54,47 66,47" fill="#facc15" />
+    </g>
+  </g>
+
+  <!-- Paved School Yard Ground -->
+  <rect x="0" y="380" width="1400" height="70" fill="#334155" />
+  <rect x="0" y="380" width="1400" height="8" fill="#e2e8f0" opacity="0.3" />
+
+  <!-- Full Dark Vignette Gradient -->
+  <rect width="1400" height="450" fill="url(#footerVignette)" pointer-events="none" />
+
+  <!-- Inspiring Slogan Typography at Center Bottom -->
+  <g transform="translate(700, 385)">
+    <text text-anchor="middle" fill="url(#goldSlogan)" font-size="14" font-weight="900" font-family="'Segoe UI', Roboto, sans-serif" letter-spacing="2.5">
+      TUỔI TRẺ QUANG TRUNG – TIÊN PHONG, GƯƠNG MẪU, BẢN LĨNH, SÁNG TẠO
+    </text>
+    <text y="30" text-anchor="middle" fill="#ffffff" font-size="22" font-weight="900" font-family="'Segoe UI', Roboto, sans-serif" letter-spacing="1">
+      Đoàn trường THPT Quang Trung - Đông Giang
+    </text>
+  </g>
+</svg>
