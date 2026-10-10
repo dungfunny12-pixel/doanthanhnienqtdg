@@ -26,11 +26,16 @@ if (typeof window !== 'undefined' && window.localStorage) {
  * Lấy cấu hình Supabase chuẩn hóa tự động cho toàn hệ thống
  */
 export const getSupabaseConfig = (): SupabaseConfig => {
-  const envUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || '').trim();
-  const envKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '').trim();
+  let envUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || '').trim();
+  let envKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '').trim();
+
+  if (!envUrl || envUrl.includes('mvkvfvxfcqxdabxumroz')) {
+    envUrl = DEFAULT_SUPABASE_URL;
+    envKey = DEFAULT_SUPABASE_ANON_KEY;
+  }
 
   return {
-    url: envUrl || DEFAULT_SUPABASE_URL,
+    url: envUrl,
     anonKey: envKey || DEFAULT_SUPABASE_ANON_KEY
   };
 };
