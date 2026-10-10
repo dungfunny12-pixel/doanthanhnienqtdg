@@ -468,153 +468,155 @@ export const PublicPortal: React.FC = () => {
 
       </div>
 
-      {/* ================= ROW 2: 3 BALANCED COLUMNS (LEADERBOARD | DUTY & SLIDES | RULES & WEATHER) ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-start">
+      {/* ================= ROW 2: 3 BALANCED EQUAL-HEIGHT COLUMNS (LEADERBOARD | DUTY & RULES | WEATHER & SLIDES) ================= */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-stretch">
         
         {/* ================= COLUMN 1 (lg:col-span-4): PUBLIC LEADERBOARD ================= */}
-        <div className="lg:col-span-4 space-y-5">
-          <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
+        <div className="lg:col-span-4 flex flex-col">
+          <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card h-full flex flex-col justify-between">
             
-            {/* Header & Filter */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
-                  <Trophy className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-sm sm:text-base font-black text-white">BẢNG XẾP HẠNG THI ĐUA</h2>
-                  <p className="text-[11px] text-slate-400">Tuần {activeWeek} • Điểm Chuẩn: 1440đ</p>
+            <div>
+              {/* Header & Filter */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm sm:text-base font-black text-white">BẢNG XẾP HẠNG THI ĐUA</h2>
+                    <p className="text-[11px] text-slate-400">Tuần {activeWeek} • Điểm Chuẩn: 1440đ</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Grade Filter Tabs */}
-            <div className="flex rounded-xl bg-slate-950 p-1 mb-5 border border-slate-800 text-xs">
-              {(['ALL', 10, 11, 12] as const).map(grade => (
-                <button
-                  key={grade}
-                  onClick={() => setSelectedGrade(grade)}
-                  className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center ${
-                    selectedGrade === grade
-                      ? 'bg-red-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {grade === 'ALL' ? 'Toàn trường' : `Khối ${grade}`}
-                </button>
-              ))}
-            </div>
-
-            {/* Top 3 Podium Display */}
-            {filteredScores.length >= 3 && (
-              <div className="grid grid-cols-3 gap-2 items-end mb-6 pt-4 pb-2">
-                {/* 2nd Place */}
-                {top2 && (
-                  <div 
-                    onClick={() => setSelectedClassModal(top2)}
-                    className="podium-2nd rounded-2xl p-2.5 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[140px]"
+              {/* Grade Filter Tabs */}
+              <div className="flex rounded-xl bg-slate-950 p-1 mb-4 border border-slate-800 text-xs">
+                {(['ALL', 10, 11, 12] as const).map(grade => (
+                  <button
+                    key={grade}
+                    onClick={() => setSelectedGrade(grade)}
+                    className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center cursor-pointer ${
+                      selectedGrade === grade
+                        ? 'bg-red-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
                   >
-                    <div className="w-8 h-8 rounded-full bg-slate-300 text-slate-900 font-black text-sm flex items-center justify-center shadow-md border-2 border-slate-200">
-                      🥈 2
-                    </div>
-                    <div className="my-1">
-                      <p className="font-extrabold text-white text-xs">{top2.className}</p>
-                      <p className="font-black text-slate-200 text-sm">{top2.finalScore}</p>
-                    </div>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold">
-                      {top2.rating}
-                    </span>
-                  </div>
-                )}
+                    {grade === 'ALL' ? 'Toàn trường' : `Khối ${grade}`}
+                  </button>
+                ))}
+              </div>
 
-                {/* 1st Place */}
-                {top1 && (
-                  <div 
-                    onClick={() => { triggerCelebration(); setSelectedClassModal(top1); }}
-                    className="podium-1st rounded-2xl p-3 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[170px] relative overflow-hidden"
-                  >
-                    <div className="absolute top-1 right-1 text-amber-400 animate-spin">✨</div>
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-base flex items-center justify-center shadow-glow-gold border-2 border-amber-300">
-                      🥇 1
-                    </div>
-                    <div className="my-1">
-                      <div className="inline-flex items-center gap-1 text-[10px] text-amber-300 font-bold">
-                        <span>🏆 Quán Quân</span>
+              {/* Top 3 Podium Display */}
+              {filteredScores.length >= 3 && (
+                <div className="grid grid-cols-3 gap-2 items-end mb-4 pt-1 pb-1">
+                  {/* 2nd Place */}
+                  {top2 && (
+                    <div 
+                      onClick={() => setSelectedClassModal(top2)}
+                      className="podium-2nd rounded-2xl p-2.5 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[135px]"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-slate-300 text-slate-900 font-black text-xs flex items-center justify-center shadow-md border-2 border-slate-200">
+                        🥈 2
                       </div>
-                      <p className="font-black text-white text-sm">{top1.className}</p>
-                      <p className="font-black text-amber-300 text-base">{top1.finalScore}</p>
-                    </div>
-                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-200 border border-amber-700 font-extrabold">
-                      {top1.rating}
-                    </span>
-                  </div>
-                )}
-
-                {/* 3rd Place */}
-                {top3 && (
-                  <div 
-                    onClick={() => setSelectedClassModal(top3)}
-                    className="podium-3rd rounded-2xl p-2.5 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[130px]"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-amber-700 text-white font-black text-sm flex items-center justify-center shadow-md border-2 border-amber-600">
-                      🥉 3
-                    </div>
-                    <div className="my-1">
-                      <p className="font-extrabold text-white text-xs">{top3.className}</p>
-                      <p className="font-black text-amber-200 text-sm">{top3.finalScore}</p>
-                    </div>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-bold">
-                      {top3.rating}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* List from #4 to #18 */}
-            <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
-              {restScores.map(item => (
-                <div
-                  key={item.classId}
-                  onClick={() => setSelectedClassModal(item)}
-                  className="p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 flex items-center justify-between cursor-pointer transition-all hover:translate-x-1"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 text-center font-bold text-xs text-slate-400">
-                      #{item.rank}
-                    </span>
-                    <div>
-                      <p className="font-bold text-white text-xs">{item.className}</p>
-                      <span className="text-[10px] text-slate-500">Khối {item.grade}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    {item.trend === 'up' && (
-                      <span className="flex items-center text-[11px] text-emerald-400 font-bold gap-0.5" title="Tăng hạng so với tuần trước">
-                        <TrendingUp className="w-3.5 h-3.5" />
-                        <span>↑</span>
+                      <div className="my-1">
+                        <p className="font-extrabold text-white text-xs">{top2.className}</p>
+                        <p className="font-black text-slate-200 text-sm">{top2.finalScore}</p>
+                      </div>
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold">
+                        {top2.rating}
                       </span>
-                    )}
-                    {item.trend === 'down' && (
-                      <span className="flex items-center text-[11px] text-rose-400 font-bold gap-0.5" title="Tụt hạng so với tuần trước">
-                        <TrendingDown className="w-3.5 h-3.5" />
-                        <span>↓</span>
-                      </span>
-                    )}
-                    {item.trend === 'same' && (
-                      <span className="flex items-center text-[11px] text-slate-500 font-bold" title="Giữ nguyên thứ hạng">
-                        <Minus className="w-3.5 h-3.5" />
-                      </span>
-                    )}
-
-                    <div className="text-right min-w-[55px]">
-                      <p className="font-black text-white text-xs">{item.finalScore}đ</p>
-                      <p className="text-[9px] text-slate-400">-{item.totalDeduction}đ</p>
                     </div>
-                  </div>
+                  )}
+
+                  {/* 1st Place */}
+                  {top1 && (
+                    <div 
+                      onClick={() => { triggerCelebration(); setSelectedClassModal(top1); }}
+                      className="podium-1st rounded-2xl p-3 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[160px] relative overflow-hidden"
+                    >
+                      <div className="absolute top-1 right-1 text-amber-400 animate-spin">✨</div>
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-sm flex items-center justify-center shadow-glow-gold border-2 border-amber-300">
+                        🥇 1
+                      </div>
+                      <div className="my-1">
+                        <div className="inline-flex items-center gap-1 text-[10px] text-amber-300 font-bold">
+                          <span>🏆 Quán Quân</span>
+                        </div>
+                        <p className="font-black text-white text-xs sm:text-sm">{top1.className}</p>
+                        <p className="font-black text-amber-300 text-base">{top1.finalScore}</p>
+                      </div>
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-200 border border-amber-700 font-extrabold">
+                        {top1.rating}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* 3rd Place */}
+                  {top3 && (
+                    <div 
+                      onClick={() => setSelectedClassModal(top3)}
+                      className="podium-3rd rounded-2xl p-2.5 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[125px]"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-amber-700 text-white font-black text-xs flex items-center justify-center shadow-md border-2 border-amber-600">
+                        🥉 3
+                      </div>
+                      <div className="my-1">
+                        <p className="font-extrabold text-white text-xs">{top3.className}</p>
+                        <p className="font-black text-amber-200 text-sm">{top3.finalScore}</p>
+                      </div>
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-bold">
+                        {top3.rating}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              ))}
+              )}
+
+              {/* List from #4 to #18 */}
+              <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+                {restScores.map(item => (
+                  <div
+                    key={item.classId}
+                    onClick={() => setSelectedClassModal(item)}
+                    className="p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 flex items-center justify-between cursor-pointer transition-all hover:translate-x-1"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-6 text-center font-bold text-xs text-slate-400">
+                        #{item.rank}
+                      </span>
+                      <div>
+                        <p className="font-bold text-white text-xs">{item.className}</p>
+                        <span className="text-[10px] text-slate-500">Khối {item.grade}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {item.trend === 'up' && (
+                        <span className="flex items-center text-[11px] text-emerald-400 font-bold gap-0.5" title="Tăng hạng so với tuần trước">
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          <span>↑</span>
+                        </span>
+                      )}
+                      {item.trend === 'down' && (
+                        <span className="flex items-center text-[11px] text-rose-400 font-bold gap-0.5" title="Tụt hạng so với tuần trước">
+                          <TrendingDown className="w-3.5 h-3.5" />
+                          <span>↓</span>
+                        </span>
+                      )}
+                      {item.trend === 'same' && (
+                        <span className="flex items-center text-[11px] text-slate-500 font-bold" title="Giữ nguyên thứ hạng">
+                          <Minus className="w-3.5 h-3.5" />
+                        </span>
+                      )}
+
+                      <div className="text-right min-w-[55px]">
+                        <p className="font-black text-white text-xs">{item.finalScore}đ</p>
+                        <p className="text-[9px] text-slate-400">-{item.totalDeduction}đ</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="mt-4 pt-3 border-t border-slate-800/80 text-center">
@@ -626,84 +628,86 @@ export const PublicPortal: React.FC = () => {
         </div>
 
         {/* ================= COLUMN 2 (lg:col-span-4): ĐỘI CỜ ĐỎ TRỰC BAN & QUY ĐỊNH ================= */}
-        <div className="lg:col-span-4 space-y-5">
+        <div className="lg:col-span-4 flex flex-col justify-between space-y-5">
           {/* CỜ ĐỎ DUTY SCHEDULE WIDGET */}
-          <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-red-600/20 text-red-400 border border-red-600/30">
-                  🛡️
-                </span>
-                <div>
-                  <h3 className="text-sm sm:text-base font-black text-white">ĐỘI CỜ ĐỎ TRỰC BAN</h3>
-                  <p className="text-[11px] text-slate-400">Minh bạch nhân sự giám sát</p>
+          <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card flex-1 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-xl bg-red-600/20 text-red-400 border border-red-600/30">
+                    🛡️
+                  </span>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-white">ĐỘI CỜ ĐỎ TRỰC BAN</h3>
+                    <p className="text-[11px] text-slate-400">Minh bạch nhân sự giám sát</p>
+                  </div>
+                </div>
+
+                {/* Toggle Tab */}
+                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                  <button
+                    onClick={() => setDutyTab('today')}
+                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                      dutyTab === 'today' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Hôm nay
+                  </button>
+                  <button
+                    onClick={() => setIsWeeklyDutyModalOpen(true)}
+                    className="px-3 py-1 rounded-lg font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Cả tuần</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
                 </div>
               </div>
 
-              {/* Toggle Tab */}
-              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-                <button
-                  onClick={() => setDutyTab('today')}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                    dutyTab === 'today' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Hôm nay
-                </button>
-                <button
-                  onClick={() => setIsWeeklyDutyModalOpen(true)}
-                  className="px-3 py-1 rounded-lg font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
-                >
-                  <span>Cả tuần</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-            {/* Today Duty Mini Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {todayDuties.map(duty => (
-                <div
-                  key={duty.id}
-                  className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2"
-                >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                      duty.session === 'Chiều' 
-                        ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' 
-                        : 'bg-amber-950 text-amber-300 border border-amber-800'
-                    }`}>
-                      {duty.session || 'Sáng'}
-                    </span>
-                    {duty.isLiveNow && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                        Đang trực
+              {/* Today Duty Mini Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[340px] overflow-y-auto pr-1 scrollbar-thin">
+                {todayDuties.map(duty => (
+                  <div
+                    key={duty.id}
+                    className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                        duty.session === 'Chiều' 
+                          ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' 
+                          : 'bg-amber-950 text-amber-300 border border-amber-800'
+                      }`}>
+                        {duty.session || 'Sáng'}
                       </span>
-                    )}
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-base">🚩</span>
-                    <div className="space-y-0.5 flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <p className="font-bold text-white text-xs truncate">{duty.auditorName}</p>
-                        <span className="text-[10px] text-amber-400 font-bold shrink-0">Lớp {duty.auditorClass}</span>
-                      </div>
-                      {duty.targetClasses && (
-                        <p className="text-[11px] text-red-300 font-semibold truncate">
-                          Chấm điểm: <span className="font-bold text-red-200">{duty.targetClasses}</span>
-                        </p>
+                      {duty.isLiveNow && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                          Đang trực
+                        </span>
                       )}
-                      <p className="text-[10px] text-slate-400 truncate">📍 {duty.zone}</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-base">🚩</span>
+                      <div className="space-y-0.5 flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="font-bold text-white text-xs truncate">{duty.auditorName}</p>
+                          <span className="text-[10px] text-amber-400 font-bold shrink-0">Lớp {duty.auditorClass}</span>
+                        </div>
+                        {duty.targetClasses && (
+                          <p className="text-[11px] text-red-300 font-semibold truncate">
+                            Chấm điểm: <span className="font-bold text-red-200">{duty.targetClasses}</span>
+                          </p>
+                        )}
+                        <p className="text-[10px] text-slate-400 truncate">📍 {duty.zone}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Quick Infobox (Quy định nề nếp tuần) */}
-          <div className="p-4 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 text-xs space-y-2.5 shadow-card">
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 text-xs space-y-2.5 shadow-card">
             <div className="flex items-center gap-2 text-amber-400 font-bold pb-2 border-b border-slate-800">
               <Info className="w-4 h-4 text-amber-400" />
               <span className="text-xs sm:text-sm font-black text-white">QUY ĐỊNH NỀ NẾP TUẦN</span>
@@ -717,95 +721,97 @@ export const PublicPortal: React.FC = () => {
         </div>
 
         {/* ================= COLUMN 3 (lg:col-span-4): THỜI TIẾT & ẢNH HOẠT ĐỘNG ================= */}
-        <div className="lg:col-span-4 space-y-5">
+        <div className="lg:col-span-4 flex flex-col justify-between space-y-5">
           {/* WEATHER WIDGET (ĐÔNG GIANG - ĐÀ NẴNG) */}
-          <div className="glass-panel rounded-3xl p-5 border border-sky-500/20 bg-gradient-to-br from-slate-900 via-sky-950/20 to-slate-950 shadow-card space-y-3.5 relative overflow-hidden">
+          <div className="glass-panel rounded-3xl p-5 border border-sky-500/20 bg-gradient-to-br from-slate-900 via-sky-950/20 to-slate-950 shadow-card space-y-3.5 relative overflow-hidden flex-1 flex flex-col justify-between">
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
-                  <CloudSun className="w-4 h-4 animate-pulse" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-white tracking-wide">THỜI TIẾT HÔM NAY</h4>
-                  <p className="text-[10px] text-sky-400 font-medium">Đông Giang, TP Đà Nẵng</p>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                Trời đẹp
-              </span>
-            </div>
-
-            {/* Main Weather Display */}
-            <div className="flex items-center justify-between py-1">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl shadow-inner">
-                  ☀️
-                </div>
-                <div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-white">29°C</span>
-                    <span className="text-[11px] text-slate-400 font-medium">/ 32°C</span>
+            <div>
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                    <CloudSun className="w-4 h-4 animate-pulse" />
                   </div>
-                  <p className="text-xs font-bold text-sky-300">Nắng nhẹ, mây thoáng</p>
+                  <div>
+                    <h4 className="text-xs font-black text-white tracking-wide">THỜI TIẾT HÔM NAY</h4>
+                    <p className="text-[10px] text-sky-400 font-medium">Đông Giang, TP Đà Nẵng</p>
+                  </div>
                 </div>
-              </div>
-              <div className="text-right text-[10px] text-slate-400 space-y-0.5">
-                <p>Cảm nhận: <span className="font-bold text-slate-200">31°C</span></p>
-                <p>Chỉ số UV: <span className="font-bold text-amber-400">5 (TB)</span></p>
-              </div>
-            </div>
-
-            {/* Weather Stats Grid */}
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
-                <div className="flex items-center justify-center gap-1 text-sky-400 text-[10px] font-bold mb-0.5">
-                  <Droplets className="w-3 h-3" />
-                  <span>Độ ẩm</span>
-                </div>
-                <span className="text-xs font-black text-white">76%</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                  Trời đẹp
+                </span>
               </div>
 
-              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
-                <div className="flex items-center justify-center gap-1 text-teal-400 text-[10px] font-bold mb-0.5">
-                  <Wind className="w-3 h-3" />
-                  <span>Gió ĐN</span>
+              {/* Main Weather Display */}
+              <div className="flex items-center justify-between py-1 mt-1">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl shadow-inner">
+                    ☀️
+                  </div>
+                  <div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xl sm:text-2xl font-black text-white">29°C</span>
+                      <span className="text-[11px] text-slate-400 font-medium">/ 32°C</span>
+                    </div>
+                    <p className="text-xs font-bold text-sky-300">Nắng nhẹ, mây thoáng</p>
+                  </div>
                 </div>
-                <span className="text-xs font-black text-white">12 km/h</span>
+                <div className="text-right text-[10px] text-slate-400 space-y-0.5">
+                  <p>Cảm nhận: <span className="font-bold text-slate-200">31°C</span></p>
+                  <p>Chỉ số UV: <span className="font-bold text-amber-400">5 (TB)</span></p>
+                </div>
               </div>
 
-              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
-                <div className="flex items-center justify-center gap-1 text-indigo-400 text-[10px] font-bold mb-0.5">
-                  <CloudRain className="w-3 h-3" />
-                  <span>Mưa</span>
+              {/* Weather Stats Grid */}
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                  <div className="flex items-center justify-center gap-1 text-sky-400 text-[10px] font-bold mb-0.5">
+                    <Droplets className="w-3 h-3" />
+                    <span>Độ ẩm</span>
+                  </div>
+                  <span className="text-xs font-black text-white">76%</span>
                 </div>
-                <span className="text-xs font-black text-white">10%</span>
-              </div>
-            </div>
 
-            {/* 3-Period Micro Forecast */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[10px]">
-              <div className="text-center">
-                <span className="text-slate-400 block font-medium">Sáng</span>
-                <span className="font-bold text-amber-300">27°C ☀️</span>
+                <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                  <div className="flex items-center justify-center gap-1 text-teal-400 text-[10px] font-bold mb-0.5">
+                    <Wind className="w-3 h-3" />
+                    <span>Gió ĐN</span>
+                  </div>
+                  <span className="text-xs font-black text-white">12 km/h</span>
+                </div>
+
+                <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                  <div className="flex items-center justify-center gap-1 text-indigo-400 text-[10px] font-bold mb-0.5">
+                    <CloudRain className="w-3 h-3" />
+                    <span>Mưa</span>
+                  </div>
+                  <span className="text-xs font-black text-white">10%</span>
+                </div>
               </div>
-              <div className="h-6 w-px bg-slate-800"></div>
-              <div className="text-center">
-                <span className="text-slate-400 block font-medium">Chiều</span>
-                <span className="font-bold text-sky-300">31°C ⛅</span>
-              </div>
-              <div className="h-6 w-px bg-slate-800"></div>
-              <div className="text-center">
-                <span className="text-slate-400 block font-medium">Tối</span>
-                <span className="font-bold text-indigo-300">25°C 🌙</span>
+
+              {/* 3-Period Micro Forecast */}
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[10px] mt-2">
+                <div className="text-center">
+                  <span className="text-slate-400 block font-medium">Sáng</span>
+                  <span className="font-bold text-amber-300">27°C ☀️</span>
+                </div>
+                <div className="h-5 w-px bg-slate-800"></div>
+                <div className="text-center">
+                  <span className="text-slate-400 block font-medium">Chiều</span>
+                  <span className="font-bold text-sky-300">31°C ⛅</span>
+                </div>
+                <div className="h-5 w-px bg-slate-800"></div>
+                <div className="text-center">
+                  <span className="text-slate-400 block font-medium">Tối</span>
+                  <span className="font-bold text-indigo-300">25°C 🌙</span>
+                </div>
               </div>
             </div>
 
             {/* Youth Union Context Note */}
-            <div className="p-2.5 rounded-xl bg-sky-950/40 border border-sky-800/40 text-[10px] text-sky-200/90 leading-relaxed flex items-start gap-2">
+            <div className="p-2.5 rounded-xl bg-sky-950/40 border border-sky-800/40 text-[10px] text-sky-200/90 leading-relaxed flex items-start gap-2 mt-2">
               <span className="text-xs mt-0.5">✨</span>
               <span>Thời tiết thuận lợi cho các hoạt động chào cờ, thể dục & nhiệm vụ trực tuần của Đội Cờ Đỏ.</span>
             </div>
@@ -814,7 +820,7 @@ export const PublicPortal: React.FC = () => {
           {/* ACTIVITY PHOTO SLIDESHOW WIDGET */}
           {activeSlideList.length > 0 && (
             <div 
-              className="glass-panel rounded-3xl p-4 border border-slate-800 shadow-card space-y-3 relative overflow-hidden group"
+              className="glass-panel rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-card space-y-3 relative overflow-hidden group"
               onMouseEnter={() => setIsSlidePaused(true)}
               onMouseLeave={() => setIsSlidePaused(false)}
             >
@@ -837,7 +843,7 @@ export const PublicPortal: React.FC = () => {
               </div>
 
               {/* Main Slide Carousel Frame */}
-              <div className="relative w-full h-52 sm:h-56 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 shadow-inner group/slide">
+              <div className="relative w-full h-48 sm:h-52 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 shadow-inner group/slide">
                 {activeSlideList.map((slide, idx) => (
                   <div
                     key={slide.id}
@@ -851,6 +857,12 @@ export const PublicPortal: React.FC = () => {
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover cursor-pointer transition-transform duration-700 hover:scale-105 bg-slate-900"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (!target.src.includes('unsplash.com/photo-1523050854058')) {
+                          target.src = 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=75';
+                        }
+                      }}
                       onClick={() => setSelectedPhotoModal({ url: slide.imageUrl, title: slide.title, subtitle: slide.subtitle })}
                     />
                     
@@ -913,7 +925,7 @@ export const PublicPortal: React.FC = () => {
                     key={dotIdx}
                     type="button"
                     onClick={() => setCurrentSlideIdx(dotIdx)}
-                    className={`h-1.5 rounded-full transition-all ${
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
                       dotIdx === currentSlideIdx 
                         ? 'w-6 bg-red-500 shadow-glow' 
                         : 'w-2 bg-slate-700 hover:bg-slate-500'
