@@ -625,7 +625,7 @@ export const PublicPortal: React.FC = () => {
           </div>
         </div>
 
-        {/* ================= COLUMN 2 (lg:col-span-4): ĐỘI CỜ ĐỎ TRỰC BAN & ẢNH HOẠT ĐỘNG ================= */}
+        {/* ================= COLUMN 2 (lg:col-span-4): ĐỘI CỜ ĐỎ TRỰC BAN & QUY ĐỊNH ================= */}
         <div className="lg:col-span-4 space-y-5">
           {/* CỜ ĐỎ DUTY SCHEDULE WIDGET */}
           <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
@@ -699,6 +699,115 @@ export const PublicPortal: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Quick Infobox (Quy định nề nếp tuần) */}
+          <div className="p-4 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 text-xs space-y-2.5 shadow-card">
+            <div className="flex items-center gap-2 text-amber-400 font-bold pb-2 border-b border-slate-800">
+              <Info className="w-4 h-4 text-amber-400" />
+              <span className="text-xs sm:text-sm font-black text-white">QUY ĐỊNH NỀ NẾP TUẦN</span>
+            </div>
+            <ul className="space-y-1.5 text-[11px] text-slate-300 list-disc list-inside leading-relaxed">
+              <li>Khóa sổ chấm điểm: <span className="font-bold text-amber-300">17h00 Thứ 7</span> hàng tuần</li>
+              <li>Thời hạn gửi phúc khảo của GVCN: <span className="font-bold text-sky-300">Trong vòng 24h</span></li>
+              <li>Học sinh quét mã QR nhận điểm danh nề nếp & cộng điểm thi đua</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* ================= COLUMN 3 (lg:col-span-4): THỜI TIẾT & ẢNH HOẠT ĐỘNG ================= */}
+        <div className="lg:col-span-4 space-y-5">
+          {/* WEATHER WIDGET (ĐÔNG GIANG - ĐÀ NẴNG) */}
+          <div className="glass-panel rounded-3xl p-5 border border-sky-500/20 bg-gradient-to-br from-slate-900 via-sky-950/20 to-slate-950 shadow-card space-y-3.5 relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                  <CloudSun className="w-4 h-4 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-white tracking-wide">THỜI TIẾT HÔM NAY</h4>
+                  <p className="text-[10px] text-sky-400 font-medium">Đông Giang, TP Đà Nẵng</p>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                Trời đẹp
+              </span>
+            </div>
+
+            {/* Main Weather Display */}
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl shadow-inner">
+                  ☀️
+                </div>
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-white">29°C</span>
+                    <span className="text-[11px] text-slate-400 font-medium">/ 32°C</span>
+                  </div>
+                  <p className="text-xs font-bold text-sky-300">Nắng nhẹ, mây thoáng</p>
+                </div>
+              </div>
+              <div className="text-right text-[10px] text-slate-400 space-y-0.5">
+                <p>Cảm nhận: <span className="font-bold text-slate-200">31°C</span></p>
+                <p>Chỉ số UV: <span className="font-bold text-amber-400">5 (TB)</span></p>
+              </div>
+            </div>
+
+            {/* Weather Stats Grid */}
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                <div className="flex items-center justify-center gap-1 text-sky-400 text-[10px] font-bold mb-0.5">
+                  <Droplets className="w-3 h-3" />
+                  <span>Độ ẩm</span>
+                </div>
+                <span className="text-xs font-black text-white">76%</span>
+              </div>
+
+              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                <div className="flex items-center justify-center gap-1 text-teal-400 text-[10px] font-bold mb-0.5">
+                  <Wind className="w-3 h-3" />
+                  <span>Gió ĐN</span>
+                </div>
+                <span className="text-xs font-black text-white">12 km/h</span>
+              </div>
+
+              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                <div className="flex items-center justify-center gap-1 text-indigo-400 text-[10px] font-bold mb-0.5">
+                  <CloudRain className="w-3 h-3" />
+                  <span>Mưa</span>
+                </div>
+                <span className="text-xs font-black text-white">10%</span>
+              </div>
+            </div>
+
+            {/* 3-Period Micro Forecast */}
+            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[10px]">
+              <div className="text-center">
+                <span className="text-slate-400 block font-medium">Sáng</span>
+                <span className="font-bold text-amber-300">27°C ☀️</span>
+              </div>
+              <div className="h-6 w-px bg-slate-800"></div>
+              <div className="text-center">
+                <span className="text-slate-400 block font-medium">Chiều</span>
+                <span className="font-bold text-sky-300">31°C ⛅</span>
+              </div>
+              <div className="h-6 w-px bg-slate-800"></div>
+              <div className="text-center">
+                <span className="text-slate-400 block font-medium">Tối</span>
+                <span className="font-bold text-indigo-300">25°C 🌙</span>
+              </div>
+            </div>
+
+            {/* Youth Union Context Note */}
+            <div className="p-2.5 rounded-xl bg-sky-950/40 border border-sky-800/40 text-[10px] text-sky-200/90 leading-relaxed flex items-start gap-2">
+              <span className="text-xs mt-0.5">✨</span>
+              <span>Thời tiết thuận lợi cho các hoạt động chào cờ, thể dục & nhiệm vụ trực tuần của Đội Cờ Đỏ.</span>
             </div>
           </div>
 
@@ -815,115 +924,6 @@ export const PublicPortal: React.FC = () => {
               </div>
             </div>
           )}
-        </div>
-
-        {/* ================= COLUMN 3 (lg:col-span-4): RULES & WEATHER ================= */}
-        <div className="lg:col-span-4 space-y-5">
-          {/* Quick Infobox */}
-          <div className="p-4 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 text-xs space-y-2.5 shadow-card">
-            <div className="flex items-center gap-2 text-amber-400 font-bold pb-2 border-b border-slate-800">
-              <Info className="w-4 h-4 text-amber-400" />
-              <span className="text-xs sm:text-sm font-black text-white">QUY ĐỊNH NỀ NẾP TUẦN</span>
-            </div>
-            <ul className="space-y-1.5 text-[11px] text-slate-300 list-disc list-inside leading-relaxed">
-              <li>Khóa sổ chấm điểm: <span className="font-bold text-amber-300">17h00 Thứ 7</span> hàng tuần</li>
-              <li>Thời hạn gửi phúc khảo của GVCN: <span className="font-bold text-sky-300">Trong vòng 24h</span></li>
-              <li>Học sinh quét mã QR nhận điểm danh nề nếp & cộng điểm thi đua</li>
-            </ul>
-          </div>
-
-          {/* WEATHER WIDGET (ĐÔNG GIANG - ĐÀ NẴNG) */}
-          <div className="glass-panel rounded-3xl p-5 border border-sky-500/20 bg-gradient-to-br from-slate-900 via-sky-950/20 to-slate-950 shadow-card space-y-3.5 relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
-
-            {/* Header */}
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
-                  <CloudSun className="w-4 h-4 animate-pulse" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-white tracking-wide">THỜI TIẾT HÔM NAY</h4>
-                  <p className="text-[10px] text-sky-400 font-medium">Đông Giang, TP Đà Nẵng</p>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                Trời đẹp
-              </span>
-            </div>
-
-            {/* Main Weather Display */}
-            <div className="flex items-center justify-between py-1">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl shadow-inner">
-                  ☀️
-                </div>
-                <div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-white">29°C</span>
-                    <span className="text-[11px] text-slate-400 font-medium">/ 32°C</span>
-                  </div>
-                  <p className="text-xs font-bold text-sky-300">Nắng nhẹ, mây thoáng</p>
-                </div>
-              </div>
-              <div className="text-right text-[10px] text-slate-400 space-y-0.5">
-                <p>Cảm nhận: <span className="font-bold text-slate-200">31°C</span></p>
-                <p>Chỉ số UV: <span className="font-bold text-amber-400">5 (TB)</span></p>
-              </div>
-            </div>
-
-            {/* Weather Stats Grid */}
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
-                <div className="flex items-center justify-center gap-1 text-sky-400 text-[10px] font-bold mb-0.5">
-                  <Droplets className="w-3 h-3" />
-                  <span>Độ ẩm</span>
-                </div>
-                <span className="text-xs font-black text-white">76%</span>
-              </div>
-
-              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
-                <div className="flex items-center justify-center gap-1 text-teal-400 text-[10px] font-bold mb-0.5">
-                  <Wind className="w-3 h-3" />
-                  <span>Gió ĐN</span>
-                </div>
-                <span className="text-xs font-black text-white">12 km/h</span>
-              </div>
-
-              <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
-                <div className="flex items-center justify-center gap-1 text-indigo-400 text-[10px] font-bold mb-0.5">
-                  <CloudRain className="w-3 h-3" />
-                  <span>Mưa</span>
-                </div>
-                <span className="text-xs font-black text-white">10%</span>
-              </div>
-            </div>
-
-            {/* 3-Period Micro Forecast */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[10px]">
-              <div className="text-center">
-                <span className="text-slate-400 block font-medium">Sáng</span>
-                <span className="font-bold text-amber-300">27°C ☀️</span>
-              </div>
-              <div className="h-6 w-px bg-slate-800"></div>
-              <div className="text-center">
-                <span className="text-slate-400 block font-medium">Chiều</span>
-                <span className="font-bold text-sky-300">31°C ⛅</span>
-              </div>
-              <div className="h-6 w-px bg-slate-800"></div>
-              <div className="text-center">
-                <span className="text-slate-400 block font-medium">Tối</span>
-                <span className="font-bold text-indigo-300">25°C 🌙</span>
-              </div>
-            </div>
-
-            {/* Youth Union Context Note */}
-            <div className="p-2.5 rounded-xl bg-sky-950/40 border border-sky-800/40 text-[10px] text-sky-200/90 leading-relaxed flex items-start gap-2">
-              <span className="text-xs mt-0.5">✨</span>
-              <span>Thời tiết thuận lợi cho các hoạt động chào cờ, thể dục & nhiệm vụ trực tuần của Đội Cờ Đỏ.</span>
-            </div>
-          </div>
         </div>
 
       </div>
