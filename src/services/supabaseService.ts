@@ -1462,24 +1462,20 @@ export const SupabaseService = {
       const client = getSupabaseClient();
       if (client && isSupabaseConfigured()) {
         try {
-          await client.from('media_assets').upsert({
+          const { error: upsertErr } = await client.from('media_assets').upsert({
             id: mediaItem.id,
-            name: mediaItem.title,
-            title: mediaItem.title,
+            name: mediaItem.title || 'Ảnh Media',
             url: mediaItem.url,
-            category: mediaItem.category,
+            category: mediaItem.category || 'general',
             folder_id: mediaItem.folderId || null,
-            bucket: mediaItem.bucket,
-            size_bytes: mediaItem.size,
-            format: mediaItem.format,
-            uploaded_by: mediaItem.uploadedBy,
-            class_id: mediaItem.classId,
-            week_number: mediaItem.weekNumber,
-            tags: mediaItem.tags,
+            size_bytes: mediaItem.size || 85000,
             created_at: new Date().toISOString()
           }, { onConflict: 'id' });
-        } catch {
-          // Bỏ qua nếu bảng media_assets chưa được migrate trên cloud, dữ liệu vẫn được lưu vào client state
+          if (upsertErr) {
+            console.warn('[Supabase Media] Lỗi upsert media_assets:', upsertErr.message);
+          }
+        } catch (dbErr) {
+          console.warn('[Supabase Media] Lỗi kết nối media_assets:', dbErr);
         }
       }
 
@@ -2072,7 +2068,7 @@ export const SupabaseService = {
       await client.from('media_folders').upsert({
         id: folder.id,
         name: folder.name,
-        parent_id: null
+        parent_id: folder.parentId || null
       }, { onConflict: 'id' });
       return true;
     } catch (err) {
