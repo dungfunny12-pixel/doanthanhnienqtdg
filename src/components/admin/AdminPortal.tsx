@@ -11309,6 +11309,13 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            if (isSupabaseConfigured()) {
+                              const publicUrl = await SupabaseService.uploadImage(file, 'media');
+                              if (publicUrl) {
+                                setAnnouncementForm(prev => ({ ...prev, thumbnail: publicUrl }));
+                                return;
+                              }
+                            }
                             const compressed = await compressImageToDataURL(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82, outputFormat: 'image/webp' });
                             if (compressed) {
                               setAnnouncementForm(prev => ({ ...prev, thumbnail: compressed }));

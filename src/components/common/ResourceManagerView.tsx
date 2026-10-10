@@ -21,7 +21,9 @@ import {
   FileImage,
   AlertTriangle,
   Move,
-  Eye
+  Eye,
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MediaItem, MediaFolder } from '../../types';
@@ -53,11 +55,20 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
     deleteMediaAsset, 
     deleteMediaAssetsBatch,
     updateMediaAsset,
+    updateSchoolSettings,
+    addActivitySlide,
     refreshDataFromCloud
   } = useApp();
 
   // Active Scope Tab: 'public' (Thư mục công khai) | 'internal' (Thư mục nội bộ)
   const [activeScope, setActiveScope] = useState<'public' | 'internal'>('public');
+
+  // Toast Notification state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   // Selected Folder
   const [selectedFolderId, setSelectedFolderId] = useState<string>(defaultFolderId || 'album-activities');
@@ -223,25 +234,30 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
   };
 
   const uploadFiles = async (files: File[]) => {
-    const validFiles = files.filter(f => f.type.startsWith('image/') || f.name.match(/\.(jpg|jpeg|png|webp|gif|svg)$/i));
+    const validFiles = files.filter(f => f.type.startsWith('image/') || f.name.match(/\.(jpg|jpeg|png|webp|gif|svg|bmp|jfif|avif|heic|ico)$/i) || !f.type);
     if (validFiles.length === 0) {
-      alert('Vui lòng chọn các tệp hình ảnh hợp lệ (PNG, JPG, JPEG, WEBP, GIF, SVG)!');
+      alert('Vui lòng chọn các tệp hình ảnh hợp lệ (PNG, JPG, JPEG, WEBP, GIF, SVG, AVIF, HEIC)!');
       return;
     }
 
     setIsUploading(true);
+    let successCount = 0;
     try {
       for (const file of validFiles) {
         const cleanName = file.name;
-        await addMediaAsset(file, {
+        const res = await addMediaAsset(file, {
           title: cleanName,
           folderId: selectedFolderId,
           category: currentFolder?.category || 'activities'
         });
+        if (res) successCount++;
+      }
+      if (successCount > 0) {
+        showToast(`🎉 Đã tải lên và lưu ${successCount} ảnh vào thư mục "${currentFolder?.name || 'Media'}" thành công!`);
       }
     } catch (err) {
       console.error('Lỗi khi tải ảnh lên:', err);
-      alert('Có lỗi xảy ra khi tải ảnh lên.');
+      alert('Có lỗi xảy ra khi tải ảnh lên: ' + (err instanceof Error ? err.message : 'Lỗi không xác định'));
     } finally {
       setIsUploading(false);
     }
@@ -554,13 +570,11 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-1.5 px-2 rounded hover:bg-blue-50 text-blue-700 flex items-center gap-1 text-xs font-semibold transition-colors"
+            className="p-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 active:scale-95"
             title="Tải lên tệp tin từ máy tính"
           >
-            <div className="relative">
-              <FileImage className="w-5 h-5 text-blue-500" />
-              <Plus className="w-3 h-3 text-emerald-600 absolute -top-1 -right-1 stroke-[3]" />
-            </div>
+            <Upload className="w-4 h-4" />
+            <span>Tải Tệp Lên</span>
           </button>
 
           {/* ✏️ Đổi tên tệp tin */}
@@ -574,7 +588,7 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
                 setIsRenameFileModalOpen(true);
               }
             }}
-            className="p-1.5 px-2 rounded hover:bg-slate-200 text-slate-700 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-1 text-xs font-semibold transition-colors"
+            className="p-1.5 px-2 rounded hover:bg-slate-200 text-slate-700 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer"
             title="Đổi tên tệp tin đang chọn"
           >
             <Edit3 className="w-4 h-4 text-slate-600" />
@@ -588,7 +602,7 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
               setTargetMoveFolderId(selectedFolderId);
               setIsMoveFileModalOpen(true);
             }}
-            className="p-1.5 px-2 rounded hover:bg-slate-200 text-slate-700 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-1 text-xs font-semibold transition-colors"
+            className="p-1.5 px-2 rounded hover:bg-slate-200 text-slate-700 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer"
             title="Di chuyển tệp tin sang thư mục khác"
           >
             <Move className="w-4 h-4 text-slate-600" />
@@ -599,7 +613,7 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
             type="button"
             disabled={selectedFileIds.length !== 1}
             onClick={handleDownloadSelectedFile}
-            className="p-1.5 px-2 rounded hover:bg-slate-200 text-slate-700 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-1 text-xs font-semibold transition-colors"
+            className="p-1.5 px-2 rounded hover:bg-slate-200 text-slate-700 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer"
             title="Tải tệp tin về máy"
           >
             <Download className="w-4 h-4 text-slate-600" />
@@ -610,7 +624,7 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
             type="button"
             disabled={selectedFileIds.length === 0}
             onClick={promptDeleteSelectedFiles}
-            className="p-1.5 px-2 rounded hover:bg-red-100 text-red-600 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-1 text-xs font-semibold transition-colors"
+            className="p-1.5 px-2 rounded hover:bg-red-100 text-red-600 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer"
             title="Xóa các tệp tin đang chọn"
           >
             <Trash2 className="w-4 h-4" />
@@ -622,18 +636,22 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
           <button
             type="button"
             onClick={() => setIsExternalUrlModalOpen(true)}
-            className="p-1.5 px-2 rounded hover:bg-slate-200 text-slate-700 flex items-center gap-1 text-xs font-semibold transition-colors"
+            className="p-1.5 px-2 rounded hover:bg-slate-200 text-slate-700 flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer"
             title="Thêm ảnh từ đường dẫn URL ngoài"
           >
             <ExternalLink className="w-4 h-4 text-slate-600" />
+            <span className="hidden sm:inline">Từ URL</span>
           </button>
 
           {/* 🔄 Làm mới */}
           <button
             type="button"
-            onClick={() => refreshDataFromCloud()}
-            className="p-1.5 px-2 rounded hover:bg-slate-200 text-slate-700 flex items-center gap-1 text-xs font-semibold transition-colors"
-            title="Làm mới dữ liệu"
+            onClick={() => {
+              refreshDataFromCloud();
+              showToast('🔄 Đang đồng bộ lại dữ liệu từ Cloud...');
+            }}
+            className="p-1.5 px-2 rounded hover:bg-slate-200 text-slate-700 flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer"
+            title="Làm mới dữ liệu từ Supabase Cloud"
           >
             <RefreshCw className="w-4 h-4 text-slate-600" />
           </button>
@@ -721,40 +739,64 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
         <div className="flex-1 flex flex-col overflow-hidden bg-white">
           
           {/* Search Files & Folder Path Bar */}
-          <div className="p-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
-            <span className="text-xs font-bold text-slate-700 truncate flex items-center gap-1.5">
-              <FolderOpen className="w-4 h-4 text-amber-500 fill-amber-400" />
-              <span>{currentFolder?.name || 'Tệp tin gần đây'}</span>
-              <span className="text-slate-400 font-normal">({filteredFiles.length} tệp)</span>
+          <div className="p-2.5 border-b border-slate-200 bg-slate-50 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5">
+            <span className="text-xs font-bold text-slate-700 truncate flex items-center gap-1.5 min-w-0">
+              <FolderOpen className="w-4 h-4 text-amber-500 fill-amber-400 shrink-0" />
+              <span className="truncate">{currentFolder?.name || 'Tệp tin gần đây'}</span>
+              <span className="text-slate-400 font-normal shrink-0">({filteredFiles.length} tệp)</span>
             </span>
 
-            <div className="relative w-60 max-w-xs">
-              <input
-                type="text"
-                placeholder="Nhập tên tệp tin ..."
-                value={fileSearchQuery}
-                onChange={(e) => {
-                  setFileSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-2 pr-7 py-1 rounded border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 bg-white"
-              />
-              <Search className="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>+ Tải Ảnh Vào Thư Mục</span>
+              </button>
+
+              <div className="relative w-40 sm:w-56">
+                <input
+                  type="text"
+                  placeholder="Tìm tệp tin..."
+                  value={fileSearchQuery}
+                  onChange={(e) => {
+                    setFileSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full pl-2 pr-7 py-1 rounded border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 bg-white"
+                />
+                <Search className="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
             </div>
           </div>
 
           {/* Files Grid View */}
           <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
             {filteredFiles.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full min-h-[220px] text-center text-slate-400">
-                <Folder className="w-12 h-12 text-slate-300 mb-2 stroke-1" />
-                <p className="text-xs">Thư mục này hiện chưa có tệp tin nào.</p>
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-col items-center justify-center h-full min-h-[260px] border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-2xl bg-slate-50/60 hover:bg-blue-50/30 text-center text-slate-400 transition-all cursor-pointer p-6 group"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-blue-100/70 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Upload className="w-7 h-7" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-700 mb-1">Thư mục "{currentFolder?.name}" chưa có tệp tin</h4>
+                <p className="text-xs text-slate-500 max-w-sm mb-3">
+                  Kéo thả file ảnh (JPG, PNG, WEBP, SVG) vào đây hoặc bấm nút bên dưới để chọn ảnh từ máy tính.
+                </p>
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="mt-2 text-xs font-bold text-blue-600 hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95"
                 >
-                  + Nhấn vào đây để tải tệp tin lên
+                  <Upload className="w-4 h-4" />
+                  <span>Chọn Ảnh Từ Máy Tính</span>
                 </button>
               </div>
             ) : (
@@ -1149,59 +1191,117 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
         </div>
       )}
 
-      {/* LIGHTBOX: XEM TRƯỚC HÌNH ẢNH TOÀN MÀN HÌNH */}
+      {/* LIGHTBOX: XEM TRƯỚC HÌNH ẢNH TOÀN MÀN HÌNH & TÙY CHỌN 1-CLICK SET BRANDING */}
       {inspectingItem && (
         <div className="fixed inset-0 z-[80] bg-black/95 flex flex-col animate-fadeIn">
-          <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-900 text-white">
-            <div className="flex items-center space-x-3">
-              <FileImage className="w-5 h-5 text-blue-400" />
-              <div>
-                <h4 className="font-bold text-sm">{inspectingItem.title}</h4>
-                <p className="text-[10px] text-slate-400">{inspectingItem.sizeFormatted || 'WebP'}</p>
+          <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-2.5 border-b border-slate-800 bg-slate-900 text-white gap-2">
+            <div className="flex items-center space-x-3 truncate">
+              <FileImage className="w-5 h-5 text-blue-400 shrink-0" />
+              <div className="truncate">
+                <h4 className="font-bold text-sm truncate">{inspectingItem.title}</h4>
+                <p className="text-[10px] text-slate-400 font-mono">{inspectingItem.sizeFormatted || 'WebP'}</p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.25))}
-                className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
-                title="Thu nhỏ"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              <span className="text-xs font-mono w-10 text-center">{Math.round(zoomLevel * 100)}%</span>
-              <button
-                onClick={() => setZoomLevel(prev => Math.min(3, prev + 0.25))}
-                className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
-                title="Phóng to"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setRotation(prev => (prev + 90) % 360)}
-                className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
-                title="Xoay"
-              >
-                <RotateCw className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(inspectingItem.url);
-                  setCopiedId(inspectingItem.id);
-                  setTimeout(() => setCopiedId(null), 2000);
-                }}
-                className="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1"
-                title="Sao chép link CDN"
-              >
-                {copiedId === inspectingItem.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedId === inspectingItem.id ? 'Đã sao chép' : 'Sao chép link'}</span>
-              </button>
-              <button
-                onClick={() => setInspectingItem(null)}
-                className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white ml-2"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* 1-Click Quick Branding Actions */}
+              <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-lg border border-slate-700">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await updateSchoolSettings({ logoUrl: inspectingItem.url });
+                    showToast('🏫 Đã đặt ảnh này làm Logo Trường THPT Quang Trung!');
+                  }}
+                  className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                  title="Đặt làm Logo trường học"
+                >
+                  🏫 Làm Logo
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await updateSchoolSettings({ youthUnionLogoUrl: inspectingItem.url });
+                    showToast('⭐ Đã đặt ảnh này làm Huy hiệu Đoàn!');
+                  }}
+                  className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                  title="Đặt làm Huy hiệu Đoàn"
+                >
+                  ⭐ Làm Huy Hiệu
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await updateSchoolSettings({ bannerTopImage: inspectingItem.url });
+                    showToast('🖼️ Đã đặt ảnh này làm Banner Đầu Trang!');
+                  }}
+                  className="px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                  title="Đặt làm Banner Đầu Trang"
+                >
+                  🖼️ Làm Banner
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    addActivitySlide({
+                      title: inspectingItem.title.replace(/\.[^/.]+$/, ''),
+                      subtitle: 'Hoạt động phong trào Đoàn trường THPT Quang Trung',
+                      imageUrl: inspectingItem.url,
+                      date: new Date().toLocaleDateString('vi-VN'),
+                      tag: 'Phong trào',
+                      isActive: true,
+                      order: 1
+                    });
+                    showToast('🎠 Đã thêm ảnh vào Slide Trình Chiếu Hoạt Động!');
+                  }}
+                  className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                  title="Thêm vào Slide Ảnh Trang Chủ"
+                >
+                  🎠 Thêm Slide
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1 ml-1">
+                <button
+                  onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.25))}
+                  className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  title="Thu nhỏ"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <span className="text-xs font-mono w-9 text-center">{Math.round(zoomLevel * 100)}%</span>
+                <button
+                  onClick={() => setZoomLevel(prev => Math.min(3, prev + 0.25))}
+                  className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  title="Phóng to"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setRotation(prev => (prev + 90) % 360)}
+                  className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  title="Xoay"
+                >
+                  <RotateCw className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(inspectingItem.url);
+                    setCopiedId(inspectingItem.id);
+                    setTimeout(() => setCopiedId(null), 2000);
+                  }}
+                  className="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1 cursor-pointer"
+                  title="Sao chép link CDN"
+                >
+                  {copiedId === inspectingItem.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedId === inspectingItem.id ? 'Đã copy' : 'Copy link'}</span>
+                </button>
+                <button
+                  onClick={() => setInspectingItem(null)}
+                  className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer ml-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1224,12 +1324,33 @@ export const ResourceManagerView: React.FC<ResourceManagerViewProps> = ({
                   onSelect(inspectingItem.url);
                   setInspectingItem(null);
                 }}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded shadow"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-lg cursor-pointer transition-all active:scale-95"
               >
                 Chọn Tệp Tin Này
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Uploading Spinner Overlay */}
+      {isUploading && (
+        <div className="absolute inset-0 z-[80] bg-slate-950/70 backdrop-blur-sm flex flex-col items-center justify-center text-white space-y-3 animate-fadeIn">
+          <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-glow animate-pulse">
+            <Loader2 className="w-8 h-8 animate-spin text-white" />
+          </div>
+          <div className="text-center">
+            <h4 className="text-base font-black text-white">Đang tải và đồng bộ ảnh lên Cloud...</h4>
+            <p className="text-xs text-blue-200 mt-1">Đang nén chuẩn WebP và lưu vào Supabase Storage</p>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-[95] px-4 py-3 rounded-2xl bg-slate-900 text-white font-bold text-xs shadow-2xl border border-slate-700 flex items-center gap-2.5 animate-slideUp">
+          <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>{toastMessage}</span>
         </div>
       )}
 
