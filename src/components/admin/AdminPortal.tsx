@@ -1333,9 +1333,10 @@ export const AdminPortal: React.FC = () => {
   const [settingsForm, setSettingsForm] = useState(schoolSettings);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const isSettingsFormDirtyRef = useRef(false);
 
   useEffect(() => {
-    if (schoolSettings) {
+    if (schoolSettings && !isSettingsFormDirtyRef.current) {
       setSettingsForm(schoolSettings);
     }
   }, [schoolSettings]);
@@ -8503,7 +8504,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <label className="block font-bold text-white text-sm">
                       🎨 Màu Sắc Chủ Đạo:
                     </label>
-                    <p className="text-[11px] text-slate-400">Lựa chọn nhanh giữa 6 bảng màu hiện đại cho toàn hệ thống</p>
+                    <p className="text-[11px] text-slate-400">Lựa chọn nhanh giữa 6 bảng màu hiện đại cho toàn hệ thống (tự động lưu và đồng bộ ngay)</p>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
                     {[
@@ -8519,8 +8520,13 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         <button
                           type="button"
                           key={theme.id}
-                          onClick={() => setSettingsForm({ ...settingsForm, themeColor: theme.id as any })}
-                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${isSelected
+                          onClick={async () => {
+                            const next = { ...settingsForm, themeColor: theme.id as any };
+                            setSettingsForm(next);
+                            isSettingsFormDirtyRef.current = false;
+                            await updateSchoolSettings(next);
+                          }}
+                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${isSelected
                             ? `${theme.bg} text-white border-white shadow-glow ring-2 ring-white/50 scale-105`
                             : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
                             }`}
@@ -8558,14 +8564,23 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           <input
                             type="text"
                             value={settingsForm.logoUrl || ''}
-                            onChange={(e) => setSettingsForm({ ...settingsForm, logoUrl: e.target.value })}
+                            onChange={(e) => {
+                              isSettingsFormDirtyRef.current = true;
+                              setSettingsForm({ ...settingsForm, logoUrl: e.target.value });
+                            }}
                             placeholder="https://... hoặc chọn từ Kho Media"
                             className="flex-1 min-w-[200px] p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
                           />
                           <MediaPickerButton
                             category="branding"
                             value={settingsForm.logoUrl}
-                            onSelect={(url) => setSettingsForm(prev => ({ ...prev, logoUrl: Array.isArray(url) ? url[0] : url }))}
+                            onSelect={async (url) => {
+                              const chosen = Array.isArray(url) ? url[0] : url;
+                              const next = { ...settingsForm, logoUrl: chosen };
+                              setSettingsForm(next);
+                              isSettingsFormDirtyRef.current = false;
+                              await updateSchoolSettings(next);
+                            }}
                             label="Kho Media Logo"
                             className="!py-2"
                           />
@@ -8602,10 +8617,12 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       </label>
                       <button
                         type="button"
-                        onClick={() => {
-                          const defaultUnionLogo = 'https://upload.wikimedia.org/wikipedia/vi/8/87/Huy_hi%E1%BB%87u_%C4%90o%C3%A0n.svg';
-                          setSettingsForm(prev => ({ ...prev, youthUnionLogoUrl: defaultUnionLogo }));
-                          updateSchoolSettings({ ...settingsForm, youthUnionLogoUrl: defaultUnionLogo });
+                        onClick={async () => {
+                          const defaultUnionLogo = '/brand/huy_hieu_doan.svg';
+                          const next = { ...settingsForm, youthUnionLogoUrl: defaultUnionLogo };
+                          setSettingsForm(next);
+                          isSettingsFormDirtyRef.current = false;
+                          await updateSchoolSettings(next);
                         }}
                         className="text-[11px] text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
                       >
@@ -8615,11 +8632,11 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                       <div className="w-14 h-14 rounded-xl p-1 bg-gradient-to-tr from-red-600 via-amber-500 to-emerald-600 border border-amber-400/40 bg-slate-950 shrink-0 shadow-glow flex items-center justify-center">
                         <img
-                          src={settingsForm.youthUnionLogoUrl || 'https://upload.wikimedia.org/wikipedia/vi/8/87/Huy_hi%E1%BB%87u_%C4%90o%C3%A0n.svg'}
+                          src={settingsForm.youthUnionLogoUrl || '/brand/huy_hieu_doan.svg'}
                           alt="Huy hiệu Đoàn"
                           className="w-full h-full object-contain"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://upload.wikimedia.org/wikipedia/vi/8/87/Huy_hi%E1%BB%87u_%C4%90o%C3%A0n.svg';
+                            (e.target as HTMLImageElement).src = '/brand/huy_hieu_doan.svg';
                           }}
                         />
                       </div>
@@ -8628,14 +8645,23 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           <input
                             type="text"
                             value={settingsForm.youthUnionLogoUrl || ''}
-                            onChange={(e) => setSettingsForm({ ...settingsForm, youthUnionLogoUrl: e.target.value })}
+                            onChange={(e) => {
+                              isSettingsFormDirtyRef.current = true;
+                              setSettingsForm({ ...settingsForm, youthUnionLogoUrl: e.target.value });
+                            }}
                             placeholder="https://... hoặc chọn từ Kho Media"
                             className="flex-1 min-w-[200px] p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
                           />
                           <MediaPickerButton
                             category="branding"
                             value={settingsForm.youthUnionLogoUrl}
-                            onSelect={(url) => setSettingsForm(prev => ({ ...prev, youthUnionLogoUrl: Array.isArray(url) ? url[0] : url }))}
+                            onSelect={async (url) => {
+                              const chosen = Array.isArray(url) ? url[0] : url;
+                              const next = { ...settingsForm, youthUnionLogoUrl: chosen };
+                              setSettingsForm(next);
+                              isSettingsFormDirtyRef.current = false;
+                              await updateSchoolSettings(next);
+                            }}
                             label="Kho Media Huy Hiệu"
                             className="!py-2"
                           />
@@ -8685,14 +8711,23 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       <input
                         type="text"
                         value={settingsForm.bannerTopImage || ''}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, bannerTopImage: e.target.value })}
+                        onChange={(e) => {
+                          isSettingsFormDirtyRef.current = true;
+                          setSettingsForm({ ...settingsForm, bannerTopImage: e.target.value });
+                        }}
                         placeholder="https://... hoặc chọn từ Kho Media"
                         className="flex-1 min-w-[200px] p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
                       />
                       <MediaPickerButton
                         category="branding"
                         value={settingsForm.bannerTopImage}
-                        onSelect={(url) => setSettingsForm(prev => ({ ...prev, bannerTopImage: Array.isArray(url) ? url[0] : url }))}
+                        onSelect={async (url) => {
+                          const chosen = Array.isArray(url) ? url[0] : url;
+                          const next = { ...settingsForm, bannerTopImage: chosen };
+                          setSettingsForm(next);
+                          isSettingsFormDirtyRef.current = false;
+                          await updateSchoolSettings(next);
+                        }}
                         label="Kho Media Banner"
                         className="!py-2"
                       />
@@ -8740,14 +8775,23 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       <input
                         type="text"
                         value={settingsForm.footerBannerImage || ''}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, footerBannerImage: e.target.value })}
+                        onChange={(e) => {
+                          isSettingsFormDirtyRef.current = true;
+                          setSettingsForm({ ...settingsForm, footerBannerImage: e.target.value });
+                        }}
                         placeholder="https://... hoặc chọn từ Kho Media"
                         className="flex-1 min-w-[200px] p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs"
                       />
                       <MediaPickerButton
                         category="branding"
                         value={settingsForm.footerBannerImage}
-                        onSelect={(url) => setSettingsForm(prev => ({ ...prev, footerBannerImage: Array.isArray(url) ? url[0] : url }))}
+                        onSelect={async (url) => {
+                          const chosen = Array.isArray(url) ? url[0] : url;
+                          const next = { ...settingsForm, footerBannerImage: chosen };
+                          setSettingsForm(next);
+                          isSettingsFormDirtyRef.current = false;
+                          await updateSchoolSettings(next);
+                        }}
                         label="Kho Media Banner"
                         className="!py-2"
                       />
@@ -8788,7 +8832,10 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         type="text"
                         required
                         value={settingsForm.schoolName}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, schoolName: e.target.value })}
+                        onChange={(e) => {
+                          isSettingsFormDirtyRef.current = true;
+                          setSettingsForm({ ...settingsForm, schoolName: e.target.value });
+                        }}
                         className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold"
                       />
                     </div>
@@ -8799,7 +8846,10 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                         type="text"
                         required
                         value={settingsForm.youthUnionName}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, youthUnionName: e.target.value })}
+                        onChange={(e) => {
+                          isSettingsFormDirtyRef.current = true;
+                          setSettingsForm({ ...settingsForm, youthUnionName: e.target.value });
+                        }}
                         className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold"
                       />
                     </div>
@@ -8810,7 +8860,10 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <input
                       type="text"
                       value={settingsForm.slogan}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, slogan: e.target.value })}
+                      onChange={(e) => {
+                        isSettingsFormDirtyRef.current = true;
+                        setSettingsForm({ ...settingsForm, slogan: e.target.value });
+                      }}
                       className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white"
                     />
                   </div>
@@ -8820,7 +8873,10 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     <input
                       type="text"
                       value={settingsForm.address}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, address: e.target.value })}
+                      onChange={(e) => {
+                        isSettingsFormDirtyRef.current = true;
+                        setSettingsForm({ ...settingsForm, address: e.target.value });
+                      }}
                       placeholder="Thôn Trung Sơn, xã Đông Giang, TP Đà Nẵng"
                       className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white"
                     />
@@ -8832,7 +8888,10 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       <input
                         type="text"
                         value={settingsForm.phone}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
+                        onChange={(e) => {
+                          isSettingsFormDirtyRef.current = true;
+                          setSettingsForm({ ...settingsForm, phone: e.target.value });
+                        }}
                         placeholder="0988806194"
                         className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono font-bold text-amber-400"
                       />
@@ -8843,7 +8902,10 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       <input
                         type="email"
                         value={settingsForm.email}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, email: e.target.value })}
+                        onChange={(e) => {
+                          isSettingsFormDirtyRef.current = true;
+                          setSettingsForm({ ...settingsForm, email: e.target.value });
+                        }}
                         placeholder="doantruongquangtrungdonggiang@gmail.com"
                         className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono font-bold text-blue-400"
                       />

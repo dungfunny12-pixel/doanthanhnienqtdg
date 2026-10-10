@@ -837,76 +837,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       hasCloudSyncedRef.current = true;
 
       if (cloudData.classes && cloudData.classes.length > 0) {
-        setClasses(cloudData.classes);
+        setClasses(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.classes) ? prev : cloudData.classes!));
         setIndexedDBKV('app_classes', cloudData.classes);
         safeSaveLocalStorage('classes', cloudData.classes);
       }
       if (cloudData.criteria && cloudData.criteria.length > 0) {
-        setCriteria(cloudData.criteria);
+        setCriteria(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.criteria) ? prev : cloudData.criteria!));
         setIndexedDBKV('app_criteria', cloudData.criteria);
         safeSaveLocalStorage('criteria', cloudData.criteria);
       }
       if (cloudData.students && cloudData.students.length > 0) {
         const cleanStudents = sanitizeStudentList(cloudData.students);
-        setStudents(cleanStudents);
+        setStudents(prev => (JSON.stringify(prev) === JSON.stringify(cleanStudents) ? prev : cleanStudents));
         setIndexedDBKV('app_students', cleanStudents);
         safeSaveLocalStorage('students', cleanStudents);
       }
       if (cloudData.violations !== undefined) {
-        setViolations(cloudData.violations);
+        setViolations(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.violations) ? prev : cloudData.violations!));
         setIndexedDBKV('app_violations', cloudData.violations);
         safeSaveLocalStorage('violations', cloudData.violations);
       }
       if (cloudData.news && cloudData.news.length > 0) {
-        setNews(cloudData.news);
+        setNews(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.news) ? prev : cloudData.news!));
         setIndexedDBKV('app_news', cloudData.news);
         safeSaveLocalStorage('news', cloudData.news);
       }
       if (cloudData.notices !== undefined) {
-        setNotices(cloudData.notices);
+        setNotices(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.notices) ? prev : cloudData.notices!));
         setIndexedDBKV('app_notices', cloudData.notices);
         safeSaveLocalStorage('notices', cloudData.notices);
       }
       if (cloudData.schoolSettings) {
         const cleanSettings = sanitizeSchoolSettings(cloudData.schoolSettings);
-        setSchoolSettings(cleanSettings);
-        setIndexedDBKV('app_school_settings', cleanSettings);
-        safeSaveLocalStorage('schoolSettings', cleanSettings);
+        setSchoolSettings(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(cleanSettings)) return prev;
+          setIndexedDBKV('app_school_settings', cleanSettings);
+          safeSaveLocalStorage('schoolSettings', cleanSettings);
+          return cleanSettings;
+        });
       }
       if (cloudData.activitySlides && cloudData.activitySlides.length > 0) {
-        setActivitySlides(cloudData.activitySlides);
+        setActivitySlides(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.activitySlides) ? prev : cloudData.activitySlides!));
         setIndexedDBKV('app_activity_slides', cloudData.activitySlides);
         safeSaveLocalStorage('activitySlides', cloudData.activitySlides);
       }
       if (cloudData.events !== undefined) {
-        setEvents(cloudData.events);
+        setEvents(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.events) ? prev : cloudData.events!));
         setIndexedDBKV('app_events', cloudData.events);
         safeSaveLocalStorage('events', cloudData.events);
       }
       if (cloudData.documentFolders && cloudData.documentFolders.length > 0) {
-        setDocumentFolders(cloudData.documentFolders);
+        setDocumentFolders(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.documentFolders) ? prev : cloudData.documentFolders!));
         saveIndexedDBBatch(STORES.DOCUMENT_FOLDERS, cloudData.documentFolders);
         safeSaveLocalStorage('documentFolders', cloudData.documentFolders);
       }
       if (cloudData.documentFiles !== undefined) {
-        setDocumentFiles(cloudData.documentFiles);
+        setDocumentFiles(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.documentFiles) ? prev : cloudData.documentFiles!));
         saveIndexedDBBatch(STORES.DOCUMENT_FILES, cloudData.documentFiles);
         safeSaveLocalStorage('documentFiles', cloudData.documentFiles);
       }
       if (cloudData.mediaFolders && cloudData.mediaFolders.length > 0) {
         const cleanMediaFolders = sanitizeMediaFolders(cloudData.mediaFolders);
-        setMediaFolders(cleanMediaFolders);
+        setMediaFolders(prev => (JSON.stringify(prev) === JSON.stringify(cleanMediaFolders) ? prev : cleanMediaFolders));
         saveIndexedDBBatch(STORES.MEDIA_FOLDERS, cleanMediaFolders);
         safeSaveLocalStorage('mediaFolders', cleanMediaFolders);
       }
       if (cloudData.mediaAssets !== undefined) {
         const cleanAssets = sanitizeMediaAssets(cloudData.mediaAssets);
-        setMediaAssets(cleanAssets);
+        setMediaAssets(prev => (JSON.stringify(prev) === JSON.stringify(cleanAssets) ? prev : cleanAssets));
         saveIndexedDBBatch(STORES.MEDIA_ASSETS, cleanAssets);
         safeSaveLocalStorage('mediaAssets', cleanAssets);
       }
       if (cloudData.weeksConfig && cloudData.weeksConfig.length > 0) {
-        setWeeksConfig(cloudData.weeksConfig);
+        setWeeksConfig(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.weeksConfig) ? prev : cloudData.weeksConfig!));
         setIndexedDBKV('app_weeks_config', cloudData.weeksConfig);
         safeSaveLocalStorage('weeksConfig', cloudData.weeksConfig);
         const currentWeek = cloudData.weeksConfig.find(w => w.isCurrent);
@@ -925,7 +928,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       if (cloudData.users && cloudData.users.length > 0) {
-        setUsers(cloudData.users);
+        setUsers(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.users) ? prev : cloudData.users!));
         setIndexedDBKV('app_users', cloudData.users);
         safeSaveLocalStorage('users', cloudData.users);
         // Cập nhật tài khoản hiện tại với thông tin mới nhất từ Cloud
@@ -936,27 +939,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
       if (cloudData.duties && cloudData.duties.length > 0) {
-        setDuties(cloudData.duties);
+        setDuties(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.duties) ? prev : cloudData.duties!));
         setIndexedDBKV('app_duties', cloudData.duties);
         safeSaveLocalStorage('duties', cloudData.duties);
       }
       if (cloudData.academicYears && cloudData.academicYears.length > 0) {
-        setAcademicYears(cloudData.academicYears);
+        setAcademicYears(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.academicYears) ? prev : cloudData.academicYears!));
         setIndexedDBKV('app_academic_years', cloudData.academicYears);
         safeSaveLocalStorage('academicYears', cloudData.academicYears);
       }
       if (cloudData.feeLocks) {
-        setFeeLocks(cloudData.feeLocks);
+        setFeeLocks(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.feeLocks) ? prev : cloudData.feeLocks!));
         setIndexedDBKV('app_fee_locks', cloudData.feeLocks);
         safeSaveLocalStorage('feeLocks', cloudData.feeLocks);
       }
       if (cloudData.auditLogs && cloudData.auditLogs.length > 0) {
-        setAuditLogs(cloudData.auditLogs);
+        setAuditLogs(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.auditLogs) ? prev : cloudData.auditLogs!));
         setIndexedDBKV('app_audit_logs', cloudData.auditLogs);
         safeSaveLocalStorage('auditLogs', cloudData.auditLogs);
       }
       if (cloudData.activityReports !== undefined) {
-        setActivityReports(cloudData.activityReports);
+        setActivityReports(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.activityReports) ? prev : cloudData.activityReports!));
         setIndexedDBKV('app_activity_reports', cloudData.activityReports);
         safeSaveLocalStorage('activityReports', cloudData.activityReports);
       }
