@@ -818,6 +818,23 @@ export const SupabaseService = {
       let bannerTopImage = settings.bannerTopImage || null;
       let footerBannerImage = settings.footerBannerImage || null;
 
+      if (logoUrl && logoUrl.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(logoUrl, 'media');
+        if (uploaded) logoUrl = uploaded;
+      }
+      if (youthUnionLogoUrl && youthUnionLogoUrl.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(youthUnionLogoUrl, 'media');
+        if (uploaded) youthUnionLogoUrl = uploaded;
+      }
+      if (bannerTopImage && bannerTopImage.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(bannerTopImage, 'media');
+        if (uploaded) bannerTopImage = uploaded;
+      }
+      if (footerBannerImage && footerBannerImage.startsWith('data:image/')) {
+        const uploaded = await this.uploadImage(footerBannerImage, 'media');
+        if (uploaded) footerBannerImage = uploaded;
+      }
+
       const { error } = await client.from('school_settings').upsert({
         id: 'current',
         school_name: settings.schoolName,
@@ -1326,12 +1343,16 @@ export const SupabaseService = {
     try {
       if (!file) return null;
 
-      // Nếu truyền trực tiếp chuỗi URL (HTTP/HTTPS) hoặc Data URL
+      // Nếu đã là link HTTP/HTTPS công khai hợp lệ
       if (typeof file === 'string') {
-        if (file.startsWith('http://') || file.startsWith('https://') || file.startsWith('data:image')) {
+        if (file.startsWith('http://') || file.startsWith('https://')) {
           return file;
         }
-        return file;
+        if (file.startsWith('data:image/')) {
+          file = dataURLtoFile(file, `img_${Date.now()}.webp`);
+        } else {
+          return file;
+        }
       }
 
       // Tự động nén ảnh sang chuẩn WebP trước khi tải lên
@@ -1340,7 +1361,7 @@ export const SupabaseService = {
       const optimizedFile = await compressImage(file, { maxWidth, quality, outputFormat: 'image/webp' });
 
       const client = getSupabaseClient();
-      // Nếu có cấu hình Supabase Cloud, thử tải lên Storage bucket
+      // Nếu có cấu hình Supabase Cloud, tải lên Storage bucket
       if (client && isSupabaseConfigured()) {
         try {
           const ext = optimizedFile.name ? optimizedFile.name.split('.').pop() : 'webp';
@@ -1394,7 +1415,7 @@ export const SupabaseService = {
     }
   ): Promise<MediaItem | null> {
     try {
-      const bucket = (meta.category === 'violations' || meta.category === 'activities') ? 'proof_images' : 'media';
+      const bucket = meta.category === 'violations' ? 'proof_images' : 'media';
       let fileSize = 0;
       let format = 'webp';
 
