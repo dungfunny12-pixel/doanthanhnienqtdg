@@ -179,11 +179,11 @@ export const PublicPortal: React.FC = () => {
   const daysOfWeek: DayOfWeek[] = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-fadeIn">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-fadeIn">
       
       {/* Top Banner Hero Image if Configured */}
       {schoolSettings.bannerTopImage && (
-        <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 min-h-[13rem] sm:min-h-[15rem] md:h-60 relative group bg-gradient-to-r from-red-950 via-slate-900 to-indigo-950 flex items-center">
+        <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 min-h-[12rem] sm:min-h-[15rem] md:h-60 relative group bg-gradient-to-r from-red-950 via-slate-900 to-indigo-950 flex items-center">
           <img 
             src={schoolSettings.bannerTopImage} 
             alt="Top Banner" 
@@ -230,7 +230,7 @@ export const PublicPortal: React.FC = () => {
       )}
 
       {/* ================= ROW 1: TOP ANNOUNCEMENTS (LEFT) + ACCOUNT / LOGIN (RIGHT) ================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
         
         {/* Left: Pinned Urgent Announcement Hub */}
         <div className="lg:col-span-8 xl:col-span-9">
@@ -468,12 +468,12 @@ export const PublicPortal: React.FC = () => {
 
       </div>
 
-      {/* ================= ROW 2: 3 BALANCED EQUAL-HEIGHT COLUMNS (LEADERBOARD | DUTY & RULES | WEATHER & SLIDES) ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-stretch">
+      {/* ================= ROW 2: 3 BALANCED EQUAL-HEIGHT COLUMNS (DESKTOP) / 2x2 BALANCED GRID (TABLET) / 1-COLUMN (MOBILE) ================= */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
         
-        {/* ================= COLUMN 1 (lg:col-span-4): PUBLIC LEADERBOARD ================= */}
-        <div className="lg:col-span-4 flex flex-col">
-          <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card h-full flex flex-col justify-between">
+        {/* ================= ITEM 1 (lg:col-span-4): PUBLIC LEADERBOARD ================= */}
+        <div className="col-span-1 md:col-span-1 lg:col-span-4 lg:row-span-2 lg:col-start-1 lg:row-start-1 flex flex-col">
+          <div className="glass-panel rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-card h-full flex flex-col justify-between">
             
             <div>
               {/* Header & Filter */}
@@ -490,7 +490,7 @@ export const PublicPortal: React.FC = () => {
               </div>
 
               {/* Grade Filter Tabs */}
-              <div className="flex rounded-xl bg-slate-950 p-1 mb-4 border border-slate-800 text-xs">
+              <div className="flex rounded-xl bg-slate-950 p-1 mb-4 border border-slate-800 text-[11px] sm:text-xs">
                 {(['ALL', 10, 11, 12] as const).map(grade => (
                   <button
                     key={grade}
@@ -513,7 +513,7 @@ export const PublicPortal: React.FC = () => {
                   {top2 && (
                     <div 
                       onClick={() => setSelectedClassModal(top2)}
-                      className="podium-2nd rounded-2xl p-2.5 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[135px]"
+                      className="podium-2nd rounded-2xl p-2 sm:p-2.5 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[125px] sm:min-h-[135px]"
                     >
                       <div className="w-7 h-7 rounded-full bg-slate-300 text-slate-900 font-black text-xs flex items-center justify-center shadow-md border-2 border-slate-200">
                         🥈 2
@@ -532,7 +532,7 @@ export const PublicPortal: React.FC = () => {
                   {top1 && (
                     <div 
                       onClick={() => { triggerCelebration(); setSelectedClassModal(top1); }}
-                      className="podium-1st rounded-2xl p-3 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[160px] relative overflow-hidden"
+                      className="podium-1st rounded-2xl p-2.5 sm:p-3 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[150px] sm:min-h-[160px] relative overflow-hidden"
                     >
                       <div className="absolute top-1 right-1 text-amber-400 animate-spin">✨</div>
                       <div className="w-9 h-9 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-sm flex items-center justify-center shadow-glow-gold border-2 border-amber-300">
@@ -555,7 +555,7 @@ export const PublicPortal: React.FC = () => {
                   {top3 && (
                     <div 
                       onClick={() => setSelectedClassModal(top3)}
-                      className="podium-3rd rounded-2xl p-2.5 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[125px]"
+                      className="podium-3rd rounded-2xl p-2 sm:p-2.5 text-center cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-between min-h-[115px] sm:min-h-[125px]"
                     >
                       <div className="w-7 h-7 rounded-full bg-amber-700 text-white font-black text-xs flex items-center justify-center shadow-md border-2 border-amber-600">
                         🥉 3
@@ -627,10 +627,10 @@ export const PublicPortal: React.FC = () => {
           </div>
         </div>
 
-        {/* ================= COLUMN 2 (lg:col-span-4): ĐỘI CỜ ĐỎ TRỰC BAN & QUY ĐỊNH ================= */}
-        <div className="lg:col-span-4 flex flex-col justify-between space-y-5">
+        {/* ================= ITEM 2 (lg:col-span-4): ĐỘI CỜ ĐỎ TRỰC BAN & QUY ĐỊNH ================= */}
+        <div className="col-span-1 md:col-span-1 lg:col-span-4 lg:row-span-2 lg:col-start-5 lg:row-start-1 flex flex-col justify-between space-y-4 sm:space-y-5">
           {/* CỜ ĐỎ DUTY SCHEDULE WIDGET */}
-          <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card flex-1 flex flex-col justify-between">
+          <div className="glass-panel rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-card flex-1 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -663,8 +663,8 @@ export const PublicPortal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Today Duty Mini Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[340px] overflow-y-auto pr-1 scrollbar-thin">
+              {/* Today Duty Mini Cards - Single column for clean readability and full names */}
+              <div className="grid grid-cols-1 gap-2.5 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
                 {todayDuties.map(duty => (
                   <div
                     key={duty.id}
@@ -685,19 +685,21 @@ export const PublicPortal: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-base">🚩</span>
+                    <div className="flex items-start gap-2.5">
+                      <span className="text-base shrink-0">🚩</span>
                       <div className="space-y-0.5 flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
-                          <p className="font-bold text-white text-xs truncate">{duty.auditorName}</p>
-                          <span className="text-[10px] text-amber-400 font-bold shrink-0">Lớp {duty.auditorClass}</span>
+                          <p className="font-bold text-white text-xs sm:text-sm truncate">{duty.auditorName}</p>
+                          <span className="text-[10px] sm:text-xs text-amber-400 font-bold shrink-0 px-2 py-0.5 rounded bg-amber-950/40 border border-amber-800/40">
+                            Lớp {duty.auditorClass}
+                          </span>
                         </div>
                         {duty.targetClasses && (
-                          <p className="text-[11px] text-red-300 font-semibold truncate">
+                          <p className="text-[11px] sm:text-xs text-red-300 font-semibold truncate">
                             Chấm điểm: <span className="font-bold text-red-200">{duty.targetClasses}</span>
                           </p>
                         )}
-                        <p className="text-[10px] text-slate-400 truncate">📍 {duty.zone}</p>
+                        <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">📍 {duty.zone}</p>
                       </div>
                     </div>
                   </div>
@@ -720,10 +722,10 @@ export const PublicPortal: React.FC = () => {
           </div>
         </div>
 
-        {/* ================= COLUMN 3 (lg:col-span-4): THỜI TIẾT & ẢNH HOẠT ĐỘNG ================= */}
-        <div className="lg:col-span-4 flex flex-col justify-between space-y-5">
+        {/* ================= ITEM 3 (lg:col-span-4): THỜI TIẾT HÔM NAY ================= */}
+        <div className="col-span-1 md:col-span-1 lg:col-span-4 lg:row-span-1 lg:col-start-9 lg:row-start-1 flex flex-col">
           {/* WEATHER WIDGET (ĐÔNG GIANG - ĐÀ NẴNG) */}
-          <div className="glass-panel rounded-3xl p-5 border border-sky-500/20 bg-gradient-to-br from-slate-900 via-sky-950/20 to-slate-950 shadow-card space-y-3.5 relative overflow-hidden flex-1 flex flex-col justify-between">
+          <div className="glass-panel rounded-3xl p-4 sm:p-5 border border-sky-500/20 bg-gradient-to-br from-slate-900 via-sky-950/20 to-slate-950 shadow-card space-y-3.5 relative overflow-hidden h-full flex flex-col justify-between">
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
             <div>
@@ -816,11 +818,14 @@ export const PublicPortal: React.FC = () => {
               <span>Thời tiết thuận lợi cho các hoạt động chào cờ, thể dục & nhiệm vụ trực tuần của Đội Cờ Đỏ.</span>
             </div>
           </div>
+        </div>
 
+        {/* ================= ITEM 4 (lg:col-span-4): ẢNH HOẠT ĐỘNG PHONG TRÀO ================= */}
+        <div className="col-span-1 md:col-span-1 lg:col-span-4 lg:row-span-1 lg:col-start-9 lg:row-start-2 flex flex-col">
           {/* ACTIVITY PHOTO SLIDESHOW WIDGET */}
           {activeSlideList.length > 0 && (
             <div 
-              className="glass-panel rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-card space-y-3 relative overflow-hidden group"
+              className="glass-panel rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-card space-y-3 relative overflow-hidden group h-full flex flex-col justify-between"
               onMouseEnter={() => setIsSlidePaused(true)}
               onMouseLeave={() => setIsSlidePaused(false)}
             >
@@ -843,7 +848,7 @@ export const PublicPortal: React.FC = () => {
               </div>
 
               {/* Main Slide Carousel Frame */}
-              <div className="relative w-full h-48 sm:h-52 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 shadow-inner group/slide">
+              <div className="relative w-full h-48 sm:h-52 md:h-56 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 shadow-inner group/slide">
                 {activeSlideList.map((slide, idx) => (
                   <div
                     key={slide.id}
@@ -902,7 +907,7 @@ export const PublicPortal: React.FC = () => {
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handlePrevSlide(); }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-slate-950/70 hover:bg-red-600 text-white border border-slate-700/80 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-all shadow-lg active:scale-95 cursor-pointer"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-slate-950/80 hover:bg-red-600 text-white border border-slate-700/80 flex items-center justify-center text-xs opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-all shadow-lg active:scale-95 cursor-pointer"
                   title="Ảnh trước"
                 >
                   ‹
@@ -911,7 +916,7 @@ export const PublicPortal: React.FC = () => {
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleNextSlide(); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-slate-950/70 hover:bg-red-600 text-white border border-slate-700/80 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-all shadow-lg active:scale-95 cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-slate-950/80 hover:bg-red-600 text-white border border-slate-700/80 flex items-center justify-center text-xs opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-all shadow-lg active:scale-95 cursor-pointer"
                   title="Ảnh tiếp theo"
                 >
                   ›
@@ -963,11 +968,11 @@ export const PublicPortal: React.FC = () => {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto scrollbar-none max-w-full">
             <button
               type="button"
               onClick={() => setNewsCategoryFilter('ALL')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
                 newsCategoryFilter === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -976,7 +981,7 @@ export const PublicPortal: React.FC = () => {
             <button
               type="button"
               onClick={() => setNewsCategoryFilter('announcement')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
                 newsCategoryFilter === 'announcement' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -985,7 +990,7 @@ export const PublicPortal: React.FC = () => {
             <button
               type="button"
               onClick={() => setNewsCategoryFilter('news')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
                 newsCategoryFilter === 'news' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >

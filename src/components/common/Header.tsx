@@ -127,7 +127,7 @@ export const Header: React.FC = () => {
 
       {/* Top micro status bar */}
       <div className={`bg-gradient-to-r ${getThemeGradient(schoolSettings.themeColor)} px-3 sm:px-4 py-1 text-[11px] sm:text-xs text-white flex items-center justify-between font-medium`}>
-        <div className="flex items-center gap-2 overflow-hidden max-w-[85%] sm:max-w-none">
+        <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0 mr-2 sm:max-w-none">
           <span className="inline-block w-2 h-2 shrink-0 rounded-full bg-amber-300 animate-ping"></span>
           <span className="font-extrabold uppercase tracking-wide truncate">
             {schoolSettings.youthUnionName.toUpperCase()} – HỆ THỐNG QUẢN LÝ NỀ NẾP & THI ĐUA ĐIỆN TỬ
