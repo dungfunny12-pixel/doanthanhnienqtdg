@@ -165,7 +165,10 @@ export const Header: React.FC = () => {
                 decoding="async"
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover shadow-glow border border-red-400/40 group-hover:scale-105 transition-transform shrink-0"
                 onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== window.location.origin + '/brand/logo_truong.svg') {
+                    target.src = '/brand/logo_truong.svg';
+                  }
                 }}
               />
             ) : (

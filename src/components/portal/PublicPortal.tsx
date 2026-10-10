@@ -172,7 +172,10 @@ export const PublicPortal: React.FC = () => {
             decoding="async"
             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-95 contrast-105" 
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&auto=format&fit=crop&q=80';
+              const target = e.target as HTMLImageElement;
+              if (target.src !== window.location.origin + '/brand/banner_top.svg') {
+                target.src = '/brand/banner_top.svg';
+              }
             }}
           />
           {/* Subtle vignette gradient allowing background photo to be bright and vivid */}

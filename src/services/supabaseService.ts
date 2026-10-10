@@ -298,9 +298,9 @@ export const SupabaseService = {
       let schoolSettings: SchoolSettings | undefined = undefined;
       if (rawSettings) {
         const themeCol = rawSettings.theme_color === 'green' ? 'emerald' : (rawSettings.theme_color || 'emerald');
-        const logo = (rawSettings.logo_url && !rawSettings.logo_url.includes('UklGRh4AAAB')) ? rawSettings.logo_url : '/brand/logo_truong.svg';
+        const logo = rawSettings.logo_url || '/brand/logo_truong.svg';
         const unionLogo = rawSettings.youth_union_logo_url || '/brand/huy_hieu_doan.svg';
-        const topBanner = (rawSettings.banner_top_image && !rawSettings.banner_top_image.includes('UklGRh4AAAB')) ? rawSettings.banner_top_image : '/brand/banner_top.svg';
+        const topBanner = rawSettings.banner_top_image || '/brand/banner_top.svg';
         const footerBanner = rawSettings.footer_banner_image || '/brand/banner_footer.svg';
 
         schoolSettings = {

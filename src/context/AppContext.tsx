@@ -100,7 +100,7 @@ interface AppContextType {
   logout: () => void;
 
   // School Settings Customizer
-  updateSchoolSettings: (settings: Partial<SchoolSettings>) => void;
+  updateSchoolSettings: (settings: Partial<SchoolSettings>) => Promise<boolean>;
 
   // Media Assets Library & Folders/Albums Manager
   mediaFolders: MediaFolder[];
@@ -311,13 +311,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const s = { ...settings };
     if (s.themeColor === ('green' as any)) s.themeColor = 'emerald';
     if (!s.themeColor) s.themeColor = 'emerald';
-    if (!s.logoUrl || s.logoUrl.includes('mvkvfvxfcqxdabxumroz.supabase.co') || s.logoUrl.includes('UklGRh4AAAB')) {
+    if (!s.logoUrl || s.logoUrl.includes('mvkvfvxfcqxdabxumroz.supabase.co')) {
       s.logoUrl = INITIAL_SCHOOL_SETTINGS.logoUrl;
     }
     if (!s.youthUnionLogoUrl || s.youthUnionLogoUrl.includes('mvkvfvxfcqxdabxumroz.supabase.co')) {
       s.youthUnionLogoUrl = INITIAL_SCHOOL_SETTINGS.youthUnionLogoUrl;
     }
-    if (!s.bannerTopImage || s.bannerTopImage.includes('mvkvfvxfcqxdabxumroz.supabase.co') || s.bannerTopImage.includes('UklGRh4AAAB')) {
+    if (!s.bannerTopImage || s.bannerTopImage.includes('mvkvfvxfcqxdabxumroz.supabase.co')) {
       s.bannerTopImage = INITIAL_SCHOOL_SETTINGS.bannerTopImage;
     }
     if (!s.footerBannerImage || s.footerBannerImage.includes('mvkvfvxfcqxdabxumroz.supabase.co')) {
@@ -501,6 +501,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
   const hasCloudSyncedRef = useRef<boolean>(false);
   const isFetchingCloudRef = useRef<boolean>(false);
+  const realtimeChannelRef = useRef<any>(null);
+  const localBroadcastRef = useRef<BroadcastChannel | null>(null);
+
+  const broadcastGlobalSync = (tableType?: string) => {
+    try {
+      if (realtimeChannelRef.current) {
+        realtimeChannelRef.current.send({
+          type: 'broadcast',
+          event: 'SYNC_UPDATE',
+          payload: { table: tableType || 'all', timestamp: Date.now() }
+        });
+      }
+    } catch {}
+    try {
+      if (localBroadcastRef.current) {
+        localBroadcastRef.current.postMessage({
+          type: 'LOCAL_SYNC_UPDATE',
+          table: tableType || 'all',
+          timestamp: Date.now()
+        });
+      }
+    } catch {}
+  };
 
   // Tự động khôi phục & đồng bộ hai chiều từ IndexedDB (vượt qua giới hạn 5MB, đảm bảo F5 luôn còn ảnh, bài viết, sự kiện & toàn bộ dữ liệu)
   useEffect(() => {
@@ -947,29 +970,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Tự động kích hoạt Realtime Subscription + Event Listeners + Polling để đồng bộ tức thì đa thiết bị
+  // Tự động kích hoạt Realtime Subscription + BroadcastChannel + Event Listeners + Polling để đồng bộ tức thì đa thiết bị
   useEffect(() => {
     // 1. Đồng bộ dữ liệu ngay khi khởi động (hiển thị trạng thái nạp)
     refreshDataFromCloud(false);
 
-    // 2. Lắng nghe thay đổi Realtime từ Supabase (Websocket postgres_changes)
+    // 2. Kích hoạt Local BroadcastChannel cho các tab/cửa sổ trên cùng trình duyệt
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const bc = new BroadcastChannel('DOANTHANHNIEN_APP_SYNC');
+        localBroadcastRef.current = bc;
+        bc.onmessage = (event) => {
+          console.log('⚡ [Local Broadcast] Nhận tín hiệu đồng bộ từ tab/cửa sổ khác:', event.data);
+          refreshDataFromCloud(true);
+        };
+      } catch {}
+    }
+
+    // 3. Lắng nghe thay đổi Realtime từ Supabase (Websocket postgres_changes & broadcast)
     const client = getSupabaseClient();
-    let channel: any = null;
     if (client && isSupabaseConfigured()) {
       try {
-        channel = client
-          .channel('public:db-sync-all-devices')
-          .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-            console.log('⚡ [Realtime] Nhận tín hiệu thay đổi dữ liệu từ thiết bị khác, đang đồng bộ tức thì...');
+        const channel = client
+          .channel('public:db-sync-all-devices', {
+            config: {
+              broadcast: { self: false }
+            }
+          })
+          .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+            console.log('⚡ [Realtime Database] Nhận thay đổi từ Cloud:', payload);
+            refreshDataFromCloud(true);
+          })
+          .on('broadcast', { event: 'SYNC_UPDATE' }, (payload) => {
+            console.log('⚡ [Realtime Broadcast] Nhận tín hiệu đồng bộ tức thì từ thiết bị khác:', payload);
             refreshDataFromCloud(true);
           })
           .subscribe();
+        realtimeChannelRef.current = channel;
       } catch (err) {
         console.warn('Không thể khởi tạo Realtime Channel:', err);
       }
     }
 
-    // 3. Tự động đồng bộ khi người dùng mở lại tab, chuyển sang ứng dụng trên điện thoại, hoặc kết nối mạng trở lại
+    // 4. Tự động đồng bộ khi người dùng mở lại tab, chuyển sang ứng dụng trên điện thoại, hoặc kết nối mạng trở lại
     const handleVisibilityOrFocus = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         refreshDataFromCloud(true);
@@ -983,15 +1026,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     window.addEventListener('visibilitychange', handleVisibilityOrFocus);
     window.addEventListener('online', handleOnline);
 
-    // 4. Định kỳ đồng bộ ngầm siêu tốc mỗi 5 giây để dữ liệu máy tính & điện thoại luôn khớp tức thì 100%
+    // 5. Định kỳ đồng bộ ngầm siêu tốc mỗi 3 giây để dữ liệu máy tính & điện thoại luôn khớp tức thì 100%
     const pollInterval = setInterval(() => {
       refreshDataFromCloud(true);
-    }, 5000);
+    }, 3000);
 
     return () => {
-      if (channel && client) {
+      if (realtimeChannelRef.current && client) {
         try {
-          client.removeChannel(channel);
+          client.removeChannel(realtimeChannelRef.current);
+        } catch {}
+      }
+      if (localBroadcastRef.current) {
+        try {
+          localBroadcastRef.current.close();
         } catch {}
       }
       window.removeEventListener('focus', handleVisibilityOrFocus);
@@ -1075,19 +1123,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // School Settings
-  const updateSchoolSettings = (updates: Partial<SchoolSettings>) => {
-    setSchoolSettings(prev => {
-      const updated = sanitizeSchoolSettings({ ...prev, ...updates });
-      safeSaveLocalStorage('schoolSettings', updated);
-      setIndexedDBKV('app_school_settings', updated);
-      if (isSupabaseConfigured()) {
-        SupabaseService.saveSchoolSettings(updated).catch(err => {
-          console.warn('Lỗi khi lưu schoolSettings lên Supabase:', err);
-        });
-      }
-      return updated;
-    });
+  const updateSchoolSettings = async (updates: Partial<SchoolSettings>): Promise<boolean> => {
+    const updated = sanitizeSchoolSettings({ ...schoolSettings, ...updates });
+    setSchoolSettings(updated);
+    safeSaveLocalStorage('schoolSettings', updated);
+    setIndexedDBKV('app_school_settings', updated);
     addLog('Cập nhật cài đặt trường', 'Thay đổi thông tin nhận diện, tên trường hoặc màu sắc giao diện');
+
+    let success = true;
+    if (isSupabaseConfigured()) {
+      success = await SupabaseService.saveSchoolSettings(updated);
+      if (!success) {
+        console.warn('Lỗi khi lưu schoolSettings lên Supabase');
+      }
+    }
+    broadcastGlobalSync('school_settings');
+    return success;
   };
 
   // Media Asset Management (Kho Ảnh Toàn Hệ Thống)

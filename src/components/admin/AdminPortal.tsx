@@ -1332,6 +1332,7 @@ export const AdminPortal: React.FC = () => {
   // School Settings form
   const [settingsForm, setSettingsForm] = useState(schoolSettings);
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   useEffect(() => {
     if (schoolSettings) {
@@ -2289,30 +2290,24 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
   };
 
   // Handle Settings Image Uploads with Supabase Cloud Storage
+  // Handle Settings Image Uploads with Supabase Cloud Storage
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsUploadingImage('logo');
     try {
+      let finalUrl: string | null = null;
       if (isSupabaseConfigured()) {
-        const publicUrl = await SupabaseService.uploadImage(file, 'media');
-        if (publicUrl) {
-          setSettingsForm(prev => {
-            const next = { ...prev, logoUrl: publicUrl };
-            updateSchoolSettings(next);
-            return next;
-          });
-          alert('✅ Đã tải Logo trường lên Supabase Storage và lưu cấu hình thành công!');
-          return;
-        }
+        finalUrl = await SupabaseService.uploadImage(file, 'media');
       }
-      const compressed = await compressImageToDataURL(file, { maxWidth: 800, maxHeight: 800, quality: 0.85, outputFormat: 'image/webp' });
-      if (compressed) {
-        setSettingsForm(prev => {
-          const next = { ...prev, logoUrl: compressed };
-          updateSchoolSettings(next);
-          return next;
-        });
+      if (!finalUrl) {
+        finalUrl = await compressImageToDataURL(file, { maxWidth: 800, maxHeight: 800, quality: 0.85, outputFormat: 'image/webp' });
+      }
+      if (finalUrl) {
+        const next = { ...settingsForm, logoUrl: finalUrl };
+        setSettingsForm(next);
+        await updateSchoolSettings(next);
+        alert('✅ Đã tải Logo trường và đồng bộ nhận diện hệ thống thành công!');
       }
     } catch (err) {
       console.error(err);
@@ -2328,25 +2323,18 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
     if (!file) return;
     setIsUploadingImage('youth_logo');
     try {
+      let finalUrl: string | null = null;
       if (isSupabaseConfigured()) {
-        const publicUrl = await SupabaseService.uploadImage(file, 'media');
-        if (publicUrl) {
-          setSettingsForm(prev => {
-            const next = { ...prev, youthUnionLogoUrl: publicUrl };
-            updateSchoolSettings(next);
-            return next;
-          });
-          alert('✅ Đã tải Huy hiệu Đoàn lên Supabase Storage và lưu cấu hình thành công!');
-          return;
-        }
+        finalUrl = await SupabaseService.uploadImage(file, 'media');
       }
-      const compressed = await compressImageToDataURL(file, { maxWidth: 800, maxHeight: 800, quality: 0.85, outputFormat: 'image/webp' });
-      if (compressed) {
-        setSettingsForm(prev => {
-          const next = { ...prev, youthUnionLogoUrl: compressed };
-          updateSchoolSettings(next);
-          return next;
-        });
+      if (!finalUrl) {
+        finalUrl = await compressImageToDataURL(file, { maxWidth: 800, maxHeight: 800, quality: 0.85, outputFormat: 'image/webp' });
+      }
+      if (finalUrl) {
+        const next = { ...settingsForm, youthUnionLogoUrl: finalUrl };
+        setSettingsForm(next);
+        await updateSchoolSettings(next);
+        alert('✅ Đã tải Huy hiệu Đoàn và đồng bộ nhận diện hệ thống thành công!');
       }
     } catch (err) {
       console.error(err);
@@ -2362,25 +2350,18 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
     if (!file) return;
     setIsUploadingImage('top_banner');
     try {
+      let finalUrl: string | null = null;
       if (isSupabaseConfigured()) {
-        const publicUrl = await SupabaseService.uploadImage(file, 'media');
-        if (publicUrl) {
-          setSettingsForm(prev => {
-            const next = { ...prev, bannerTopImage: publicUrl };
-            updateSchoolSettings(next);
-            return next;
-          });
-          alert('✅ Đã tải Banner Đầu Trang lên Supabase Storage và lưu cấu hình thành công!');
-          return;
-        }
+        finalUrl = await SupabaseService.uploadImage(file, 'media');
       }
-      const compressed = await compressImageToDataURL(file, { maxWidth: 1600, maxHeight: 600, quality: 0.82, outputFormat: 'image/webp' });
-      if (compressed) {
-        setSettingsForm(prev => {
-          const next = { ...prev, bannerTopImage: compressed };
-          updateSchoolSettings(next);
-          return next;
-        });
+      if (!finalUrl) {
+        finalUrl = await compressImageToDataURL(file, { maxWidth: 1600, maxHeight: 600, quality: 0.82, outputFormat: 'image/webp' });
+      }
+      if (finalUrl) {
+        const next = { ...settingsForm, bannerTopImage: finalUrl };
+        setSettingsForm(next);
+        await updateSchoolSettings(next);
+        alert('✅ Đã tải Banner Đầu Trang và đồng bộ nhận diện hệ thống thành công!');
       }
     } catch (err) {
       console.error(err);
@@ -2396,25 +2377,18 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
     if (!file) return;
     setIsUploadingImage('footer_banner');
     try {
+      let finalUrl: string | null = null;
       if (isSupabaseConfigured()) {
-        const publicUrl = await SupabaseService.uploadImage(file, 'media');
-        if (publicUrl) {
-          setSettingsForm(prev => {
-            const next = { ...prev, footerBannerImage: publicUrl };
-            updateSchoolSettings(next);
-            return next;
-          });
-          alert('✅ Đã tải Banner Chân Trang lên Supabase Storage và lưu cấu hình thành công!');
-          return;
-        }
+        finalUrl = await SupabaseService.uploadImage(file, 'media');
       }
-      const compressed = await compressImageToDataURL(file, { maxWidth: 1600, maxHeight: 600, quality: 0.82, outputFormat: 'image/webp' });
-      if (compressed) {
-        setSettingsForm(prev => {
-          const next = { ...prev, footerBannerImage: compressed };
-          updateSchoolSettings(next);
-          return next;
-        });
+      if (!finalUrl) {
+        finalUrl = await compressImageToDataURL(file, { maxWidth: 1600, maxHeight: 600, quality: 0.82, outputFormat: 'image/webp' });
+      }
+      if (finalUrl) {
+        const next = { ...settingsForm, footerBannerImage: finalUrl };
+        setSettingsForm(next);
+        await updateSchoolSettings(next);
+        alert('✅ Đã tải Banner Chân Trang và đồng bộ nhận diện hệ thống thành công!');
       }
     } catch (err) {
       console.error(err);
@@ -8498,18 +8472,28 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
               </div>
 
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
-                  updateSchoolSettings(settingsForm);
-                  setSettingsSaved(true);
-                  setTimeout(() => setSettingsSaved(false), 3000);
+                  setIsSavingSettings(true);
+                  try {
+                    const ok = await updateSchoolSettings(settingsForm);
+                    setSettingsSaved(true);
+                    setTimeout(() => setSettingsSaved(false), 4000);
+                    if (ok) {
+                      alert('🎉 Đã lưu và đồng bộ cài đặt nhận diện trường lên Cloud & toàn bộ các thiết bị thành công!');
+                    }
+                  } catch (err: any) {
+                    alert('Lỗi khi lưu cài đặt: ' + (err?.message || 'Không xác định'));
+                  } finally {
+                    setIsSavingSettings(false);
+                  }
                 }}
                 className="space-y-6 text-xs max-w-4xl"
               >
                 {settingsSaved && (
                   <div className="p-3.5 rounded-2xl bg-emerald-950 border border-emerald-700 text-emerald-300 font-bold flex items-center gap-2 animate-fadeIn">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                    <span>Đã lưu toàn bộ thông tin cài đặt nhận diện trường thành công!</span>
+                    <span>Đã lưu & phát tín hiệu đồng bộ nhận diện trường tới tất cả các thiết bị thành công!</span>
                   </div>
                 )}
 
@@ -8870,10 +8854,15 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 <div className="flex justify-end pt-2">
                   <button
                     type="submit"
-                    className="px-8 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow-glow flex items-center gap-2"
+                    disabled={isSavingSettings}
+                    className="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-sm shadow-glow flex items-center gap-2 cursor-pointer transition-all"
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Lưu Thay Đổi Nhận Diện Trường</span>
+                    {isSavingSettings ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4" />
+                    )}
+                    <span>{isSavingSettings ? 'Đang lưu & đồng bộ Cloud...' : 'Lưu Thay Đổi Nhận Diện Trường'}</span>
                   </button>
                 </div>
               </form>
