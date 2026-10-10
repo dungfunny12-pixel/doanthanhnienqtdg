@@ -389,8 +389,8 @@ export const Header: React.FC = () => {
               )}
             </div>
 
-            {/* Authenticated User Status or Login Trigger */}
-            {currentUser ? (
+            {/* Authenticated User Status or Login Trigger - Only display on non-portal views to keep header clean and prevent duplication */}
+            {currentUser && activeView !== 'portal' ? (
               <div className="flex items-center gap-1 bg-slate-800/80 border border-slate-700 p-0.5 sm:p-1 rounded-xl shrink-0">
                 
                 {/* User Avatar + Name (Desktop) */}
@@ -429,7 +429,7 @@ export const Header: React.FC = () => {
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ) : (
+            ) : !currentUser && activeView !== 'portal' ? (
               <button
                 onClick={() => setActiveView('portal')}
                 className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs font-bold shadow-glow flex items-center gap-1 shrink-0"
@@ -437,7 +437,7 @@ export const Header: React.FC = () => {
                 <span>🔐</span>
                 <span className="hidden xs:inline">Đăng Nhập</span>
               </button>
-            )}
+            ) : null}
 
             {/* Mobile Menu Button (Hamburger) */}
             <button

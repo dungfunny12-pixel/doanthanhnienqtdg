@@ -208,42 +208,48 @@ export const PublicPortal: React.FC = () => {
         </div>
       )}
 
-      {/* Pinned Urgent Announcement Banner */}
-      {pinnedNews.map(pinned => (
-        <div 
-          key={pinned.id}
-          onClick={() => setSelectedArticleModal(pinned)}
-          className="bg-gradient-to-r from-red-950/90 via-red-900/80 to-amber-950/90 border-2 border-red-600/70 rounded-2xl p-4 sm:p-5 shadow-glow cursor-pointer hover:border-red-500 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-        >
-          <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-xl bg-red-600 text-white shrink-0 mt-0.5 animate-pulse">
-              <AlertCircle className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-0.5 rounded text-white text-[10px] font-black uppercase tracking-wider ${
-                  pinned.urgency === 'critical' ? 'bg-red-600 animate-pulse' : 'bg-amber-600'
-                }`}>
-                  {pinned.category === 'announcement' ? '📢 THÔNG BÁO CHỈ ĐẠO' : '⭐ TIN NỔI BẬT'}
-                </span>
-                <span className="text-xs text-red-200">{pinned.publishDate}</span>
-              </div>
-              <h3 className="font-black text-white text-sm sm:text-base mt-1 line-clamp-1">{pinned.title}</h3>
-              <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">{pinned.excerpt}</p>
-            </div>
-          </div>
-          <button className="shrink-0 px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors inline-flex items-center gap-1">
-            <span>Xem Toàn Văn</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ))}
-
-      {/* Main 3-Column Grid Layout on Desktop / Stacked on Mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Main Layout: Left & Center Main Section (8 cols on lg, 9 cols on xl) + Right Sidebar (4 cols on lg, 3 cols on xl) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* ================= COLUMN 1 (LEFT 3.5 cols): PUBLIC LEADERBOARD ================= */}
-        <div className="lg:col-span-4 space-y-4">
+        {/* ================= LEFT & CENTER MAIN SECTION ================= */}
+        <div className="lg:col-span-8 xl:col-span-9 space-y-6">
+
+          {/* Pinned Urgent Announcement Banners (Rendered at top of Main Section, side-by-side with Right Sidebar) */}
+          {pinnedNews.map(pinned => (
+            <div 
+              key={pinned.id}
+              onClick={() => setSelectedArticleModal(pinned)}
+              className="bg-gradient-to-r from-red-950/90 via-red-900/80 to-amber-950/90 border-2 border-red-600/70 rounded-2xl p-4 sm:p-5 shadow-glow cursor-pointer hover:border-red-500 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            >
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-xl bg-red-600 text-white shrink-0 mt-0.5 animate-pulse">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded text-white text-[10px] font-black uppercase tracking-wider ${
+                      pinned.urgency === 'critical' ? 'bg-red-600 animate-pulse' : 'bg-amber-600'
+                    }`}>
+                      {pinned.category === 'announcement' ? '📢 THÔNG BÁO CHỈ ĐẠO' : '⭐ TIN NỔI BẬT'}
+                    </span>
+                    <span className="text-xs text-red-200">{pinned.publishDate}</span>
+                  </div>
+                  <h3 className="font-black text-white text-sm sm:text-base mt-1 line-clamp-1">{pinned.title}</h3>
+                  <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">{pinned.excerpt}</p>
+                </div>
+              </div>
+              <button className="shrink-0 px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors inline-flex items-center gap-1">
+                <span>Xem Toàn Văn</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+
+          {/* Subgrid: Column 1 (Leaderboard + Slides) & Column 2 (Duty + Newsfeed) */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            
+            {/* ================= SUB-COLUMN 1: PUBLIC LEADERBOARD & ACTIVITY PHOTOS ================= */}
+            <div className="md:col-span-5 space-y-5">
           <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
             
             {/* Header & Filter */}
@@ -511,8 +517,8 @@ export const PublicPortal: React.FC = () => {
           )}
         </div>
 
-        {/* ================= COLUMN 2 (MIDDLE 5.5 cols): NEWSFEED & CỜ ĐỎ DUTY ================= */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* ================= SUB-COLUMN 2: NEWSFEED & CỜ ĐỎ DUTY ================= */}
+        <div className="md:col-span-7 space-y-6">
           
           {/* CỜ ĐỎ DUTY SCHEDULE WIDGET */}
           <div className="glass-panel rounded-3xl p-5 border border-slate-800 shadow-card">
@@ -690,9 +696,13 @@ export const PublicPortal: React.FC = () => {
           </div>
         </div>
 
-        {/* ================= COLUMN 3 (RIGHT 3 cols): STICKY LOGIN FORM ================= */}
-        <div className="lg:col-span-3 space-y-4">
-          <div className="sticky top-24 space-y-4">
+      </div>
+    </div>
+
+    {/* ================= RIGHT SIDEBAR: ACCOUNT / LOGIN / RULES / WEATHER ================= */}
+    {/* Positioned directly at the top right, seamlessly level with the Top Pinned Announcements */}
+    <div className="lg:col-span-4 xl:col-span-3 space-y-4">
+      <div className="sticky top-20 space-y-4">
             
             {/* User Profile & Launchpad Card (If logged in) OR Login Form (If guest) */}
             {currentUser ? (
