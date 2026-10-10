@@ -1367,7 +1367,7 @@ export const SupabaseService = {
           const ext = optimizedFile.name ? optimizedFile.name.split('.').pop() : 'webp';
           const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
 
-          const targetBucket = bucket === 'proof_images' ? 'proof_images' : bucket;
+          const targetBucket = bucket === 'proof_images' ? 'proof_images' : (bucket === 'violations' ? 'violations' : 'media');
           const { error } = await client.storage.from(targetBucket).upload(fileName, optimizedFile, {
             cacheControl: '31536000', // Cache 1 năm trên Browser & CDN
             upsert: true,
@@ -1377,6 +1377,7 @@ export const SupabaseService = {
           if (!error) {
             const { data } = client.storage.from(targetBucket).getPublicUrl(fileName);
             if (data?.publicUrl) {
+              console.log(`✅ [Supabase Storage] Đã lưu ảnh vào bucket "${targetBucket}":`, data.publicUrl);
               return data.publicUrl;
             }
           } else {

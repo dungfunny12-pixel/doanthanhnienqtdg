@@ -49,10 +49,25 @@ export async function compressImage(
     return new File([file], 'image.svg', { type: file.type });
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const originalSize = file.size;
     const originalName = (file as File).name || 'image.jpg';
     const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || 'image';
+
+    // Timeout an toàn 3 giây: Nếu nén canvas bị treo/chậm, trả về tệp gốc ngay lập tức để không gián đoạn tải lên
+    let isSettled = false;
+    const safeResolve = (result: File) => {
+      if (isSettled) return;
+      isSettled = true;
+      if (timer) clearTimeout(timer);
+      resolve(result);
+    };
+
+    const timer = setTimeout(() => {
+      console.warn('⚠️ [Image Optimizer] Quá thời gian nén canvas 3s, sử dụng tệp gốc trực tiếp');
+      if (file instanceof File) safeResolve(file);
+      else safeResolve(new File([file], originalName, { type: file.type || 'image/jpeg' }));
+    }, 3000);
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -61,82 +76,87 @@ export async function compressImage(
       img.src = event.target?.result as string;
 
       img.onload = () => {
-        let width = img.width;
-        let height = img.height;
+        try {
+          let width = img.width;
+          let height = img.height;
 
-        // Tính toán tỷ lệ co giãn giữ nguyên aspect ratio
-        if (width > maxWidth || height > maxHeight) {
-          if (width / height > maxWidth / maxHeight) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          } else {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
-          }
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          if (file instanceof File) return resolve(file);
-          return resolve(new File([file], originalName, { type: file.type }));
-        }
-
-        // Vẽ nền mượt
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Kiểm tra xem trình duyệt có hỗ trợ WebP không
-        let targetType = outputFormat;
-        const testCanvas = document.createElement('canvas');
-        testCanvas.width = 1;
-        testCanvas.height = 1;
-        const isWebPSupported = testCanvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
-
-        if (!isWebPSupported && targetType === 'image/webp') {
-          targetType = 'image/jpeg';
-        }
-
-        const extension = targetType === 'image/webp' ? 'webp' : 'jpg';
-
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              if (file instanceof File) return resolve(file);
-              return resolve(new File([file], originalName, { type: file.type }));
+          // Tính toán tỷ lệ co giãn giữ nguyên aspect ratio
+          if (width > maxWidth || height > maxHeight) {
+            if (width / height > maxWidth / maxHeight) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
             }
+          }
 
-            const compressedFile = new File([blob], `${baseName}_optimized.${extension}`, {
-              type: targetType,
-              lastModified: Date.now()
-            });
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
 
-            const reductionPercent = Math.round(((originalSize - blob.size) / originalSize) * 100);
-            console.log(
-              `⚡ [Image Optimizer] Nén ảnh thành công: ${(originalSize / 1024).toFixed(0)}KB ➔ ${(blob.size / 1024).toFixed(0)}KB (Tiết kiệm ${reductionPercent}% dung lượng, tải cực nhanh!)`
-            );
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            if (file instanceof File) return safeResolve(file);
+            return safeResolve(new File([file], originalName, { type: file.type }));
+          }
 
-            resolve(compressedFile);
-          },
-          targetType,
-          quality
-        );
+          // Vẽ nền mượt
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Kiểm tra xem trình duyệt có hỗ trợ WebP không
+          let targetType = outputFormat;
+          const testCanvas = document.createElement('canvas');
+          testCanvas.width = 1;
+          testCanvas.height = 1;
+          const isWebPSupported = testCanvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+
+          if (!isWebPSupported && targetType === 'image/webp') {
+            targetType = 'image/jpeg';
+          }
+
+          const extension = targetType === 'image/webp' ? 'webp' : 'jpg';
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                if (file instanceof File) return safeResolve(file);
+                return safeResolve(new File([file], originalName, { type: file.type }));
+              }
+
+              const compressedFile = new File([blob], `${baseName}_optimized.${extension}`, {
+                type: targetType,
+                lastModified: Date.now()
+              });
+
+              const reductionPercent = Math.round(((originalSize - blob.size) / originalSize) * 100);
+              console.log(
+                `⚡ [Image Optimizer] Nén ảnh thành công: ${(originalSize / 1024).toFixed(0)}KB ➔ ${(blob.size / 1024).toFixed(0)}KB (Tiết kiệm ${reductionPercent}% dung lượng)`
+              );
+
+              safeResolve(compressedFile);
+            },
+            targetType,
+            quality
+          );
+        } catch (err) {
+          console.warn('Lỗi khi vẽ canvas nén ảnh, sử dụng tệp gốc:', err);
+          if (file instanceof File) safeResolve(file);
+          else safeResolve(new File([file], originalName, { type: file.type }));
+        }
       };
 
       img.onerror = () => {
-        // Fallback nếu không parse được ảnh
-        if (file instanceof File) resolve(file);
-        else resolve(new File([file], originalName, { type: file.type }));
+        if (file instanceof File) safeResolve(file);
+        else safeResolve(new File([file], originalName, { type: file.type }));
       };
     };
 
     reader.onerror = () => {
-      if (file instanceof File) resolve(file);
-      else resolve(new File([file], 'image.jpg', { type: 'image/jpeg' }));
+      if (file instanceof File) safeResolve(file);
+      else safeResolve(new File([file], 'image.jpg', { type: 'image/jpeg' }));
     };
   });
 }

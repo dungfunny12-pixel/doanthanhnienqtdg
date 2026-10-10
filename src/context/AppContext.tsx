@@ -1029,10 +1029,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     window.addEventListener('visibilitychange', handleVisibilityOrFocus);
     window.addEventListener('online', handleOnline);
 
-    // 5. Định kỳ đồng bộ ngầm siêu tốc mỗi 3 giây để dữ liệu máy tính & điện thoại luôn khớp tức thì 100%
+    // 5. Định kỳ đồng bộ ngầm mỗi 30 giây (kết hợp Realtime WebSocket + BroadcastChannel để cập nhật tức thì)
     const pollInterval = setInterval(() => {
       refreshDataFromCloud(true);
-    }, 3000);
+    }, 30000);
 
     return () => {
       if (realtimeChannelRef.current && client) {
@@ -1271,6 +1271,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setMediaAssets(prev => [item, ...prev.filter(p => p.id !== item.id)]);
         await saveIndexedDBItem(STORES.MEDIA_ASSETS, item);
         addLog('Tải ảnh lên Kho Media', `Đã lưu ảnh "${item.title}" vào danh mục ${item.category}`);
+        broadcastGlobalSync('media_assets');
         return item;
       }
       return null;
@@ -1287,6 +1288,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await deleteIndexedDBItem(STORES.MEDIA_ASSETS, id);
     setMediaAssets(prev => prev.filter(m => m.id !== id));
     addLog('Xóa ảnh khỏi Kho Media', `Đã xóa ảnh "${target.title}"`);
+    broadcastGlobalSync('media_assets');
     return true;
   };
 
@@ -1299,6 +1301,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await deleteIndexedDBBatch(STORES.MEDIA_ASSETS, ids);
     setMediaAssets(prev => prev.filter(m => !ids.includes(m.id)));
     addLog('Xóa hàng loạt ảnh', `Đã xóa ${targets.length} ảnh khỏi Kho Media`);
+    broadcastGlobalSync('media_assets');
     return { deletedCount: targets.length };
   };
 
