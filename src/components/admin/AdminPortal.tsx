@@ -863,7 +863,7 @@ export const AdminPortal: React.FC = () => {
   const [dutyWeekFilter, setDutyWeekFilter] = useState<number>(activeWeek);
   const [dutyViewMode, setDutyViewMode] = useState<'official' | 'matrix'>('official');
   const [dutySessionFilter, setDutySessionFilter] = useState<'ALL' | 'Sáng' | 'Chiều'>('ALL');
-  const [dutyDayFilter, setDutyDayFilter] = useState<'ALL' | DayOfWeek>('ALL');
+  const [dutyDayFilter, setDutyDayFilter] = useState<'ALL' | DayOfWeek | 'CN'>('ALL');
   const [dutySearch, setDutySearch] = useState<string>('');
   const [isDutyModalOpen, setIsDutyModalOpen] = useState<boolean>(false);
   const [editingDuty, setEditingDuty] = useState<DutyAssignment | null>(null);
@@ -5290,6 +5290,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                             {getDayLabel(d)} ({currentWeekDuties.filter(x => x.day === d).length} ca)
                           </option>
                         ))}
+                        <option value="CN" className="bg-slate-900">Chủ Nhật (Nghỉ cuối tuần - 0 ca)</option>
                       </select>
                     </div>
 
@@ -5360,8 +5361,16 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                             <tbody className="divide-y divide-slate-800/60">
                               {morningDuties.length === 0 ? (
                                 <tr>
-                                  <td colSpan={7} className="p-6 text-center text-slate-500">
-                                    Không tìm thấy ca trực buổi sáng nào khớp với bộ lọc.
+                                  <td colSpan={7} className="p-6 text-center">
+                                    {dutyDayFilter === 'CN' ? (
+                                      <div className="inline-flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-sky-950/30 border border-sky-800/40 text-sky-200">
+                                        <span className="text-2xl">🌴</span>
+                                        <span className="font-bold text-sm text-sky-300">Chủ Nhật không có ca trực cờ đỏ buổi sáng</span>
+                                        <span className="text-xs text-slate-400">Học sinh toàn trường nghỉ học cuối tuần theo kế hoạch nhà trường.</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-500">Không tìm thấy ca trực buổi sáng nào khớp với bộ lọc.</span>
+                                    )}
                                   </td>
                                 </tr>
                               ) : (
@@ -5490,8 +5499,28 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                             <tbody className="divide-y divide-slate-800/60">
                               {afternoonDuties.length === 0 ? (
                                 <tr>
-                                  <td colSpan={7} className="p-6 text-center text-slate-500">
-                                    Không tìm thấy ca trực buổi chiều nào khớp với bộ lọc.
+                                  <td colSpan={7} className="p-6 text-center">
+                                    {dutyDayFilter === 'T5' ? (
+                                      <div className="inline-flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-amber-950/30 border border-amber-800/40 text-amber-200">
+                                        <span className="text-2xl">☕</span>
+                                        <span className="font-bold text-sm text-amber-300">Chiều Thứ 5 không có ca trực cờ đỏ</span>
+                                        <span className="text-xs text-slate-400">Theo phân công của Đoàn trường, Thứ 5 chỉ bố trí ca trực vào buổi Sáng (06:45 - 07:15 & 11:15 - 11:45).</span>
+                                      </div>
+                                    ) : dutyDayFilter === 'T7' ? (
+                                      <div className="inline-flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-indigo-950/30 border border-indigo-800/40 text-indigo-200">
+                                        <span className="text-2xl">🏁</span>
+                                        <span className="font-bold text-sm text-indigo-300">Chiều Thứ 7 không có ca trực cờ đỏ</span>
+                                        <span className="text-xs text-slate-400">Thứ 7 chỉ bố trí ca trực vào buổi Sáng. Buổi chiều toàn trường kết thúc tuần học & tổng kết điểm thi đua lúc 17h00.</span>
+                                      </div>
+                                    ) : dutyDayFilter === 'CN' ? (
+                                      <div className="inline-flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-sky-950/30 border border-sky-800/40 text-sky-200">
+                                        <span className="text-2xl">🌴</span>
+                                        <span className="font-bold text-sm text-sky-300">Chủ Nhật không có ca trực cờ đỏ buổi chiều</span>
+                                        <span className="text-xs text-slate-400">Học sinh toàn trường nghỉ học cuối tuần theo kế hoạch nhà trường.</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-500">Không tìm thấy ca trực buổi chiều nào khớp với bộ lọc.</span>
+                                    )}
                                   </td>
                                 </tr>
                               ) : (

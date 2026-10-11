@@ -82,7 +82,7 @@ export const PublicPortal: React.FC = () => {
   const [isWeeklyDutyModalOpen, setIsWeeklyDutyModalOpen] = useState(false);
   const [dutyModalSession, setDutyModalSession] = useState<'ALL' | 'Sáng' | 'Chiều'>('ALL');
   const [dutyModalSearch, setDutyModalSearch] = useState<string>('');
-  const [dutyModalDay, setDutyModalDay] = useState<'ALL' | DayOfWeek>('ALL');
+  const [dutyModalDay, setDutyModalDay] = useState<'ALL' | DayOfWeek | 'CN'>('ALL');
 
   // Activity Photo Slider state
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
@@ -174,10 +174,52 @@ export const PublicPortal: React.FC = () => {
     });
   };
 
-  // Group duties for today vs week
+  // Real-time day of week calculation
+  const realDayOfWeekMap: Record<number, 'CN' | DayOfWeek> = {
+    0: 'CN',
+    1: 'T2',
+    2: 'T3',
+    3: 'T4',
+    4: 'T5',
+    5: 'T6',
+    6: 'T7'
+  };
+  const todayRealDay: 'CN' | DayOfWeek = realDayOfWeekMap[new Date().getDay()] || 'T2';
+
+  // State for homepage Duty widget day & session selection
+  const [selectedDutyDay, setSelectedDutyDay] = useState<'TODAY' | DayOfWeek | 'CN'>('TODAY');
+  const [selectedDutySession, setSelectedDutySession] = useState<'ALL' | 'Sáng' | 'Chiều'>('ALL');
+
+  const effectiveDutyDay: 'CN' | DayOfWeek = selectedDutyDay === 'TODAY' ? todayRealDay : selectedDutyDay;
+
+  // Group duties for active week
   const weekDuties = duties.filter(d => d.weekNumber === activeWeek);
-  const activeDutiesPool = weekDuties.length > 0 ? weekDuties : duties.filter(d => d.day === 'T2');
-  const todayDuties = activeDutiesPool.filter(d => d.day === 'T2');
+  const activeDutiesPool = weekDuties.length > 0 ? weekDuties : duties;
+
+  // Filtered duties for homepage widget
+  const dayDuties = effectiveDutyDay === 'CN' 
+    ? [] 
+    : activeDutiesPool.filter(d => d.day === effectiveDutyDay);
+
+  const filteredDayDuties = dayDuties.filter(d => {
+    if (selectedDutySession === 'ALL') return true;
+    if (selectedDutySession === 'Sáng') return (d.session || 'Sáng') === 'Sáng';
+    if (selectedDutySession === 'Chiều') return d.session === 'Chiều';
+    return true;
+  });
+
+  const getDayLabel = (d: DayOfWeek | 'CN') => {
+    switch (d) {
+      case 'T2': return 'Thứ 2';
+      case 'T3': return 'Thứ 3';
+      case 'T4': return 'Thứ 4';
+      case 'T5': return 'Thứ 5';
+      case 'T6': return 'Thứ 6';
+      case 'T7': return 'Thứ 7';
+      case 'CN': return 'Chủ Nhật';
+    }
+  };
+
   const daysOfWeek: DayOfWeek[] = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
   return (
@@ -634,7 +676,8 @@ export const PublicPortal: React.FC = () => {
           {/* CỜ ĐỎ DUTY SCHEDULE WIDGET */}
           <div className="glass-panel rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-card flex-1 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between mb-4">
+              {/* Widget Header */}
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="p-2 rounded-xl bg-red-600/20 text-red-400 border border-red-600/30">
                     🛡️
@@ -645,68 +688,286 @@ export const PublicPortal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Toggle Tab */}
-                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                {/* Right controls: Cả tuần modal button */}
+                <button
+                  onClick={() => setIsWeeklyDutyModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <span>Cả tuần</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Day & Session Selector Toolbar */}
+              <div className="space-y-2 mb-3">
+                {/* Day selector pills */}
+                <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800/80 overflow-x-auto scrollbar-none text-[11px]">
                   <button
-                    onClick={() => setDutyTab('today')}
-                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      dutyTab === 'today' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
+                    onClick={() => setSelectedDutyDay('TODAY')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                      selectedDutyDay === 'TODAY'
+                        ? 'bg-red-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Hôm nay
+                    <span>Hôm nay</span>
+                    <span className="text-[10px] opacity-80">({getDayLabel(todayRealDay)})</span>
                   </button>
-                  <button
-                    onClick={() => setIsWeeklyDutyModalOpen(true)}
-                    className="px-3 py-1 rounded-lg font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Cả tuần</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
+
+                  {(['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'] as const).map(d => {
+                    const isSelected = selectedDutyDay === d;
+                    const isToday = todayRealDay === d;
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => setSelectedDutyDay(d)}
+                        className={`px-2 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer relative ${
+                          isSelected
+                            ? 'bg-red-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title={d === 'CN' ? 'Chủ Nhật (Nghỉ)' : getDayLabel(d)}
+                      >
+                        <span>{d}</span>
+                        {isToday && (
+                          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Session filter & info badge */}
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center bg-slate-950/90 p-0.5 rounded-lg border border-slate-800/80 text-[11px]">
+                    {(['ALL', 'Sáng', 'Chiều'] as const).map(sess => (
+                      <button
+                        key={sess}
+                        onClick={() => setSelectedDutySession(sess)}
+                        className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                          selectedDutySession === sess
+                            ? 'bg-slate-800 text-amber-300'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {sess === 'ALL' ? 'Tất cả' : sess}
+                      </button>
+                    ))}
+                  </div>
+
+                  <span className="text-[11px] font-mono text-slate-400">
+                    {effectiveDutyDay === 'CN' 
+                      ? 'Nghỉ cuối tuần' 
+                      : `${getDayLabel(effectiveDutyDay)}: ${filteredDayDuties.length} ca`}
+                  </span>
                 </div>
               </div>
 
-              {/* Today Duty Mini Cards - Single column for clean readability and full names */}
-              <div className="grid grid-cols-1 gap-2.5 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
-                {todayDuties.map(duty => (
-                  <div
-                    key={duty.id}
-                    className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2"
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                        duty.session === 'Chiều' 
-                          ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' 
-                          : 'bg-amber-950 text-amber-300 border border-amber-800'
-                      }`}>
-                        {duty.session || 'Sáng'}
-                      </span>
-                      {duty.isLiveNow && (
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                          Đang trực
-                        </span>
-                      )}
+              {/* Duty Cards / Informative Notices */}
+              {effectiveDutyDay === 'CN' ? (
+                /* ================= CASE 1: CHỦ NHẬT (NGHỈ CUỐI TUẦN) ================= */
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 via-sky-950/30 to-slate-900/90 border border-sky-500/30 text-center space-y-3 animate-fadeIn">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-sky-500/20 text-sky-400 border border-sky-500/30 flex items-center justify-center text-2xl shadow-glow">
+                    🌴
+                  </div>
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800/80 text-[10px] font-bold mb-1">
+                      <span>🏖️</span>
+                      <span>Nghỉ Học Cuối Tuần</span>
                     </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="text-base shrink-0">🚩</span>
-                      <div className="space-y-0.5 flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <p className="font-bold text-white text-xs sm:text-sm truncate">{duty.auditorName}</p>
-                          <span className="text-[10px] sm:text-xs text-amber-400 font-bold shrink-0 px-2 py-0.5 rounded bg-amber-950/40 border border-amber-800/40">
-                            Lớp {duty.auditorClass}
+                    <h4 className="text-sm sm:text-base font-black text-white">
+                      {selectedDutyDay === 'TODAY' ? 'Hôm Nay Là Chủ Nhật' : 'Chủ Nhật – Không Có Lịch Trực Cờ Đỏ'}
+                    </h4>
+                    <p className="text-xs text-sky-200/80 font-medium mt-1 leading-relaxed">
+                      Theo quy định nề nếp của Đoàn trường, Chủ Nhật là ngày nghỉ của học sinh toàn trường. Đội Cờ đỏ không thực hiện trực ban giám sát.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 text-[11px] text-slate-300 space-y-1 text-left">
+                    <p className="flex items-center gap-1.5 font-bold text-amber-300">
+                      <span>⏰</span> Ca trực kế tiếp: Sáng Thứ Hai tuần tới
+                    </p>
+                    <p className="text-slate-400">
+                      • Khung giờ: 06:45 – 07:15 & 11:15 – 11:45
+                    </p>
+                    <p className="text-slate-400">
+                      • Bắt đầu tuần thi đua nề nếp mới
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      onClick={() => { setSelectedDutyDay('T2'); setSelectedDutySession('ALL'); }}
+                      className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                    >
+                      <span>👀 Xem trực Thứ Hai</span>
+                    </button>
+                    <button
+                      onClick={() => setIsWeeklyDutyModalOpen(true)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                    >
+                      <span>📋 Lịch cả tuần</span>
+                    </button>
+                  </div>
+                </div>
+              ) : selectedDutySession === 'Chiều' && effectiveDutyDay === 'T5' ? (
+                /* ================= CASE 2: CHIỀU THỨ 5 (KHÔNG CÓ CA TRỰC CHIỀU) ================= */
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 via-amber-950/20 to-slate-900/90 border border-amber-500/30 text-center space-y-3 animate-fadeIn">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-2xl">
+                    ☕
+                  </div>
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800/80 text-[10px] font-bold mb-1">
+                      <span>ℹ️</span>
+                      <span>Không Bố Trí Trực Chiều</span>
+                    </div>
+                    <h4 className="text-sm sm:text-base font-black text-white">
+                      Chiều Thứ 5 – Không Có Ca Trực Cờ Đỏ
+                    </h4>
+                    <p className="text-xs text-amber-200/80 font-medium mt-1 leading-relaxed">
+                      Theo phân công chính thức của Đoàn trường, Thứ 5 chỉ bố trí ca trực vào buổi Sáng. Buổi chiều không có ca trực cờ đỏ.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 text-[11px] text-slate-300 space-y-1 text-left">
+                    <p className="flex items-center gap-1.5 font-bold text-amber-300">
+                      <span>🌅</span> Ca trực buổi Sáng Thứ 5: Có 6 ca trực
+                    </p>
+                    <p className="text-slate-400">
+                      • Khung giờ: 06:45 – 07:15 & 11:15 – 11:45
+                    </p>
+                    <p className="text-slate-400">
+                      • Phụ trách: Khối 10, 11 và 12
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      onClick={() => setSelectedDutySession('Sáng')}
+                      className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      ☀️ Xem trực ca Sáng
+                    </button>
+                    <button
+                      onClick={() => setIsWeeklyDutyModalOpen(true)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      📋 Lịch cả tuần
+                    </button>
+                  </div>
+                </div>
+              ) : selectedDutySession === 'Chiều' && effectiveDutyDay === 'T7' ? (
+                /* ================= CASE 3: CHIỀU THỨ 7 (KHÔNG CÓ CA TRỰC CHIỀU) ================= */
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 via-indigo-950/20 to-slate-900/90 border border-indigo-500/30 text-center space-y-3 animate-fadeIn">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-2xl">
+                    🏁
+                  </div>
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800/80 text-[10px] font-bold mb-1">
+                      <span>🔒</span>
+                      <span>Tổng Kết Nề Nếp Tuần</span>
+                    </div>
+                    <h4 className="text-sm sm:text-base font-black text-white">
+                      Chiều Thứ 7 – Không Có Ca Trực Cờ Đỏ
+                    </h4>
+                    <p className="text-xs text-indigo-200/80 font-medium mt-1 leading-relaxed">
+                      Thứ 7 chỉ bố trí ca trực vào buổi Sáng. Buổi chiều kết thúc tuần học và tiến hành khóa sổ nề nếp thi đua toàn trường.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 text-[11px] text-slate-300 space-y-1 text-left">
+                    <p className="flex items-center gap-1.5 font-bold text-amber-300">
+                      <span>🔒</span> Khóa sổ thi đua tuần: 17h00 Thứ 7
+                    </p>
+                    <p className="text-slate-400">
+                      • Điểm thi đua được chốt tự động trên hệ thống
+                    </p>
+                    <p className="text-slate-400">
+                      • GVCN kiểm tra và khiếu nại trong vòng 24h
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      onClick={() => setSelectedDutySession('Sáng')}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      ☀️ Xem trực ca Sáng
+                    </button>
+                    <button
+                      onClick={() => setIsWeeklyDutyModalOpen(true)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      📋 Lịch cả tuần
+                    </button>
+                  </div>
+                </div>
+              ) : filteredDayDuties.length === 0 ? (
+                /* ================= CASE 4: KHÔNG TÌM THẤY CA TRỰC ================= */
+                <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-2">
+                  <div className="text-2xl">📋</div>
+                  <p className="font-bold text-white text-xs sm:text-sm">Không có ca trực cờ đỏ phù hợp</p>
+                  <p className="text-[11px] text-slate-400">Không tìm thấy phân công trực phù hợp với ngày và buổi đã chọn.</p>
+                </div>
+              ) : (
+                /* ================= CASE 5: DANH SÁCH CA TRỰC ================= */
+                <div className="grid grid-cols-1 gap-2.5 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
+                  {filteredDayDuties.map(duty => (
+                    <div
+                      key={duty.id}
+                      className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                          duty.session === 'Chiều' 
+                            ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' 
+                            : 'bg-amber-950 text-amber-300 border border-amber-800'
+                        }`}>
+                          {duty.session || 'Sáng'}
+                        </span>
+                        {duty.isLiveNow && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            Đang trực
                           </span>
-                        </div>
-                        {duty.targetClasses && (
-                          <p className="text-[11px] sm:text-xs text-red-300 font-semibold truncate">
-                            Chấm điểm: <span className="font-bold text-red-200">{duty.targetClasses}</span>
-                          </p>
                         )}
-                        <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">📍 {duty.zone}</p>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-base shrink-0">🚩</span>
+                        <div className="space-y-0.5 flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="font-bold text-white text-xs sm:text-sm truncate">{duty.auditorName}</p>
+                            <span className="text-[10px] sm:text-xs text-amber-400 font-bold shrink-0 px-2 py-0.5 rounded bg-amber-950/40 border border-amber-800/40">
+                              Lớp {duty.auditorClass}
+                            </span>
+                          </div>
+                          {duty.targetClasses && (
+                            <p className="text-[11px] sm:text-xs text-red-300 font-semibold truncate">
+                              Chấm điểm: <span className="font-bold text-red-200">{duty.targetClasses}</span>
+                            </p>
+                          )}
+                          <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">📍 {duty.zone}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+
+                  {/* Informative footer alerts when viewing ALL on Thursday or Saturday */}
+                  {selectedDutySession === 'ALL' && effectiveDutyDay === 'T5' && (
+                    <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-800/30 flex items-center gap-2 text-[11px] text-amber-300">
+                      <span className="text-sm shrink-0">☕</span>
+                      <span><strong>Lưu ý:</strong> Buổi chiều Thứ 5 không có ca trực cờ đỏ theo quy định Đoàn trường.</span>
+                    </div>
+                  )}
+
+                  {selectedDutySession === 'ALL' && effectiveDutyDay === 'T7' && (
+                    <div className="p-2.5 rounded-xl bg-indigo-950/30 border border-indigo-800/30 flex items-center gap-2 text-[11px] text-indigo-300">
+                      <span className="text-sm shrink-0">🏁</span>
+                      <span><strong>Lưu ý:</strong> Buổi chiều Thứ 7 không có ca trực cờ đỏ. Khóa sổ nề nếp tuần lúc 17h00.</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1832,6 +2093,7 @@ export const PublicPortal: React.FC = () => {
                     {dayOrder.map(d => (
                       <option key={d} value={d} className="bg-slate-900">{getDayLabel(d)}</option>
                     ))}
+                    <option value="CN" className="bg-slate-900">Chủ Nhật (Nghỉ cuối tuần)</option>
                   </select>
                 </div>
               </div>
@@ -1863,8 +2125,19 @@ export const PublicPortal: React.FC = () => {
                         <tbody className="divide-y divide-slate-800/60 bg-slate-950/50">
                           {morningDuties.length === 0 ? (
                             <tr>
-                              <td colSpan={5} className="p-4 text-center text-slate-500">
-                                Không có ca trực buổi sáng phù hợp với bộ lọc.
+                              <td colSpan={5} className="p-6 text-center">
+                                {dutyModalDay === 'CN' ? (
+                                  <div className="inline-flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-sky-950/30 border border-sky-800/40 text-sky-200">
+                                    <span className="text-2xl">🌴</span>
+                                    <span className="font-bold text-sm text-sky-300">Chủ Nhật không có ca trực cờ đỏ buổi sáng</span>
+                                    <span className="text-xs text-slate-400">Học sinh toàn trường nghỉ học cuối tuần theo quy định của nhà trường.</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center gap-1.5 text-slate-400">
+                                    <span className="text-xl">ℹ️</span>
+                                    <span className="font-semibold text-slate-300">Không có ca trực buổi sáng phù hợp với bộ lọc.</span>
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           ) : (
@@ -1934,8 +2207,31 @@ export const PublicPortal: React.FC = () => {
                         <tbody className="divide-y divide-slate-800/60 bg-slate-950/50">
                           {afternoonDuties.length === 0 ? (
                             <tr>
-                              <td colSpan={5} className="p-4 text-center text-slate-500">
-                                Không có ca trực buổi chiều phù hợp với bộ lọc.
+                              <td colSpan={5} className="p-6 text-center">
+                                {dutyModalDay === 'T5' ? (
+                                  <div className="inline-flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-amber-950/30 border border-amber-800/40 text-amber-200">
+                                    <span className="text-2xl">☕</span>
+                                    <span className="font-bold text-sm text-amber-300">Chiều Thứ 5 không có lịch trực cờ đỏ</span>
+                                    <span className="text-xs text-slate-300">Theo phân công của Đoàn trường, Thứ 5 chỉ bố trí ca trực vào buổi Sáng (06:45 - 07:15 & 11:15 - 11:45).</span>
+                                  </div>
+                                ) : dutyModalDay === 'T7' ? (
+                                  <div className="inline-flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-indigo-950/30 border border-indigo-800/40 text-indigo-200">
+                                    <span className="text-2xl">🏁</span>
+                                    <span className="font-bold text-sm text-indigo-300">Chiều Thứ 7 không có lịch trực cờ đỏ</span>
+                                    <span className="text-xs text-slate-300">Thứ 7 chỉ bố trí ca trực vào buổi Sáng. Buổi chiều toàn trường kết thúc tuần học & tổng kết điểm thi đua lúc 17h00.</span>
+                                  </div>
+                                ) : dutyModalDay === 'CN' ? (
+                                  <div className="inline-flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-sky-950/30 border border-sky-800/40 text-sky-200">
+                                    <span className="text-2xl">🌴</span>
+                                    <span className="font-bold text-sm text-sky-300">Chủ Nhật không có lịch trực cờ đỏ buổi chiều</span>
+                                    <span className="text-xs text-slate-400">Học sinh toàn trường nghỉ học cuối tuần theo quy định của nhà trường.</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center gap-1.5 text-slate-400">
+                                    <span className="text-xl">ℹ️</span>
+                                    <span className="font-semibold text-slate-300">Không có ca trực buổi chiều phù hợp với bộ lọc.</span>
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           ) : (
