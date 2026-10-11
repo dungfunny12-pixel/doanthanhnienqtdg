@@ -467,8 +467,12 @@ export const SupabaseService = {
         isHidden: n.is_hidden || false,
         tags: n.tags || ['Đoàn Trường', 'Hoạt động'],
         views: n.views || 0,
-        sourceUrl: n.source_url || (Array.isArray(n.tags) && n.tags.some((t: string) => t.toLowerCase().includes('facebook')) ? 'https://www.facebook.com/profile.php?id=100065567376763' : undefined),
-        sourcePlatform: n.source_platform || (Array.isArray(n.tags) && n.tags.some((t: string) => t.toLowerCase().includes('facebook')) ? 'facebook' : undefined),
+        sourceUrl: n.source_url || (typeof n.news_id === 'string' && n.news_id.startsWith('fb-') && n.news_id.includes('_')
+          ? `https://www.facebook.com/${n.news_id.replace('fb-', '').split('_')[0]}/posts/${n.news_id.replace('fb-', '').split('_')[1]}`
+          : (Array.isArray(n.tags) && n.tags.some((t: string) => t.toLowerCase().includes('facebook'))
+            ? 'https://www.facebook.com/profile.php?id=100065567376763'
+            : undefined)),
+        sourcePlatform: (n.source_platform as any) || ((typeof n.news_id === 'string' && n.news_id.startsWith('fb-')) || (Array.isArray(n.tags) && n.tags.some((t: string) => t.toLowerCase().includes('facebook'))) ? 'facebook' : undefined),
         images: n.images || (n.image_url ? [n.image_url] : [])
       }));
 
