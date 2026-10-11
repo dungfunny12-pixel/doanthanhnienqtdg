@@ -106,7 +106,7 @@ import { DocumentManagerModal } from '../common/DocumentManagerModal';
 import { DocumentViewerModal } from '../common/DocumentViewerModal';
 import { DocumentPickerButton } from '../common/DocumentPickerButton';
 import { compressImageToDataURL } from '../../utils/imageCompressor';
-import { INITIAL_CLASSES } from '../../data/initialData';
+import { INITIAL_CLASSES, INITIAL_AUDITORS } from '../../data/initialData';
 
 export const AdminPortal: React.FC = () => {
   const {
@@ -1383,6 +1383,7 @@ export const AdminPortal: React.FC = () => {
     assignedZone?: string;
     phone: string;
     email: string;
+    studentId?: string;
   }>({
     username: '',
     password: '123456@Password',
@@ -1392,8 +1393,12 @@ export const AdminPortal: React.FC = () => {
     classId: '10/1',
     assignedZone: 'Khối 10',
     phone: '',
-    email: ''
+    email: '',
+    studentId: ''
   });
+
+  // Nguồn dữ liệu CSDL dự án để tự động điền tài khoản
+  const [userDbPickerSource, setUserDbPickerSource] = useState<string>('codo');
 
   // Zalo template state
   const [zaloCopied, setZaloCopied] = useState<boolean>(false);
@@ -8249,15 +8254,17 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     setEditingUser(null);
                     setUserForm({
                       username: '',
-                      password: '',
+                      password: '123456@Password',
                       name: '',
                       role: 'manager',
                       roleTitle: 'Giáo viên Chủ nhiệm',
                       classId: '10/1',
-                      assignedZone: 'Khối 10',
+                      assignedZone: 'Phòng 1 & 2 (Tầng 1)',
                       phone: '',
-                      email: ''
+                      email: '',
+                      studentId: ''
                     });
+                    setUserDbPickerSource('codo');
                     setIsUserModalOpen(true);
                   }}
                   className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow shrink-0"
@@ -8413,14 +8420,17 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                               setEditingUser(u);
                               setUserForm({
                                 username: u.username,
+                                password: '',
                                 name: u.name,
                                 role: u.role,
                                 roleTitle: u.roleTitle,
                                 classId: u.classId || '10/1',
-                                assignedZone: u.assignedZone || 'Khối 10',
+                                assignedZone: u.assignedZone || 'Phòng 1 & 2 (Tầng 1)',
                                 phone: u.phone || '',
-                                email: u.email || ''
+                                email: u.email || '',
+                                studentId: u.studentId || ''
                               });
+                              setUserDbPickerSource(u.role === 'auditor' ? 'codo' : u.role === 'manager' ? 'gvcn' : u.role === 'youth_secretary' ? 'bcs' : 'current');
                               setIsUserModalOpen(true);
                             }}
                             title="Sửa tài khoản"
@@ -12317,14 +12327,179 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
       {/* ================= MODAL: USER ADD / EDIT ================= */}
       {isUserModalOpen && (() => {
-        const studentsOfClass = students.filter(s => s.classId === (userForm.classId || '10/1'));
+        const studentsOfClass = students.filter(s => s.classId === (userForm.classId || '10/1') && s.status !== 'inactive');
         const currentClassInfo = classes.find(c => c.id === (userForm.classId || '10/1'));
+
+        // Xây dựng danh sách các đối tượng từ CSDL dự án dựa trên nguồn đang chọn (userDbPickerSource)
+        let dbPickerOptions: Array<{
+          id: string;
+          name: string;
+          phone?: string;
+          email?: string;
+          classId?: string;
+          assignedZone?: string;
+          studentId?: string;
+          role?: 'admin' | 'manager' | 'auditor' | 'youth_secretary' | 'user';
+          roleTitle?: string;
+          suggestedUsername?: string;
+          label: string;
+        }> = [];
+
+        if (userDbPickerSource === 'codo') {
+          dbPickerOptions = INITIAL_AUDITORS.map(a => ({
+            id: `codo_${a.id}`,
+            name: a.name,
+            phone: a.phone || '',
+            email: `${a.id.toLowerCase()}@thpt.edu.vn`,
+            classId: a.classId,
+            assignedZone: a.assignedZone || 'Phòng 1 & 2 (Tầng 1)',
+            role: 'auditor',
+            roleTitle: 'Cán bộ Đội Cờ Đỏ',
+            suggestedUsername: a.id.toLowerCase(),
+            label: `${a.name} — Lớp ${a.classId} (${a.assignedZone || 'Khu vực trực'}${a.phone ? ` • SĐT: ${a.phone}` : ''})`
+          }));
+        } else if (userDbPickerSource === 'bcs') {
+          INITIAL_CLASSES.forEach(ic => {
+            if (ic.classPresidentName) {
+              dbPickerOptions.push({
+                id: `lt_${ic.id}`,
+                name: ic.classPresidentName,
+                phone: ic.classPresidentPhone || '',
+                email: `loptruong_${ic.id.replace('/', '_')}@thpt.edu.vn`,
+                classId: ic.id,
+                role: 'user',
+                roleTitle: 'Lớp trưởng',
+                suggestedUsername: `loptruong_${ic.id.replace('/', '_')}`,
+                label: `Lớp ${ic.id}: ${ic.classPresidentName} (Lớp trưởng${ic.classPresidentPhone ? ` • SĐT: ${ic.classPresidentPhone}` : ''})`
+              });
+            }
+            if (ic.bithuName && ic.bithuName !== 'Đang cập nhật') {
+              dbPickerOptions.push({
+                id: `bt_${ic.id}`,
+                name: ic.bithuName,
+                phone: ic.bithuPhone || '',
+                email: `bithu_${ic.id.replace('/', '_')}@thpt.edu.vn`,
+                classId: ic.id,
+                role: 'youth_secretary',
+                roleTitle: 'Bí thư Chi đoàn',
+                suggestedUsername: `bithu_${ic.id.replace('/', '_')}`,
+                label: `Lớp ${ic.id}: ${ic.bithuName} ⭐ (Bí thư Chi đoàn${ic.bithuPhone ? ` • SĐT: ${ic.bithuPhone}` : ''})`
+              });
+            }
+            if (ic.academicVicePresidentName) {
+              dbPickerOptions.push({
+                id: `lp_${ic.id}`,
+                name: ic.academicVicePresidentName,
+                phone: ic.academicVicePresidentPhone || '',
+                email: `loppho_${ic.id.replace('/', '_')}@thpt.edu.vn`,
+                classId: ic.id,
+                role: 'user',
+                roleTitle: 'Lớp phó Học tập',
+                suggestedUsername: `loppho_${ic.id.replace('/', '_')}`,
+                label: `Lớp ${ic.id}: ${ic.academicVicePresidentName} (Lớp phó HT${ic.academicVicePresidentPhone ? ` • SĐT: ${ic.academicVicePresidentPhone}` : ''})`
+              });
+            }
+            if (ic.deputySecretaryName) {
+              dbPickerOptions.push({
+                id: `pbt_${ic.id}`,
+                name: ic.deputySecretaryName,
+                phone: ic.deputySecretaryPhone || '',
+                email: `phobithu_${ic.id.replace('/', '_')}@thpt.edu.vn`,
+                classId: ic.id,
+                role: 'youth_secretary',
+                roleTitle: 'Phó Bí thư Chi đoàn',
+                suggestedUsername: `phobithu_${ic.id.replace('/', '_')}`,
+                label: `Lớp ${ic.id}: ${ic.deputySecretaryName} (Phó Bí thư${ic.deputySecretaryPhone ? ` • SĐT: ${ic.deputySecretaryPhone}` : ''})`
+              });
+            }
+          });
+        } else if (userDbPickerSource === 'gvcn') {
+          INITIAL_CLASSES.forEach(ic => {
+            if (ic.gvcnName && ic.gvcnName !== 'Chưa phân công') {
+              dbPickerOptions.push({
+                id: `gvcn_${ic.id}`,
+                name: ic.gvcnName,
+                phone: '',
+                email: `gvcn_${ic.id.replace('/', '_')}@thpt.edu.vn`,
+                classId: ic.id,
+                role: 'manager',
+                roleTitle: 'Giáo viên Chủ nhiệm',
+                suggestedUsername: `gvcn_${ic.id.replace('/', '_')}`,
+                label: `${ic.gvcnName} — GVCN Lớp ${ic.id}`
+              });
+            }
+          });
+        } else if (userDbPickerSource === 'all') {
+          dbPickerOptions = students.filter(s => s.status !== 'inactive').map(s => {
+            let cleanPhone = s.phone ? String(s.phone).trim() : '';
+            if (/[a-zA-Zà-ỹÀ-Ỹ]/.test(cleanPhone)) cleanPhone = '';
+            return {
+              id: s.id || s.studentId,
+              name: s.name,
+              phone: cleanPhone,
+              email: `${(s.studentId || 'hs').toLowerCase()}@thpt.edu.vn`,
+              classId: s.classId,
+              studentId: s.studentId,
+              role: s.isUnionMember ? 'youth_secretary' : 'user',
+              roleTitle: s.isUnionMember ? 'Đoàn viên' : 'Học sinh',
+              suggestedUsername: (s.studentId || '').toLowerCase(),
+              label: `${s.name} — Mã: ${s.studentId} (Lớp ${s.classId}${s.isUnionMember ? ' ⭐ Đoàn viên' : ''}${cleanPhone ? ` • SĐT: ${cleanPhone}` : ''})`
+            };
+          });
+        } else {
+          // Specific class e.g. 'class_10/1' or 'current'
+          const targetClassId = userDbPickerSource === 'current' 
+            ? (userForm.classId || '10/1') 
+            : userDbPickerSource.replace('class_', '');
+          
+          dbPickerOptions = students.filter(s => s.classId === targetClassId && s.status !== 'inactive').map(s => {
+            let cleanPhone = s.phone ? String(s.phone).trim() : '';
+            if (/[a-zA-Zà-ỹÀ-Ỹ]/.test(cleanPhone)) cleanPhone = '';
+            return {
+              id: s.id || s.studentId,
+              name: s.name,
+              phone: cleanPhone,
+              email: `${(s.studentId || 'hs').toLowerCase()}@thpt.edu.vn`,
+              classId: s.classId,
+              studentId: s.studentId,
+              role: s.isUnionMember ? 'youth_secretary' : 'user',
+              roleTitle: s.isUnionMember ? 'Đoàn viên' : 'Học sinh',
+              suggestedUsername: (s.studentId || '').toLowerCase(),
+              label: `${s.name} — Mã: ${s.studentId} (${s.isUnionMember ? '⭐ Đoàn viên' : 'Học sinh'}${cleanPhone ? ` • SĐT: ${cleanPhone}` : ''})`
+            };
+          });
+        }
+
+        const handleSelectPersonFromDb = (val: string) => {
+          if (!val) return;
+          const p = dbPickerOptions.find(item => item.id === val);
+          if (!p) return;
+
+          setUserForm(prev => {
+            let newUsername = prev.username;
+            // Nếu là tạo mới hoặc username đang trống / mặc định, cập nhật username gợi ý
+            if (!editingUser && p.suggestedUsername) {
+              newUsername = p.suggestedUsername;
+            }
+
+            return {
+              ...prev,
+              name: p.name,
+              phone: p.phone || prev.phone,
+              email: p.email || prev.email,
+              classId: p.classId || prev.classId,
+              assignedZone: p.assignedZone || prev.assignedZone,
+              studentId: p.studentId || prev.studentId,
+              username: newUsername
+            };
+          });
+        };
 
         const handleFillDefaultAccount = () => {
           const rolePrefixes: Record<string, string> = {
             admin: 'admin_bch',
             manager: `gvcn_${(userForm.classId || '10_1').replace('/', '_')}`,
-            auditor: `codo_${(userForm.assignedZone || 'k10').toLowerCase().replace(/\s+/g, '_')}`,
+            auditor: `codo_${(userForm.classId || '10_1').replace('/', '_')}`,
             youth_secretary: `bithu_${(userForm.classId || '10_1').replace('/', '_')}`,
             user: `hs_${(userForm.classId || '10_1').replace('/', '_')}_01`
           };
@@ -12344,25 +12519,25 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             ...prev,
             username,
             name,
-            password: '123456@Password',
+            password: prev.password || '123456@Password',
             phone: prev.phone || '0988.123.456',
             email: `${username}@thpt.edu.vn`
           }));
         };
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-            <div className="glass-modal max-w-lg w-full rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-hidden animate-fadeIn">
+            <div className="glass-modal max-w-xl w-full max-h-[92vh] flex flex-col rounded-3xl border border-slate-700/80 bg-slate-950/95 shadow-2xl overflow-hidden my-auto">
 
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="p-2 rounded-xl bg-red-600 text-white font-bold">👥</span>
+              {/* Header Cố Định */}
+              <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-800 bg-slate-900/90 shrink-0">
+                <div className="flex items-center gap-3">
+                  <span className="p-2 rounded-xl bg-red-600 text-white font-bold shadow-md">👥</span>
                   <div>
                     <h3 className="text-base font-black text-white">
                       {editingUser ? 'Chỉnh Sửa Tài Khoản' : 'Thêm Tài Khoản Mới'}
                     </h3>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-xs text-slate-400">
                       Cấp phát và phân quyền người dùng trong hệ thống
                     </p>
                   </div>
@@ -12376,264 +12551,302 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       title="Tự động điền dữ liệu tài khoản mặc định theo vai trò"
                     >
                       <Sparkles className="w-3 h-3 text-amber-400" />
-                      <span>⚡ Điền Tài Khoản Mặc Định</span>
+                      <span>⚡ Mặc Định</span>
                     </button>
                   )}
-                  <button onClick={() => { setIsUserModalOpen(false); setEditingUser(null); }} className="p-1 rounded-lg text-slate-400 hover:text-white">
+                  <button 
+                    type="button"
+                    onClick={() => { setIsUserModalOpen(false); setEditingUser(null); }} 
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
+              {/* Form Body Cuộn Mượt */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (editingUser) {
-                    updateUser(editingUser.id, userForm);
-                    alert(`Đã cập nhật tài khoản ${userForm.username} thành công!`);
+                    // Kiểm tra nếu tên đăng nhập thay đổi và trùng với tài khoản khác
+                    if (userForm.username !== editingUser.username && users.some(u => u.id !== editingUser.id && u.username.toLowerCase() === userForm.username.toLowerCase())) {
+                      alert(`⚠️ Tên đăng nhập "${userForm.username}" đã tồn tại trên một tài khoản khác! Vui lòng chọn tên đăng nhập khác.`);
+                      return;
+                    }
+                    const updates: Partial<User> = { ...userForm };
+                    if (!updates.password || updates.password.trim() === '') {
+                      delete updates.password; // Giữ nguyên mật khẩu cũ nếu không nhập mật khẩu mới
+                    }
+                    updateUser(editingUser.id, updates);
+                    alert(`✅ Đã cập nhật tài khoản ${userForm.username} thành công!`);
                   } else {
+                    if (users.some(u => u.username.toLowerCase() === userForm.username.toLowerCase())) {
+                      alert(`⚠️ Tên đăng nhập "${userForm.username}" đã tồn tại! Vui lòng chọn tên đăng nhập khác.`);
+                      return;
+                    }
                     addUser({
                       ...userForm,
+                      password: userForm.password || '123456@Password',
                       isActive: true
                     });
-                    alert(`Đã thêm mới tài khoản ${userForm.username} (Mật khẩu: ${userForm.password || '123456@Password'})!`);
+                    alert(`✅ Đã thêm mới tài khoản ${userForm.username} (Mật khẩu: ${userForm.password || '123456@Password'})!`);
                   }
                   setIsUserModalOpen(false);
                   setEditingUser(null);
                 }}
-                className="space-y-3 text-xs"
+                className="flex flex-col flex-1 min-h-0"
               >
+                <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar text-xs">
 
-                {/* Role & Scope Selection First */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80">
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Vai Trò / Phân Quyền:</label>
-                    <select
-                      value={userForm.role}
-                      onChange={(e) => {
-                        const r = e.target.value as 'admin' | 'manager' | 'auditor' | 'youth_secretary' | 'user';
-                        const titles: Record<string, string> = {
-                          admin: 'Bí thư Đoàn Trường / Quản trị viên',
-                          manager: 'Giáo viên Chủ nhiệm',
-                          auditor: 'Cán bộ Đội Cờ Đỏ',
-                          youth_secretary: 'Bí thư Chi đoàn',
-                          user: 'Đoàn viên / Học sinh'
-                        };
-                        setUserForm({ 
-                          ...userForm, 
-                          role: r, 
-                          roleTitle: titles[r] || 'Người dùng',
-                          classId: r === 'admin' ? 'Toàn Trường' : (userForm.classId === 'Toàn Trường' ? (classes[0]?.id || '10/1') : userForm.classId)
-                        });
-                      }}
-                      className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold focus:border-red-500"
-                    >
-                      <option value="admin">1. Bí Thư Đoàn / Admin</option>
-                      <option value="manager">2. Giáo Viên Chủ Nhiệm (GVCN)</option>
-                      <option value="auditor">3. Đội Cờ Đỏ / Giám Sát</option>
-                      <option value="youth_secretary">4. Bí Thư Chi Đoàn Lớp</option>
-                      <option value="user">5. Đoàn Viên / Học Sinh</option>
-                    </select>
-                  </div>
+                  {/* 1. Vai Trò & Phạm Vi Phụ Trách */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-900/60 rounded-2xl border border-slate-800">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Vai Trò / Phân Quyền:</label>
+                      <select
+                        value={userForm.role}
+                        onChange={(e) => {
+                          const r = e.target.value as 'admin' | 'manager' | 'auditor' | 'youth_secretary' | 'user';
+                          const titles: Record<string, string> = {
+                            admin: 'Bí thư Đoàn Trường / Quản trị viên',
+                            manager: 'Giáo viên Chủ nhiệm',
+                            auditor: 'Cán bộ Đội Cờ Đỏ',
+                            youth_secretary: 'Bí thư Chi đoàn',
+                            user: 'Đoàn viên / Học sinh'
+                          };
+                          setUserForm({ 
+                            ...userForm, 
+                            role: r, 
+                            roleTitle: titles[r] || 'Người dùng',
+                            classId: r === 'admin' ? 'Toàn Trường' : (userForm.classId === 'Toàn Trường' ? (classes[0]?.id || '10/1') : userForm.classId)
+                          });
+                          setUserDbPickerSource(r === 'auditor' ? 'codo' : r === 'manager' ? 'gvcn' : r === 'youth_secretary' ? 'bcs' : 'current');
+                        }}
+                        className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold focus:border-red-500"
+                      >
+                        <option value="admin">1. Bí Thư Đoàn / Admin</option>
+                        <option value="manager">2. Giáo Viên Chủ Nhiệm (GVCN)</option>
+                        <option value="auditor">3. Đội Cờ Đỏ / Giám Sát</option>
+                        <option value="youth_secretary">4. Bí Thư Chi Đoàn Lớp</option>
+                        <option value="user">5. Đoàn Viên / Học Sinh</option>
+                      </select>
+                    </div>
 
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">
-                      {userForm.role === 'admin' ? 'Phạm Vi Quản Lý:' : userForm.role === 'auditor' ? 'Khu Vực Phụ Trách:' : 'Lớp Phụ Trách / Lớp Học:'}
-                    </label>
-                    {userForm.role === 'admin' ? (
-                      <div className="w-full p-2.5 rounded-xl bg-red-950/50 border border-red-800/80 text-red-200 font-bold flex items-center justify-between text-xs min-h-[42px]">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">🏛️</span>
-                          <span>Toàn Trường (Tất cả {classes.length} lớp)</span>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">
+                        {userForm.role === 'admin' ? 'Phạm Vi Quản Lý:' : userForm.role === 'auditor' ? 'Khu Vực Phụ Trách:' : 'Lớp Phụ Trách / Lớp Học:'}
+                      </label>
+                      {userForm.role === 'admin' ? (
+                        <div className="w-full p-2.5 rounded-xl bg-red-950/50 border border-red-800/80 text-red-200 font-bold flex items-center justify-between text-xs min-h-[42px]">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">🏛️</span>
+                            <span>Toàn Trường (Tất cả {classes.length} lớp)</span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-md bg-red-800/60 text-[10px] text-red-100 font-bold uppercase tracking-wider whitespace-nowrap">
+                            Toàn Quyền
+                          </span>
                         </div>
-                        <span className="px-2 py-0.5 rounded-md bg-red-800/60 text-[10px] text-red-100 font-bold uppercase tracking-wider whitespace-nowrap">
-                          Toàn Quyền
-                        </span>
-                      </div>
-                    ) : userForm.role === 'auditor' ? (
-                      <select
-                        value={userForm.assignedZone || (zones[0]?.name || 'Khối 10')}
-                        onChange={(e) => setUserForm({ ...userForm, assignedZone: e.target.value })}
-                        className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold focus:border-red-500"
-                      >
-                        {zones.map(z => (
-                          <option key={z.id} value={z.name}>{z.icon || '📍'} {z.name}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <select
-                        value={userForm.classId}
-                        onChange={(e) => setUserForm({ ...userForm, classId: e.target.value })}
-                        className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold focus:border-red-500"
-                      >
-                        {classes.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                    )}
+                      ) : userForm.role === 'auditor' ? (
+                        <select
+                          value={userForm.assignedZone || (zones[0]?.name || 'Phòng 1 & 2 (Tầng 1)')}
+                          onChange={(e) => setUserForm({ ...userForm, assignedZone: e.target.value })}
+                          className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold focus:border-red-500"
+                        >
+                          {zones.map(z => (
+                            <option key={z.id} value={z.name}>{z.icon || '📍'} {z.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <select
+                          value={userForm.classId}
+                          onChange={(e) => setUserForm({ ...userForm, classId: e.target.value })}
+                          className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold focus:border-red-500"
+                        >
+                          {classes.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Autocomplete Student Picker when Role is Student / Union Member */}
-                {(userForm.role === 'user' || userForm.role === 'youth_secretary') && (
-                  <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/50 space-y-1.5 animate-fadeIn">
-                    <label className="block font-bold text-amber-300 text-xs flex items-center justify-between">
+                  {/* 2. CHỌN DỮ LIỆU TỪ CSDL DỰ ÁN (HỌC SINH / ĐỘI CỜ ĐỎ / BAN CÁN SỰ / GVCN) */}
+                  <div className="p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/60 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold text-amber-300">
                       <span className="flex items-center gap-1.5">
-                        <span>🎯 Lấy Dữ Liệu Từ Danh Sách Học Sinh Lớp {userForm.classId || '10/1'}:</span>
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <span>CHỌN DỮ LIỆU TỪ CSDL DỰ ÁN</span>
                       </span>
-                      <span className="text-[10px] text-amber-400 font-mono">({studentsOfClass.length} học sinh)</span>
-                    </label>
-                    <select
-                      onChange={(e) => {
-                        const selectedSt = studentsOfClass.find(s => s.id === e.target.value || s.studentId === e.target.value);
-                        if (selectedSt) {
-                          let cleanPhone = selectedSt.phone ? String(selectedSt.phone).trim() : '';
-                          if (/[a-zA-Zà-ỹÀ-Ỹ]/.test(cleanPhone)) {
-                            cleanPhone = '';
-                          }
+                      <span className="text-[10px] text-amber-400/90 font-mono">
+                        ({dbPickerOptions.length} đối tượng phù hợp)
+                      </span>
+                    </div>
 
-                          setUserForm(prev => ({
-                            ...prev,
-                            name: selectedSt.name,
-                            username: selectedSt.studentId.toLowerCase(),
-                            phone: cleanPhone || prev.phone || '',
-                            email: `${selectedSt.studentId.toLowerCase()}@thpt.edu.vn`,
-                            password: prev.password || '123456@Password',
-                            studentId: selectedSt.studentId
-                          }));
-                        }
-                      }}
-                      className="w-full p-2.5 rounded-xl bg-slate-900 border border-amber-600/70 text-amber-300 font-bold text-xs focus:outline-none focus:border-amber-400 cursor-pointer"
-                    >
-                      <option value="">-- Click để chọn học sinh (Tự động điền họ tên, mã HS, email) --</option>
-                      {studentsOfClass.map(st => (
-                        <option key={st.id} value={st.id}>
-                          {st.name} — Mã: {st.studentId} ({st.isUnionMember ? 'Đoàn viên' : 'Học sinh'})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="sm:col-span-1">
+                        <label className="block text-[11px] text-slate-300 font-semibold mb-1">Nguồn Dữ Liệu:</label>
+                        <select
+                          value={userDbPickerSource}
+                          onChange={(e) => setUserDbPickerSource(e.target.value)}
+                          className="w-full p-2 rounded-xl bg-slate-900 border border-amber-600/70 text-xs text-amber-300 font-bold focus:border-amber-400"
+                        >
+                          <optgroup label="⭐ Cán Bộ / Phân Công Chuẩn">
+                            <option value="codo">🚩 Đội Cờ Đỏ ({INITIAL_AUDITORS.length} Cán bộ)</option>
+                            <option value="bcs">🎖️ Ban Cán Sự & BCH Chi Đoàn 15 Lớp</option>
+                            <option value="gvcn">👨‍🏫 GVCN 15 Lớp</option>
+                          </optgroup>
+                          <optgroup label="🏫 Học Sinh Theo Lớp">
+                            <option value="current">Học sinh Lớp {userForm.classId || '10/1'}</option>
+                            <option value="all">Toàn bộ 15 Lớp (578 Học sinh)</option>
+                            {classes.map(c => (
+                              <option key={c.id} value={`class_${c.id}`}>Lớp {c.id}</option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] text-slate-300 font-semibold mb-1">Chọn Người Dùng Từ CSDL:</label>
+                        <select
+                          value=""
+                          onChange={(e) => handleSelectPersonFromDb(e.target.value)}
+                          className="w-full p-2 rounded-xl bg-slate-900 border border-amber-600/70 text-xs text-sky-300 font-bold focus:border-sky-400 cursor-pointer"
+                        >
+                          <option value="">-- Bấm để chọn người từ CSDL dự án --</option>
+                          {dbPickerOptions.map(item => (
+                            <option key={item.id} value={item.id}>
+                              {item.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                     <p className="text-[10px] text-slate-400">
-                      💡 Chọn học sinh để tự động điền Tên đăng nhập ({'{Mã_HS}'}), Họ tên, Email và Mật khẩu mặc định.
+                      💡 Khi chọn, hệ thống tự động điền Họ tên, SĐT, Email và gợi ý Username. Quản trị viên vẫn có thể tự do chỉnh sửa thủ công bất kỳ trường nào bên dưới.
                     </p>
                   </div>
-                )}
 
-                {/* Quick Auto-fill for GVCN */}
-                {userForm.role === 'manager' && currentClassInfo && (
-                  <div className="p-2.5 rounded-2xl bg-blue-950/40 border border-blue-600/50 flex items-center justify-between text-xs animate-fadeIn">
-                    <span className="text-blue-300">
-                      GVCN {currentClassInfo.name}: <strong>{currentClassInfo.gvcnName}</strong>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUserForm(prev => ({
-                          ...prev,
-                          name: currentClassInfo.gvcnName,
-                          username: `gvcn_${currentClassInfo.id.replace('/', '_')}`,
-                          email: `gvcn_${currentClassInfo.id.replace('/', '_')}@thpt.edu.vn`,
-                          password: prev.password || '123456@Password'
-                        }));
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] transition-all flex items-center gap-1"
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      <span>⚡ Điền nhanh thông tin</span>
-                    </button>
-                  </div>
-                )}
+                  {/* 3. Tên Đăng Nhập & Mật Khẩu */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block font-bold text-slate-300">Tên Đăng Nhập (Username):</label>
+                        <span className="text-[10px] text-amber-400 font-medium">Có thể nhập thủ công ✍️</span>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={userForm.username}
+                        onChange={(e) => setUserForm({ ...userForm, username: e.target.value.trim() })}
+                        placeholder="VD: codo_10_1, gv_huong, 2410101..."
+                        className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-amber-400 font-mono font-bold focus:border-amber-500"
+                      />
+                    </div>
 
-                {/* Username & Password */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Tên Đăng Nhập (Username):</label>
-                    <input
-                      type="text"
-                      required
-                      disabled={!!editingUser}
-                      value={userForm.username}
-                      onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                      placeholder="VD: gv_huong, codo_nam..."
-                      className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-amber-400 font-mono font-bold disabled:opacity-60 focus:border-red-500"
-                    />
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-300">
+                          {editingUser ? 'Mật Khẩu Mới:' : 'Mật Khẩu Ban Đầu:'}
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setUserForm({ ...userForm, password: '123456' })}
+                            className="px-2 py-0.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold transition-all"
+                            title="Đặt mật khẩu mặc định 6 số: 123456"
+                          >
+                            ⚡ 123456
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setUserForm({ ...userForm, password: '123456@Password' })}
+                            className="px-2 py-0.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold transition-all"
+                            title="Đặt mật khẩu mặc định chuẩn: 123456@Password"
+                          >
+                            ⚡ 123456@Password
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        value={userForm.password || ''}
+                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                        placeholder={editingUser ? "Để trống nếu không đổi, hoặc nhập mật khẩu mới..." : "123456@Password"}
+                        className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:border-red-500"
+                      />
+                    </div>
                   </div>
+                  <p className="text-[10px] text-slate-400 -mt-2">
+                    💡 Có thể nhập mật khẩu riêng hoặc chọn mặc định để bàn giao cho người dùng tự đổi mật khẩu khi cần.
+                  </p>
+
+                  {/* 4. Họ và Tên Người Dùng */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="font-bold text-slate-300">
-                        {editingUser ? 'Mật Khẩu Mới:' : 'Mật Khẩu Ban Đầu:'}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setUserForm({ ...userForm, password: '123456@Password' })}
-                        className="text-[10px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-0.5 hover:underline"
-                        title="Đặt mật khẩu về mặc định: 123456@Password"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        <span>⚡ 123456@Password</span>
-                      </button>
+                      <label className="block font-bold text-slate-300">Họ và Tên Người Dùng:</label>
+                      <span className="text-[10px] text-amber-400 font-medium">Có thể nhập thủ công ✍️</span>
                     </div>
                     <input
                       type="text"
-                      value={userForm.password || ''}
-                      onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                      placeholder="123456@Password"
-                      className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono focus:border-red-500"
+                      required
+                      value={userForm.name}
+                      onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                      placeholder="Nhập họ và tên hoặc chọn từ CSDL dự án bên trên..."
+                      className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold focus:border-red-500"
                     />
+                  </div>
+
+                  {/* 5. Số Điện Thoại & Email */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block font-bold text-slate-300">Số Điện Thoại:</label>
+                        <span className="text-[10px] text-slate-400">Tùy chọn</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={userForm.phone}
+                        onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                        placeholder="0905.xxx.xxx"
+                        className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:border-red-500"
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block font-bold text-slate-300">Email:</label>
+                        <span className="text-[10px] text-slate-400">Tùy chọn</span>
+                      </div>
+                      <input
+                        type="email"
+                        value={userForm.email}
+                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                        placeholder="email@thpt.edu.vn"
+                        className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:border-red-500"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Full Name */}
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Họ và Tên Người Dùng:</label>
-                  <input
-                    type="text"
-                    required
-                    value={userForm.name}
-                    onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                    placeholder="Nhập họ và tên hoặc chọn từ danh sách học sinh..."
-                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold focus:border-red-500"
-                  />
-                </div>
-
-                {/* Phone & Email */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Số Điện Thoại:</label>
-                    <input
-                      type="text"
-                      value={userForm.phone}
-                      onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-                      placeholder="0912.xxx.xxx"
-                      className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono focus:border-red-500"
-                    />
+                {/* Footer Cố Định */}
+                <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-t border-slate-800 bg-slate-900/90 shrink-0">
+                  <span className="text-[11px] text-slate-400 hidden sm:inline">
+                    {userForm.username ? `Tài khoản: ${userForm.username}` : 'Cấp phát người dùng'}
+                  </span>
+                  <div className="flex items-center gap-2.5 ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => { setIsUserModalOpen(false); setEditingUser(null); }}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold transition-colors"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold shadow-glow flex items-center gap-1.5 transition-all"
+                    >
+                      <span>{editingUser ? 'Lưu Thay Đổi' : 'Tạo Tài Khoản'}</span>
+                    </button>
                   </div>
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Email:</label>
-                    <input
-                      type="email"
-                      value={userForm.email}
-                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                      placeholder="email@thpt.edu.vn"
-                      className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono focus:border-red-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => { setIsUserModalOpen(false); setEditingUser(null); }}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold shadow-glow flex items-center gap-1.5"
-                  >
-                    <span>{editingUser ? 'Lưu Thay Đổi' : 'Tạo Tài Khoản'}</span>
-                  </button>
                 </div>
               </form>
             </div>
