@@ -121,23 +121,16 @@ export const PublicPortal: React.FC = () => {
   const [currentPinnedIdx, setCurrentPinnedIdx] = useState(0);
   const [isPinnedPaused, setIsPinnedPaused] = useState(false);
 
-  // News category filter tab state ('ALL' | 'announcement' | 'news' | 'facebook')
-  const [newsCategoryFilter, setNewsCategoryFilter] = useState<'ALL' | 'announcement' | 'news' | 'facebook'>('ALL');
   const [facebookViewMode, setFacebookViewMode] = useState<'grid' | 'feed'>('grid');
 
-  const facebookNewsCount = visibleNews.filter(n => 
+  const facebookNewsList = visibleNews.filter(n => 
     n.sourcePlatform === 'facebook' || 
     n.sourceUrl?.includes('facebook.com') || 
     (Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes('facebook')))
-  ).length;
+  );
 
-  const filteredNewsList = visibleNews.filter(n => {
-    if (newsCategoryFilter === 'ALL') return true;
-    if (newsCategoryFilter === 'announcement') return n.category === 'announcement' || n.id.startsWith('ann-');
-    if (newsCategoryFilter === 'news') return n.category !== 'announcement' && !n.id.startsWith('ann-') && n.sourcePlatform !== 'facebook';
-    if (newsCategoryFilter === 'facebook') return n.sourcePlatform === 'facebook' || n.sourceUrl?.includes('facebook.com') || (Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes('facebook')));
-    return true;
-  });
+  const facebookNewsCount = facebookNewsList.length;
+  const filteredNewsList = facebookNewsList.length > 0 ? facebookNewsList : visibleNews;
 
   useEffect(() => {
     if (pinnedNews.length <= 1 || isPinnedPaused) return;
@@ -956,73 +949,6 @@ export const PublicPortal: React.FC = () => {
 
       {/* ================= ROW 3: BẢN TIN & THÔNG BÁO HOẠT ĐỘNG ĐOÀN (FULL-WIDTH 100%) ================= */}
       <div className="glass-panel rounded-3xl p-5 sm:p-6 border border-slate-800 bg-gradient-to-b from-slate-900/95 via-slate-900/70 to-slate-950 shadow-card space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-600/30 flex items-center justify-center text-xl shadow-inner shrink-0">
-              📰
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-white">
-                  BẢN TIN & THÔNG BÁO ĐOÀN TRƯỜNG
-                </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                  {visibleNews.length} bài viết
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Cổng thông tin tuyên truyền, sự kiện phong trào và thông báo chính thức từ BCH Đoàn Trường
-              </p>
-            </div>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto scrollbar-none max-w-full">
-            <button
-              type="button"
-              onClick={() => setNewsCategoryFilter('ALL')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
-                newsCategoryFilter === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Tất cả ({visibleNews.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setNewsCategoryFilter('announcement')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
-                newsCategoryFilter === 'announcement' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Thông báo ({visibleNews.filter(n => n.category === 'announcement' || n.id.startsWith('ann-')).length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setNewsCategoryFilter('news')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
-                newsCategoryFilter === 'news' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Bản tin ({visibleNews.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-') && n.sourcePlatform !== 'facebook').length})
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setNewsCategoryFilter('facebook');
-                setFacebookViewMode('grid');
-              }}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                newsCategoryFilter === 'facebook' ? 'bg-[#1877F2] text-white shadow-sm' : 'text-blue-400 hover:text-white'
-              }`}
-            >
-              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              <span>Facebook Đoàn Trường ({facebookNewsCount})</span>
-            </button>
-          </div>
-        </div>
-
         {/* Official Facebook Connectivity Banner */}
         <div className="rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-blue-950/80 via-slate-900 to-indigo-950/80 border border-blue-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
           <div className="flex items-center gap-3.5">
@@ -1039,6 +965,9 @@ export const PublicPortal: React.FC = () => {
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-500/20 text-blue-300 border border-blue-500/40">
                   Xác thực Đoàn Trường
                 </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                  {facebookNewsCount} bài viết
+                </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
                 Cập nhật bài viết, hình ảnh hoạt động phong trào, phóng sự ảnh và video trực tiếp từ Fanpage chính thức Đoàn trường THPT Quang Trung - Đông Giang.
@@ -1047,42 +976,27 @@ export const PublicPortal: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {newsCategoryFilter === 'facebook' && (
-              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setFacebookViewMode('grid')}
-                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                    facebookViewMode === 'grid' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Lưới bài viết
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFacebookViewMode('feed')}
-                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    facebookViewMode === 'feed' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                  <span>Live Feed</span>
-                </button>
-              </div>
-            )}
-            {newsCategoryFilter !== 'facebook' && (
+            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
               <button
                 type="button"
-                onClick={() => {
-                  setNewsCategoryFilter('facebook');
-                  setFacebookViewMode('feed');
-                }}
-                className="px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                onClick={() => setFacebookViewMode('grid')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  facebookViewMode === 'grid' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Lưới bài viết
+              </button>
+              <button
+                type="button"
+                onClick={() => setFacebookViewMode('feed')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  facebookViewMode === 'feed' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                }`}
               >
                 <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                <span>Xem Live Feed Facebook</span>
+                <span>Live Feed</span>
               </button>
-            )}
+            </div>
             <a
               href="https://www.facebook.com/profile.php?id=100065567376763"
               target="_blank"
@@ -1095,8 +1009,8 @@ export const PublicPortal: React.FC = () => {
           </div>
         </div>
 
-        {/* Facebook Live Feed View (When Facebook Tab & Feed Mode Active) */}
-        {newsCategoryFilter === 'facebook' && facebookViewMode === 'feed' ? (
+        {/* Facebook Live Feed View (When Feed Mode Active) */}
+        {facebookViewMode === 'feed' ? (
           <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 sm:p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2.5">

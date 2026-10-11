@@ -1989,6 +1989,86 @@ Khẩu hiệu hành động: Tuổi trẻ THPT Quang Trung - Đông Giang Tiên 
     ]
   },
   {
+    id: 'fb-100065567376763_atgt_2026',
+    title: 'TRƯỜNG THPT QUANG TRUNG – ĐÔNG GIANG TỔ CHỨC TUYÊN TRUYỀN PHÁP LUẬT VỀ TRẬT TỰ, AN TOÀN GIAO THÔNG VÀ ĐÀO TẠO KỸ NĂNG LÁI XE AN TOÀN',
+    excerpt: 'Sáng nay, Đoàn trường phối hợp với Đội CSGT Công an huyện tổ chức chương trình tuyên truyền Luật giao thông đường bộ, kỹ năng lái xe an toàn và trao tặng mũ bảo hiểm đạt chuẩn.',
+    content: `🚦 TRƯỜNG THPT QUANG TRUNG – ĐÔNG GIANG TỔ CHỨC TUYÊN TRUYỀN PHÁP LUẬT VỀ TRẬT TỰ, AN TOÀN GIAO THÔNG VÀ ĐÀO TẠO KỸ NĂNG LÁI XE AN TOÀN 🚦
+
+Nhằm nâng cao nhận thức, ý thức tự giác chấp hành pháp luật về trật tự an toàn giao thông và xây dựng văn hóa giao thông trong học sinh, sáng nay Đoàn trường THPT Quang Trung - Đông Giang phối hợp với Đội Cảnh sát giao thông Công an huyện tổ chức buổi sinh hoạt chuyên đề tuyên truyền luật an toàn giao thông và hướng dẫn kỹ năng lái xe an toàn.
+
+Tại buổi tuyên truyền, các em học sinh được thông tin về tình hình trật tự ATGT trên địa bàn, các nguyên nhân phổ biến dẫn đến tai nạn giao thông, các quy định xử phạt vi phạm thường gặp ở lứa tuổi học sinh, đồng thời tham gia phần thi tìm hiểu luật và thực hành kỹ năng đội mũ bảo hiểm đúng cách.`,
+    thumbnail: 'https://bqrozmqorvxpwjfmgkfk.supabase.co/storage/v1/object/public/media/facebook_news/post_atgt_2026.jpg',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Fanpage Chính Thức',
+    publishDate: '2026-10-05',
+    isPinned: true,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['#Facebook', '#ATGT', '#TuoiTreQuangTrung'],
+    views: 420,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook',
+    images: [
+      'https://bqrozmqorvxpwjfmgkfk.supabase.co/storage/v1/object/public/media/facebook_news/post_atgt_2026.jpg'
+    ]
+  },
+  {
+    id: 'fb-100065567376763_chunhatxanh_2026',
+    title: 'ĐOÀN TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG RA QUÂN HƯỞNG ỨNG “NGÀY CHỦ NHẬT XANH” NĂM 2026',
+    excerpt: 'Phối hợp cùng Đoàn xã Đông Giang ra quân Ngày Chủ Nhật Xanh 2026: trồng cây xanh bản địa, dọn dẹp vệ sinh khuôn viên trường học và các trục đường thanh niên tự quản.',
+    content: `🌿💚 ĐOÀN TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG RA QUÂN HƯỞNG ỨNG “NGÀY CHỦ NHẬT XANH” NĂM 2026 🌱🌍
+
+Phát huy tinh thần xung kích, tình nguyện của tuổi trẻ vùng cao trong bảo vệ môi trường, ứng phó biến đổi khí hậu, sáng 20/09, Đoàn trường THPT Quang Trung - Đông Giang phối hợp cùng Đoàn xã Đông Giang long trọng tổ chức Lễ ra quân Ngày Chủ Nhật Xanh năm 2026.
+
+Hơn 120 đoàn viên thanh niên xung kích đã đồng loạt thực hiện các phần việc ý nghĩa:
+- Trồng và chăm sóc hơn 50 cây xanh bóng mát trong khuôn viên trường học và các sườn đồi xung quanh.
+- Thu gom, phân loại rác thải nhựa, dọn vệ sinh tuyến đường liên thôn thanh niên tự quản.
+- Tuyên truyền lối sống xanh, hạn chế rác thải nhựa đến toàn thể cán bộ, giáo viên và học sinh.`,
+    thumbnail: 'https://bqrozmqorvxpwjfmgkfk.supabase.co/storage/v1/object/public/media/facebook_news/post_chuanhatxanh_2026.jpg',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Fanpage Chính Thức',
+    publishDate: '2026-09-20',
+    isPinned: false,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['#Facebook', '#ChuNhatXanh', '#TuoiTreQuangTrung'],
+    views: 380,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook',
+    images: [
+      'https://bqrozmqorvxpwjfmgkfk.supabase.co/storage/v1/object/public/media/facebook_news/post_chuanhatxanh_2026.jpg'
+    ]
+  },
+  {
+    id: 'fb-100065567376763_thientai_2026',
+    title: 'TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG TĂNG CƯỜNG CÔNG TÁC PHÒNG, CHỐNG THIÊN TAI VÀ ỨNG PHÓ THỜI TIẾT BẤT THƯỜNG',
+    excerpt: 'Cảnh báo thời tiết mưa dông, nguy cơ sạt lở đất đá mùa mưa bão và cẩm nang hướng dẫn ứng phó khẩn cấp dành cho giáo viên, nhân viên, bảo vệ và học sinh trường THPT Quang Trung.',
+    content: `📢🌧️ TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG TĂNG CƯỜNG CÔNG TÁC PHÒNG, CHỐNG THIÊN TAI VÀ ỨNG PHÓ THỜI TIẾT BẤT THƯỜNG 🌧️📢
+
+Trước diễn biến phức tạp của thời tiết vùng cao Đông Giang trong mùa mưa lũ, Ban Giám hiệu cùng Đoàn trường THPT Quang Trung ban hành hướng dẫn các biện pháp phòng chống thiên tai, sạt lở đất và đảm bảo an toàn tính mạng, tài sản của nhà trường:
+
+1. Diễn biến thời tiết: Mưa rào rải rác, đề phòng lốc sét, mưa đá và sạt lở các triền dốc.
+2. Nhiệm vụ của Đoàn viên học sinh: Chủ động theo dõi bản tin thời tiết, không đi qua ngầm tràn khi nước dâng cao, không trú mưa dưới gốc cây to.
+3. Ban Chỉ đạo phòng chống bão lũ duy trì trực ban 24/24 sẵn sàng ứng phó sự cố.`,
+    thumbnail: 'https://bqrozmqorvxpwjfmgkfk.supabase.co/storage/v1/object/public/media/facebook_news/post_phongchongthientai_2026.png',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Fanpage Chính Thức',
+    publishDate: '2026-09-09',
+    isPinned: false,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['#Facebook', '#CanhBao', '#TuoiTreQuangTrung'],
+    views: 450,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook',
+    images: [
+      'https://bqrozmqorvxpwjfmgkfk.supabase.co/storage/v1/object/public/media/facebook_news/post_phongchongthientai_2026.png'
+    ]
+  },
+  {
     id: 'news-fb-01',
     title: 'Lễ Kết Nạp Đoàn Viên Mới – Lớp Đoàn Viên 95 Năm Thành Lập Đoàn TNCS Hồ Chí Minh',
     excerpt: 'Đoàn trường THPT Quang Trung - Đông Giang long trọng tổ chức Lễ kết nạp đoàn viên mới cho 68 thanh niên ưu tú tại phòng truyền thống.',
