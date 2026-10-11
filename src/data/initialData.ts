@@ -2110,7 +2110,7 @@ Hòa chung không khí rực rỡ của ngày hội "Toàn dân đưa trẻ đ�
 - "Hoa điểm 10 dâng thầy cô" và giữ vững nề nếp kỷ cương trường lớp.
 - Đẩy mạnh phong trào học sinh 3 tốt và câu lạc bộ học thuật, văn thể mỹ.
 - Chào đón hơn 250 tân học sinh Khối 10 gia nhập đại gia đình Quang Trung - Đông Giang!`,
-    thumbnail: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80',
+    thumbnail: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&auto=format&fit=crop&q=80',
     author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
     authorRole: 'Fanpage Chính Thức',
     publishDate: '2026-09-05',
@@ -2123,7 +2123,7 @@ Hòa chung không khí rực rỡ của ngày hội "Toàn dân đưa trẻ đ�
     sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
     sourcePlatform: 'facebook',
     images: [
-      'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&auto=format&fit=crop&q=80'
     ]
   },
   {
@@ -2152,8 +2152,8 @@ Hòa chung không khí rực rỡ của ngày hội "Toàn dân đưa trẻ đ�
     ]
   },
   {
-    id: 'news-fb-01',
-    title: 'Lễ Kết Nạp Đoàn Viên Mới – Lớp Đoàn Viên 95 Năm Thành Lập Đoàn TNCS Hồ Chí Minh',
+    id: 'fb-100065567376763_ketnapdoan_2026',
+    title: 'LỄ KẾT NẠP ĐOÀN VIÊN MỚI – ĐỢT I NĂM HỌC 2026 – 2027 CHO 68 THANH NIÊN ƯU TÚ',
     excerpt: 'Đoàn trường THPT Quang Trung - Đông Giang long trọng tổ chức Lễ kết nạp đoàn viên mới cho 68 thanh niên ưu tú tại phòng truyền thống.',
     content: `[KẾT NẠP ĐOÀN VIÊN MỚI] ĐOÀN TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG TỔ CHỨC LỄ KẾT NẠP ĐOÀN VIÊN ĐỢT I NĂM HỌC 2026 - 2027.
 
@@ -2164,10 +2164,10 @@ Hôm nay, trong không khí trang nghiêm tại phòng Truyền thống nhà tr�
 Chúc mừng các tân đoàn viên! Hãy luôn giữ vững tinh thần "Đâu cần thanh niên có, việc gì khó có thanh niên"! 🇻🇳
 
 *(Bài viết và hình ảnh được đồng bộ từ Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang)*`,
-    thumbnail: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop&q=80',
+    thumbnail: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80',
     author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
     authorRole: 'Fanpage Chính Thức',
-    publishDate: '2026-09-02 16:30',
+    publishDate: '2026-09-02',
     isPinned: false,
     isHidden: false,
     category: 'news',
@@ -2177,14 +2177,12 @@ Chúc mừng các tân đoàn viên! Hãy luôn giữ vững tinh thần "Đâu 
     sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
     sourcePlatform: 'facebook',
     images: [
-      'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80'
     ]
   },
   {
-    id: 'news-fb-02',
-    title: 'Chùm Ảnh Hoạt Động: Giải Bóng Đá Nữ Thanh Niên Tranh Cúp Đoàn Trường 2026',
+    id: 'fb-100065567376763_bongdanu_2026',
+    title: 'SÔI NỔI GIẢI BÓNG ĐÁ THANH NIÊN HỌC SINH TRANH CÚP ĐOÀN TRƯỜNG THPT QUANG TRUNG',
     excerpt: 'Những pha bóng đẹp mắt, tinh thần thể thao nhiệt huyết và sự cổ vũ cuồng nhiệt của các nữ đoàn viên thanh niên 18 chi đoàn.',
     content: `[SÔI NỔI PHONG TRÀO THỂ THAO] GIẢI BÓNG ĐÁ NỮ HỌC SINH THPT QUANG TRUNG - ĐÔNG GIANG NĂM HỌC 2026 - 2027.
 
@@ -2198,7 +2196,7 @@ Cảm ơn các cầu thủ nữ và đông đảo cổ động viên đã cháy 
     thumbnail: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=80',
     author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
     authorRole: 'Fanpage Chính Thức',
-    publishDate: '2026-08-30 17:00',
+    publishDate: '2026-08-30',
     isPinned: false,
     isHidden: false,
     category: 'news',
@@ -2208,9 +2206,7 @@ Cảm ơn các cầu thủ nữ và đông đảo cổ động viên đã cháy 
     sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
     sourcePlatform: 'facebook',
     images: [
-      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=80'
     ]
   },
 
