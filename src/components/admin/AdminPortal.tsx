@@ -2955,7 +2955,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
       if (ok) {
         alert(`🎉 ĐÃ ĐỒNG BỘ THÀNH CÔNG ${students.length} HỌC SINH LÊN SUPABASE CLOUD!\n\n📱 Bây giờ trên điện thoại bạn chỉ cần mở lại hoặc bấm nút 🔄 (Đồng bộ) là sẽ thấy đầy đủ ${students.length} học sinh!`);
       } else {
-        alert('Có lỗi khi lưu học sinh lên Supabase Cloud. Vui lòng kiểm tra kết nối mạng hoặc thử lại.');
+        const errMsg = SupabaseService.getLastErrorMessage();
+        alert(`Có lỗi khi lưu học sinh lên Supabase Cloud:\n${errMsg || 'Vui lòng kiểm tra kết nối mạng hoặc thử lại.'}`);
       }
     } catch (e: any) {
       alert(`Lỗi khi đẩy dữ liệu: ${e?.message || 'Không xác định'}`);

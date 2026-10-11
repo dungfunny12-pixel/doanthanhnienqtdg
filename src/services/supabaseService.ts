@@ -25,10 +25,182 @@ import {
   DocumentFile
 } from '../types';
 
+
+/**
+ * Chuyển đổi và chuẩn hóa ngày tháng sang định dạng ISO YYYY-MM-DD tương thích PostgreSQL DATE
+ */
+export function normalizeDateForDb(raw: any, defaultYear = 2009): string | null {
+  if (!raw) return null;
+  const str = String(raw).trim();
+  if (!str) return null;
+
+  // Đã là YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return str;
+  }
+
+  // YYYY-M-D hoặc YYYY/M/D
+  const isoMatch = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (isoMatch) {
+    const y = isoMatch[1];
+    const m = isoMatch[2].padStart(2, '0');
+    const d = isoMatch[3].padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  // DD/MM/YYYY hoặc DD-MM-YYYY hoặc D/M/YYYY (Định dạng phổ biến ở Việt Nam)
+  const dmyMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+  if (dmyMatch) {
+    const d = dmyMatch[1].padStart(2, '0');
+    const m = dmyMatch[2].padStart(2, '0');
+    const y = dmyMatch[3];
+    return `${y}-${m}-${d}`;
+  }
+
+  // Nếu chỉ có năm sinh (VD: 2009)
+  if (/^\d{4}$/.test(str)) {
+    return `${str}-01-01`;
+  }
+
+  // Nếu là số ngày Excel Serial (VD: 40000 - 45000)
+  const num = Number(str);
+  if (!isNaN(num) && num > 20000 && num < 60000) {
+    const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+    if (!isNaN(d.getTime())) {
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+  }
+
+  // Fallback qua Date parse chuẩn
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return `${defaultYear}-01-01`;
+}
+
+/**
+ * Chuẩn hóa giới tính theo enum 'Nam' | 'Nữ' của PostgreSQL
+ */
+export function normalizeGenderForDb(raw: any): 'Nam' | 'Nữ' {
+  if (!raw) return 'Nam';
+  const s = String(raw).trim().toLowerCase();
+  if (s === 'nữ' || s === 'nu' || s === 'female' || s === 'f') return 'Nữ';
+  return 'Nam';
+}
+
+/**
+ * Chuẩn hóa mã lớp (loại bỏ tiền tố 'Lớp ', khoảng trắng, dạng '10-1' -> '10/1')
+ */
+export function normalizeClassIdForDb(raw: any): string {
+  if (!raw) return '10/1';
+  let s = String(raw).trim().replace(/^Lớp\s+/i, '').trim();
+  s = s.replace(/^(\d{1,2})[-_](\d{1,2})$/, '$1/$2');
+  const m = s.match(/^(\d{1,2})\/0*(\d{1,2})$/);
+  if (m) {
+    return `${m[1]}/${m[2]}`;
+  }
+  return s || '10/1';
+}
+
+/**
+ * Map đối tượng Student của Frontend sang đúng cấu trúc cột của bảng students trên Supabase Cloud
+ */
+export function mapStudentToDbPayload(s: Student) {
+  const normClass = normalizeClassIdForDb(s.classId);
+  const gradeNum = Number(normClass.split('/')[0]) || Number(s.grade) || 10;
+  const validGrade = (gradeNum === 10 || gradeNum === 11 || gradeNum === 12) ? gradeNum : 10;
+  const defaultYear = 2009 - (validGrade - 10);
+  const dobVal = normalizeDateForDb(s.dob, defaultYear) || `${defaultYear}-01-01`;
+  const unionDateVal = normalizeDateForDb(s.unionJoinedDate);
+
+  const isInactive = s.status === 'inactive' || Boolean((s as any).is_deleted);
+  const dbStatus = isInactive ? 'archived' : (['active', 'archived', 'transferred'].includes(s.status) ? s.status : 'active');
+
+  const feeStatus = s.unionFeeStatus === 'unpaid' ? 'unpaid' : 'paid';
+  const bookletStatus = s.unionBookletStatus === 'not_submitted' ? 'not_submitted' : 'submitted';
+
+  return {
+    student_id: String(s.studentId || s.id).trim(),
+    full_name: String(s.name || '').trim() || 'Học sinh',
+    class_id: normClass,
+    grade: validGrade,
+    gender: normalizeGenderForDb(s.gender),
+    dob: dobVal,
+    ethnicity: String(s.ethnicity || 'Kinh').trim() || 'Kinh',
+    phone_number: s.phone ? String(s.phone).trim() : null,
+    address: String(s.address || '').trim() || 'Thôn Trung Sơn, xã Đông Giang, TP Đà Nẵng',
+    member_type: s.isUnionMember ? 'Đoàn viên' : 'Học sinh',
+    is_union_member: Boolean(s.isUnionMember),
+    union_card_number: s.unionCardNumber ? String(s.unionCardNumber).trim() : null,
+    title: String(s.unionPosition || (s.isUnionMember ? 'Đoàn viên' : 'Học sinh')).trim(),
+    union_joined_date: unionDateVal,
+    union_joined_place: s.unionJoinedPlace ? String(s.unionJoinedPlace).trim() : (s.isUnionMember ? 'Đoàn trường THPT Quang Trung' : null),
+    union_fee_status: feeStatus,
+    union_booklet_status: bookletStatus,
+    conduct_rating: s.conductRating || 'Xuất sắc',
+    monthly_union_fees: s.monthlyUnionFees || {},
+    points: Number(s.points ?? 100),
+    rank_title: String(s.rankTitle || (s.isUnionMember ? 'Đoàn viên' : 'Học sinh')).trim(),
+    violations_count: Number(s.violationsCount || 0),
+    custom_notes: s.customNotes ? String(s.customNotes).trim() : null,
+    status: dbStatus,
+    is_deleted: isInactive,
+    updated_at: new Date().toISOString()
+  };
+}
+
+/**
+ * Đảm bảo các lớp học tham chiếu tồn tại trên CSDL Supabase để không vi phạm ràng buộc khoá ngoại students_class_id_fkey
+ */
+export async function ensureClassesExistForStudents(client: any, students: Student[]): Promise<void> {
+  try {
+    const rawIds = Array.from(new Set(students.map(s => normalizeClassIdForDb(s.classId)).filter(Boolean)));
+    if (rawIds.length === 0) return;
+
+    const { data: existing } = await client.from('classes').select('class_id');
+    const existingSet = new Set((existing || []).map((c: any) => c.class_id));
+    const missing = rawIds.filter(c => !existingSet.has(c));
+
+    if (missing.length > 0) {
+      const toInsert = missing.map(cid => {
+        const g = Number(cid.split('/')[0]) || 10;
+        const validGrade = (g === 10 || g === 11 || g === 12) ? g : 10;
+        return {
+          class_id: cid,
+          class_name: `Lớp ${cid}`,
+          grade: validGrade,
+          academic_year: '2024-2025',
+          total_students: 40,
+          union_members_count: 0,
+          standard_score: 1440,
+          is_archived: false,
+          is_deleted: false,
+          updated_at: new Date().toISOString()
+        };
+      });
+      await client.from('classes').upsert(toInsert, { onConflict: 'class_id' });
+    }
+  } catch (err) {
+    console.warn('Cảnh báo khi kiểm tra/tạo lớp học liên kết:', err);
+  }
+}
+
 /**
  * Service đồng bộ dữ liệu hai chiều toàn diện giữa Frontend và Supabase PostgreSQL Cloud
  */
 export const SupabaseService = {
+  _lastErrorMessage: '',
+  getLastErrorMessage(): string {
+    return this._lastErrorMessage || '';
+  },
   /**
    * Tải toàn bộ dữ liệu cốt lõi từ Supabase
    */
@@ -188,7 +360,7 @@ export const SupabaseService = {
         address: s.address || '',
         isUnionMember: s.is_union_member ?? false,
         unionCardNumber: s.union_card_number || '',
-        unionPosition: s.union_position || (s.is_union_member ? 'Đoàn viên' : 'Học sinh'),
+        unionPosition: s.title || s.union_position || (s.is_union_member ? 'Đoàn viên' : 'Học sinh'),
         unionJoinedDate: s.union_join_date || s.union_joined_date || '',
         unionJoinedPlace: s.union_joined_place || 'Đoàn trường THPT Quang Trung',
         unionFeeStatus: (s.union_fee_status || 'paid') as 'paid' | 'unpaid',
@@ -669,23 +841,8 @@ export const SupabaseService = {
 
       // 3. Seed Students
       if (payload.students && payload.students.length > 0) {
-        const mappedStudents = payload.students.map(s => ({
-          student_id: s.studentId || s.id,
-          class_id: s.classId,
-          full_name: s.name,
-          gender: s.gender,
-          date_of_birth: s.dob,
-          is_union_member: s.isUnionMember,
-          union_join_date: s.unionJoinedDate || null,
-          union_card_number: s.unionCardNumber || null,
-          union_position: s.unionPosition || 'Đoàn viên',
-          phone_number: s.phone || null,
-          address: s.address || null,
-          ethnicity: s.ethnicity || 'Kinh',
-          activity_points: s.points || 100,
-          rank_title: s.rankTitle || 'Đoàn viên',
-          is_deleted: false
-        }));
+        await ensureClassesExistForStudents(client, payload.students);
+        const mappedStudents = payload.students.map(mapStudentToDbPayload);
         // Insert in batches of 100
         for (let i = 0; i < mappedStudents.length; i += 100) {
           const batch = mappedStudents.slice(i, i + 100);
@@ -967,40 +1124,19 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      const { error } = await client.from('students').upsert({
-        student_id: s.studentId || s.id,
-        class_id: s.classId,
-        full_name: s.name,
-        grade: s.grade || 10,
-        gender: s.gender || 'Nam',
-        dob: s.dob || '2009-01-01',
-        ethnicity: s.ethnicity || 'Kinh',
-        phone_number: s.phone || null,
-        address: s.address || null,
-        member_type: s.isUnionMember ? 'Đoàn viên' : 'Học sinh',
-        is_union_member: Boolean(s.isUnionMember),
-        union_joined_date: s.unionJoinedDate || null,
-        union_joined_place: s.unionJoinedPlace || null,
-        union_card_number: s.unionCardNumber || null,
-        title: s.unionPosition || (s.isUnionMember ? 'Đoàn viên' : 'Học sinh'),
-        union_fee_status: s.unionFeeStatus || 'paid',
-        union_booklet_status: s.unionBookletStatus || 'submitted',
-        conduct_rating: s.conductRating || 'Xuất sắc',
-        custom_notes: s.customNotes || null,
-        points: s.points || 100,
-        rank_title: s.rankTitle || 'Đoàn viên',
-        violations_count: s.violationsCount || 0,
-        status: s.status || 'active',
-        is_deleted: s.status === 'inactive',
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'student_id' });
+      await ensureClassesExistForStudents(client, [s]);
+      const payload = mapStudentToDbPayload(s);
+      const { error } = await client.from('students').upsert(payload, { onConflict: 'student_id' });
       if (error) {
         console.warn('Lỗi lưu student:', error.message);
+        this._lastErrorMessage = error.message;
         return false;
       }
+      this._lastErrorMessage = '';
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Lỗi lưu student:', err);
+      this._lastErrorMessage = err?.message || String(err);
       return false;
     }
   },
@@ -1014,49 +1150,28 @@ export const SupabaseService = {
     if (!client || students.length === 0) return false;
 
     try {
-      const mapped = students.map(s => ({
-        student_id: String(s.studentId || s.id).trim(),
-        class_id: String(s.classId || '10/1').trim(),
-        full_name: String(s.name || '').trim(),
-        name: String(s.name || '').trim(),
-        grade: Number(s.grade || 10),
-        gender: String(s.gender || 'Nam').trim(),
-        dob: String(s.dob || '2009-01-01').trim(),
-        ethnicity: String(s.ethnicity || 'Kinh').trim(),
-        phone_number: s.phone ? String(s.phone).trim() : null,
-        phone: s.phone ? String(s.phone).trim() : null,
-        address: String(s.address || '').trim(),
-        member_type: s.isUnionMember ? 'Đoàn viên' : 'Học sinh',
-        is_union_member: Boolean(s.isUnionMember),
-        union_joined_date: s.unionJoinedDate ? String(s.unionJoinedDate).trim() : null,
-        union_joined_place: s.unionJoinedPlace ? String(s.unionJoinedPlace).trim() : null,
-        union_card_number: s.unionCardNumber ? String(s.unionCardNumber).trim() : null,
-        union_position: s.unionPosition || (s.isUnionMember ? 'Đoàn viên' : 'Học sinh'),
-        union_fee_status: s.unionFeeStatus || 'paid',
-        union_booklet_status: s.unionBookletStatus || 'submitted',
-        conduct_rating: s.conductRating || 'Xuất sắc',
-        custom_notes: s.customNotes || '',
-        activity_points: Number(s.points || 100),
-        points: Number(s.points || 100),
-        rank_title: s.rankTitle || 'Đoàn viên',
-        violations_count: Number(s.violationsCount || 0),
-        status: s.status || 'active',
-        is_deleted: s.status === 'inactive'
-      }));
+      // 1. Tự động đảm bảo tất cả các lớp học tồn tại để không vi phạm foreign key students_class_id_fkey
+      await ensureClassesExistForStudents(client, students);
 
-      // Chia nhỏ thành các mẻ 100 bản ghi
+      // 2. Chuyển đổi và chuẩn hóa dữ liệu học sinh tương thích 100% với schema Supabase PostgreSQL
+      const mapped = students.map(mapStudentToDbPayload);
+
+      // 3. Chia nhỏ thành các mẻ 100 bản ghi để gửi lên Supabase
       const CHUNK_SIZE = 100;
       for (let i = 0; i < mapped.length; i += CHUNK_SIZE) {
         const chunk = mapped.slice(i, i + CHUNK_SIZE);
         const { error } = await client.from('students').upsert(chunk, { onConflict: 'student_id' });
         if (error) {
           console.error(`Lỗi khi lưu mẻ học sinh [${i} - ${i + chunk.length}]:`, error.message);
+          this._lastErrorMessage = `Lỗi ở nhóm học sinh [${i + 1} - ${i + chunk.length}]: ${error.message}`;
           return false;
         }
       }
+      this._lastErrorMessage = '';
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Lỗi ngoại lệ khi lưu học sinh:', err);
+      this._lastErrorMessage = err?.message || String(err);
       return false;
     }
   },
