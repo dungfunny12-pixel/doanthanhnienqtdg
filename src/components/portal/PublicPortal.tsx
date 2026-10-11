@@ -1186,10 +1186,17 @@ export const PublicPortal: React.FC = () => {
                     <span className="truncate max-w-[120px]">Bởi: <strong className="text-slate-200">{article.author}</strong></span>
                     <span className="text-red-400 font-bold group-hover:underline flex items-center gap-0.5 shrink-0">
                       {isFb ? (
-                        <span className="text-blue-400 flex items-center gap-1">
-                          <span>Xem tin Facebook</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </span>
+                        <a
+                          href={article.sourceUrl || 'https://www.facebook.com/people/Tu%E1%BB%95i-tr%E1%BA%BB-THPT-Quang-Trung-%C4%90%C3%B4ng-Giang/100065567376763/'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 cursor-pointer font-bold"
+                          title="Mở bài viết thật trên Facebook"
+                        >
+                          <span>Mở trên Facebook</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
                       ) : (
                         <>
                           Xem tin <ChevronRight className="w-3 h-3" />
@@ -1618,7 +1625,7 @@ export const PublicPortal: React.FC = () => {
                   </div>
                 </div>
                 <a
-                  href={selectedArticleModal.sourceUrl || 'https://www.facebook.com/profile.php?id=100065567376763'}
+                  href={selectedArticleModal.sourceUrl || 'https://www.facebook.com/people/Tu%E1%BB%95i-tr%E1%BA%BB-THPT-Quang-Trung-%C4%90%C3%B4ng-Giang/100065567376763/'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3.5 py-1.5 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow"
