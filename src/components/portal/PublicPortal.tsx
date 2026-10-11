@@ -121,12 +121,21 @@ export const PublicPortal: React.FC = () => {
   const [currentPinnedIdx, setCurrentPinnedIdx] = useState(0);
   const [isPinnedPaused, setIsPinnedPaused] = useState(false);
 
-  // News category filter tab state ('ALL' | 'announcement' | 'news')
-  const [newsCategoryFilter, setNewsCategoryFilter] = useState<'ALL' | 'announcement' | 'news'>('ALL');
+  // News category filter tab state ('ALL' | 'announcement' | 'news' | 'facebook')
+  const [newsCategoryFilter, setNewsCategoryFilter] = useState<'ALL' | 'announcement' | 'news' | 'facebook'>('ALL');
+  const [facebookViewMode, setFacebookViewMode] = useState<'grid' | 'feed'>('grid');
+
+  const facebookNewsCount = visibleNews.filter(n => 
+    n.sourcePlatform === 'facebook' || 
+    n.sourceUrl?.includes('facebook.com') || 
+    (Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes('facebook')))
+  ).length;
+
   const filteredNewsList = visibleNews.filter(n => {
     if (newsCategoryFilter === 'ALL') return true;
     if (newsCategoryFilter === 'announcement') return n.category === 'announcement' || n.id.startsWith('ann-');
-    if (newsCategoryFilter === 'news') return n.category !== 'announcement' && !n.id.startsWith('ann-');
+    if (newsCategoryFilter === 'news') return n.category !== 'announcement' && !n.id.startsWith('ann-') && n.sourcePlatform !== 'facebook';
+    if (newsCategoryFilter === 'facebook') return n.sourcePlatform === 'facebook' || n.sourceUrl?.includes('facebook.com') || (Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes('facebook')));
     return true;
   });
 
@@ -994,84 +1003,294 @@ export const PublicPortal: React.FC = () => {
                 newsCategoryFilter === 'news' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Bản tin ({visibleNews.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-')).length})
+              Bản tin ({visibleNews.filter(n => n.category !== 'announcement' && !n.id.startsWith('ann-') && n.sourcePlatform !== 'facebook').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setNewsCategoryFilter('facebook');
+                setFacebookViewMode('grid');
+              }}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                newsCategoryFilter === 'facebook' ? 'bg-[#1877F2] text-white shadow-sm' : 'text-blue-400 hover:text-white'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              <span>Facebook Đoàn Trường ({facebookNewsCount})</span>
             </button>
           </div>
         </div>
 
-        {/* 4-Column Responsive Magazine Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-          {filteredNewsList.map(article => {
-            const isAnn = article.category === 'announcement' || article.id.startsWith('ann-');
-            return (
-              <div
-                key={article.id}
-                onClick={() => setSelectedArticleModal(article)}
-                className={`glass-panel glass-panel-hover rounded-2xl p-3.5 border cursor-pointer group flex flex-col justify-between gap-3 transition-all hover:border-red-500/50 hover:shadow-glow ${
-                  isAnn 
-                    ? 'border-amber-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20' 
-                    : 'border-slate-800 bg-slate-900/90'
-                }`}
+        {/* Official Facebook Connectivity Banner */}
+        <div className="rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-blue-950/80 via-slate-900 to-indigo-950/80 border border-blue-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-[#1877F2] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-600/30">
+              <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="text-sm sm:text-base font-black text-white">
+                  KÊNH TRUYỀN THÔNG FACEBOOK: TUỔI TRẺ THPT QUANG TRUNG – ĐÔNG GIANG
+                </h4>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                  Xác thực Đoàn Trường
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Cập nhật bài viết, hình ảnh hoạt động phong trào, phóng sự ảnh và video trực tiếp từ Fanpage chính thức Đoàn trường THPT Quang Trung - Đông Giang.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {newsCategoryFilter === 'facebook' && (
+              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setFacebookViewMode('grid')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                    facebookViewMode === 'grid' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Lưới bài viết
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFacebookViewMode('feed')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    facebookViewMode === 'feed' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                  <span>Live Feed</span>
+                </button>
+              </div>
+            )}
+            {newsCategoryFilter !== 'facebook' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNewsCategoryFilter('facebook');
+                  setFacebookViewMode('feed');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <div className="space-y-2.5">
-                  <div className="w-full h-40 relative shrink-0 rounded-xl overflow-hidden border border-slate-700 bg-slate-950">
-                    <img
-                      src={article.thumbnail}
-                      alt={article.title}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm ${
-                      isAnn ? 'bg-amber-600/90' : 'bg-blue-600/90'
-                    }`}>
-                      {isAnn ? '📢 THÔNG BÁO' : '📰 BẢN TIN'}
-                    </span>
-                    {isAnn && article.urgency && article.urgency !== 'normal' && (
-                      <span className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                        article.urgency === 'critical' ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-500 text-slate-950 font-black'
-                      }`}>
-                        {article.urgency === 'critical' ? '🔥 HỎA TỐC' : '⚠️ KHẨN'}
-                      </span>
-                    )}
-                  </div>
+                <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                <span>Xem Live Feed Facebook</span>
+              </button>
+            )}
+            <a
+              href="https://www.facebook.com/profile.php?id=100065567376763"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-black transition-all shadow-md shadow-blue-600/30 flex items-center gap-1.5"
+            >
+              <span>Mở Fanpage</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
 
-                  <div className="space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400">
-                      {article.tags.slice(0, 2).map(tag => (
-                        <span key={tag} className="font-bold text-red-400 bg-red-950/60 px-1.5 py-0.2 rounded border border-red-900/50">
-                          {tag}
-                        </span>
+        {/* Facebook Live Feed View (When Facebook Tab & Feed Mode Active) */}
+        {newsCategoryFilter === 'facebook' && facebookViewMode === 'feed' ? (
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
+                <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-tight">
+                  DÒNG THỜI GIAN TRỰC TIẾP (LIVE TIMELINE FEED) TỪ FANPAGE ĐOÀN TRƯỜNG
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <span>Page ID: <strong className="text-blue-400">100065567376763</strong></span>
+                <span>•</span>
+                <a
+                  href="https://www.facebook.com/profile.php?id=100065567376763"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:underline flex items-center gap-1"
+                >
+                  <span>Mở trong tab mới</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column: Embedded Facebook Page Plugin Iframe */}
+              <div className="lg:col-span-7 flex flex-col items-center justify-center bg-slate-900/90 rounded-2xl border border-slate-800 p-2 sm:p-4 min-h-[600px] overflow-hidden">
+                <iframe 
+                  src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Fprofile.php%3Fid%3D100065567376763&tabs=timeline&width=500&height=750&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId" 
+                  width="100%" 
+                  height="750" 
+                  style={{ border: 'none', overflow: 'hidden', minHeight: '650px', maxWidth: '500px' }} 
+                  scrolling="no" 
+                  frameBorder="0" 
+                  allowFullScreen={true} 
+                  allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                  title="Facebook Page Feed Đoàn Trường"
+                  className="rounded-xl w-full shadow-inner bg-white/5"
+                />
+                <p className="text-[11px] text-slate-400 mt-3 text-center max-w-md">
+                  Nếu trình duyệt của bạn đang bật chế độ bảo mật chặn cookie hoặc tiện ích mở rộng Adblock, bạn có thể bấm trực tiếp nút bên dưới để xem fanpage:
+                </p>
+                <a
+                  href="https://www.facebook.com/profile.php?id=100065567376763"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2.5 px-4 py-2 bg-[#1877F2] hover:bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-colors"
+                >
+                  <span>Mở Facebook "Tuổi trẻ THPT Quang Trung - Đông Giang"</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              {/* Right Column: Synced Facebook Highlights & Gallery */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                  <h4 className="text-xs font-black uppercase text-blue-400 flex items-center gap-1.5">
+                    <span>📸</span>
+                    <span>BÀI VIẾT & HÌNH ẢNH ĐỒNG BỘ TỪ FACEBOOK ({facebookNewsCount})</span>
+                  </h4>
+                  <div className="space-y-3">
+                    {visibleNews
+                      .filter(n => n.sourcePlatform === 'facebook' || n.sourceUrl?.includes('facebook.com') || (Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes('facebook'))))
+                      .map(fbPost => (
+                        <div
+                          key={fbPost.id}
+                          onClick={() => setSelectedArticleModal(fbPost)}
+                          className="p-3 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-blue-500/40 cursor-pointer transition-all flex gap-3 group"
+                        >
+                          <img
+                            src={fbPost.thumbnail}
+                            alt={fbPost.title}
+                            className="w-16 h-16 rounded-lg object-cover shrink-0 border border-slate-700"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[10px] text-blue-400 font-bold block">{fbPost.publishDate}</span>
+                            <h5 className="text-xs font-bold text-white group-hover:text-blue-300 line-clamp-2 leading-snug">
+                              {fbPost.title}
+                            </h5>
+                            <span className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                              <span>Xem bài & chùm ảnh</span>
+                              <ChevronRight className="w-3 h-3 text-blue-400" />
+                            </span>
+                          </div>
+                        </div>
                       ))}
-                      <span>• {article.publishDate}</span>
-                    </div>
-
-                    <h4 className="font-bold text-white text-xs sm:text-sm group-hover:text-red-400 transition-colors line-clamp-2 leading-snug">
-                      {article.title}
-                    </h4>
-
-                    <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
-                      {article.excerpt}
-                    </p>
                   </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
-                  <span className="truncate max-w-[120px]">Bởi: <strong className="text-slate-200">{article.author}</strong></span>
-                  <span className="text-red-400 font-bold group-hover:underline flex items-center gap-0.5 shrink-0">
-                    Xem tin <ChevronRight className="w-3 h-3" />
-                  </span>
                 </div>
               </div>
-            );
-          })}
-
-          {filteredNewsList.length === 0 && (
-            <div className="col-span-full text-center py-12 glass-panel rounded-2xl border border-slate-800">
-              <p className="text-slate-400 text-sm">Chưa có bài viết hoặc thông báo nào trong mục này.</p>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          /* 4-Column Responsive Magazine Grid */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+            {filteredNewsList.map(article => {
+              const isAnn = article.category === 'announcement' || article.id.startsWith('ann-');
+              const isFb = article.sourcePlatform === 'facebook' || article.sourceUrl?.includes('facebook.com') || (Array.isArray(article.tags) && article.tags.some(t => t.toLowerCase().includes('facebook')));
+              return (
+                <div
+                  key={article.id}
+                  onClick={() => setSelectedArticleModal(article)}
+                  className={`glass-panel glass-panel-hover rounded-2xl p-3.5 border cursor-pointer group flex flex-col justify-between gap-3 transition-all hover:border-red-500/50 hover:shadow-glow ${
+                    isAnn 
+                      ? 'border-amber-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20' 
+                      : isFb
+                        ? 'border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950/20 hover:border-blue-500/60'
+                        : 'border-slate-800 bg-slate-900/90'
+                  }`}
+                >
+                  <div className="space-y-2.5">
+                    <div className="w-full h-40 relative shrink-0 rounded-xl overflow-hidden border border-slate-700 bg-slate-950">
+                      <img
+                        src={article.thumbnail}
+                        alt={article.title}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm ${
+                        isAnn 
+                          ? 'bg-amber-600/90' 
+                          : isFb 
+                            ? 'bg-[#1877F2]/90 flex items-center gap-1' 
+                            : 'bg-blue-600/90'
+                      }`}>
+                        {isAnn ? '📢 THÔNG BÁO' : isFb ? '🌐 FACEBOOK' : '📰 BẢN TIN'}
+                      </span>
+                      {isAnn && article.urgency && article.urgency !== 'normal' && (
+                        <span className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                          article.urgency === 'critical' ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-500 text-slate-950 font-black'
+                        }`}>
+                          {article.urgency === 'critical' ? '🔥 HỎA TỐC' : '⚠️ KHẨN'}
+                        </span>
+                      )}
+                      {article.images && article.images.length > 1 && (
+                        <span className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[9px] font-bold text-white flex items-center gap-1">
+                          <span>📷</span>
+                          <span>{article.images.length} ảnh</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400">
+                        {article.tags.slice(0, 2).map(tag => (
+                          <span 
+                            key={tag} 
+                            className={`font-bold px-1.5 py-0.2 rounded border ${
+                              tag.toLowerCase().includes('facebook')
+                                ? 'text-blue-400 bg-blue-950/60 border-blue-900/50'
+                                : 'text-red-400 bg-red-950/60 border-red-900/50'
+                            }`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        <span>• {article.publishDate}</span>
+                      </div>
+
+                      <h4 className="font-bold text-white text-xs sm:text-sm group-hover:text-red-400 transition-colors line-clamp-2 leading-snug">
+                        {article.title}
+                      </h4>
+
+                      <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
+                        {article.excerpt}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                    <span className="truncate max-w-[120px]">Bởi: <strong className="text-slate-200">{article.author}</strong></span>
+                    <span className="text-red-400 font-bold group-hover:underline flex items-center gap-0.5 shrink-0">
+                      {isFb ? (
+                        <span className="text-blue-400 flex items-center gap-1">
+                          <span>Xem tin Facebook</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </span>
+                      ) : (
+                        <>
+                          Xem tin <ChevronRight className="w-3 h-3" />
+                        </>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {filteredNewsList.length === 0 && (
+              <div className="col-span-full text-center py-12 glass-panel rounded-2xl border border-slate-800">
+                <p className="text-slate-400 text-sm">Chưa có bài viết hoặc thông báo nào trong mục này.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ================= PUBLIC DOCUMENT & FORM REPOSITORY ================= */}
@@ -1427,8 +1646,14 @@ export const PublicPortal: React.FC = () => {
           <div className="glass-modal max-w-2xl w-full rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded bg-red-600 text-white text-xs font-black">
-                  TIN ĐOÀN TRƯỜNG
+                <span className={`px-2.5 py-1 rounded text-xs font-black ${
+                  (selectedArticleModal.sourcePlatform === 'facebook' || selectedArticleModal.sourceUrl?.includes('facebook.com') || (Array.isArray(selectedArticleModal.tags) && selectedArticleModal.tags.some(t => t.toLowerCase().includes('facebook'))))
+                    ? 'bg-[#1877F2] text-white'
+                    : 'bg-red-600 text-white'
+                }`}>
+                  {(selectedArticleModal.sourcePlatform === 'facebook' || selectedArticleModal.sourceUrl?.includes('facebook.com') || (Array.isArray(selectedArticleModal.tags) && selectedArticleModal.tags.some(t => t.toLowerCase().includes('facebook'))))
+                    ? '🌐 FACEBOOK ĐOÀN TRƯỜNG'
+                    : 'TIN ĐOÀN TRƯỜNG'}
                 </span>
                 <span className="text-xs text-slate-400">{selectedArticleModal.publishDate}</span>
               </div>
@@ -1450,6 +1675,32 @@ export const PublicPortal: React.FC = () => {
               <span>{selectedArticleModal.views} lượt xem</span>
             </div>
 
+            {/* Facebook Origin Attribution Banner */}
+            {(selectedArticleModal.sourceUrl || selectedArticleModal.sourcePlatform === 'facebook' || (Array.isArray(selectedArticleModal.tags) && selectedArticleModal.tags.some(t => t.toLowerCase().includes('facebook')))) && (
+              <div className="p-3.5 rounded-2xl bg-[#1877F2]/10 border border-[#1877F2]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#1877F2] text-white flex items-center justify-center shrink-0 shadow">
+                    <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-white">Nguồn: Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang</h5>
+                    <p className="text-[11px] text-blue-300">Đồng bộ từ Facebook Page ID: 100065567376763</p>
+                  </div>
+                </div>
+                <a
+                  href={selectedArticleModal.sourceUrl || 'https://www.facebook.com/profile.php?id=100065567376763'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow"
+                >
+                  <span>Mở trên Facebook</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            )}
+
             <img
               src={selectedArticleModal.thumbnail}
               alt={selectedArticleModal.title}
@@ -1459,6 +1710,34 @@ export const PublicPortal: React.FC = () => {
             <div className="bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-800/80 shadow-inner">
               <RichTextViewer content={selectedArticleModal.content} />
             </div>
+
+            {/* Photo Gallery If Multiple Images Present */}
+            {selectedArticleModal.images && selectedArticleModal.images.length > 0 && (
+              <div className="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 space-y-2.5">
+                <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>📷</span>
+                  <span>Chùm Ảnh Hoạt Động ({selectedArticleModal.images.length} ảnh):</span>
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {selectedArticleModal.images.map((imgUrl, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setSelectedPhotoModal({ url: imgUrl, title: `${selectedArticleModal.title} (Ảnh ${idx + 1})` })}
+                      className="h-28 rounded-xl overflow-hidden border border-slate-700 bg-slate-950 cursor-pointer group relative"
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Ảnh ${idx + 1}`}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
+                        <span>🔍 Xem lớn</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Attachments */}
             {selectedArticleModal.attachments && selectedArticleModal.attachments.length > 0 && (

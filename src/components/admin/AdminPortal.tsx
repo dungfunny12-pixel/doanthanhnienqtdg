@@ -1104,6 +1104,28 @@ export const AdminPortal: React.FC = () => {
     attachments: []
   });
 
+  // ================= FACEBOOK POST IMPORT MODAL STATE =================
+  const [isFacebookImportModalOpen, setIsFacebookImportModalOpen] = useState<boolean>(false);
+  const [facebookImportForm, setFacebookImportForm] = useState<{
+    postUrl: string;
+    title: string;
+    excerpt: string;
+    content: string;
+    thumbnail: string;
+    imagesText: string;
+    tags: string;
+    isPinned: boolean;
+  }>({
+    postUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    title: '',
+    excerpt: '',
+    content: '',
+    thumbnail: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80',
+    imagesText: '',
+    tags: '#Facebook, #TuoiTreQuangTrung, #DoanTruong',
+    isPinned: false
+  });
+
   // ================= ANNOUNCEMENT CRUD MODAL STATE (THÔNG BÁO CHỈ ĐẠO ĐOÀN TRƯỜNG) =================
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState<boolean>(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<NewsPost | null>(null);
@@ -2284,6 +2306,46 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
     }
     setIsNewsModalOpen(false);
     setEditingNews(null);
+  };
+
+  // Handle Facebook Import Form Save
+  const handleSaveFacebookImport = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!facebookImportForm.title.trim()) {
+      alert('Vui lòng nhập tiêu đề bài viết từ Facebook!');
+      return;
+    }
+    const tagArray = facebookImportForm.tags.split(',').map(t => t.trim()).filter(Boolean);
+    if (!tagArray.includes('#Facebook')) {
+      tagArray.unshift('#Facebook');
+    }
+    const parsedImages = facebookImportForm.imagesText
+      .split('\n')
+      .map(s => s.trim())
+      .filter(s => s.startsWith('http') || s.startsWith('data:'));
+    if (facebookImportForm.thumbnail && !parsedImages.includes(facebookImportForm.thumbnail)) {
+      parsedImages.unshift(facebookImportForm.thumbnail);
+    }
+
+    addNewsPost({
+      title: facebookImportForm.title,
+      excerpt: facebookImportForm.excerpt || facebookImportForm.title,
+      content: facebookImportForm.content,
+      thumbnail: facebookImportForm.thumbnail || parsedImages[0] || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80',
+      author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+      authorRole: 'Fanpage Chính Thức',
+      publishDate: new Date().toISOString().split('T')[0],
+      category: 'news',
+      urgency: 'normal',
+      isPinned: facebookImportForm.isPinned,
+      tags: tagArray,
+      sourceUrl: facebookImportForm.postUrl || 'https://www.facebook.com/profile.php?id=100065567376763',
+      sourcePlatform: 'facebook',
+      images: parsedImages.length > 0 ? parsedImages : [facebookImportForm.thumbnail || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80']
+    });
+
+    alert(`Đã nhập và đồng bộ bài viết Facebook "${facebookImportForm.title}" thành công!`);
+    setIsFacebookImportModalOpen(false);
   };
 
   // Handle Announcement Form Save
@@ -6582,10 +6644,33 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       });
                       setIsNewsModalOpen(true);
                     }}
-                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow active:scale-95 transition-all"
+                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow active:scale-95 transition-all cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ Thêm Bản Tin Mới</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFacebookImportForm({
+                        postUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+                        title: '',
+                        excerpt: '',
+                        content: '',
+                        thumbnail: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80',
+                        imagesText: '',
+                        tags: '#Facebook, #TuoiTreQuangTrung, #DoanTruong',
+                        isPinned: false
+                      });
+                      setIsFacebookImportModalOpen(true);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-glow active:scale-95 transition-all cursor-pointer"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    <span>⚡ Nhập / Đồng Bộ từ Facebook</span>
                   </button>
 
                   <button
@@ -11139,6 +11224,213 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 >
                   {editingNews ? 'Lưu Cập Nhật' : 'Đăng Bài Viết'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: FACEBOOK POST IMPORT & SYNC ================= */}
+      {isFacebookImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="glass-modal max-w-2xl w-full rounded-3xl p-6 border border-blue-500/40 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#1877F2] text-white flex items-center justify-center shadow">
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">
+                    ĐỒNG BỘ & NHẬP BÀI VIẾT TỪ FACEBOOK ĐOÀN TRƯỜNG
+                  </h3>
+                  <p className="text-xs text-blue-400">
+                    Trang: Tuổi trẻ THPT Quang Trung - Đông Giang • ID: 100065567376763
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setIsFacebookImportModalOpen(false)} className="text-slate-400 hover:text-white p-1 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick Preset Templates */}
+            <div className="p-3 rounded-2xl bg-blue-950/40 border border-blue-600/40 space-y-2">
+              <span className="text-[11px] font-bold text-blue-300 block">
+                ⚡ Mẫu bài viết phổ biến từ Fanpage Đoàn Trường (Bấm để nạp nhanh mẫu):
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  {
+                    name: 'Lễ Kết Nạp Đoàn Viên',
+                    title: 'Lễ Kết Nạp Đoàn Viên Mới – Lớp Đoàn Viên 95 Năm Thành Lập Đoàn',
+                    excerpt: 'Đoàn trường tổ chức Lễ kết nạp đoàn viên mới cho các thanh niên ưu tú tại phòng truyền thống.',
+                    content: `[KẾT NẠP ĐOÀN VIÊN MỚI] ĐOÀN TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG TỔ CHỨC LỄ KẾT NẠP ĐOÀN VIÊN ĐỢT MỚI.\n\nĐược đứng vào hàng ngũ của Đoàn TNCS Hồ Chí Minh là niềm vinh dự to lớn của tuổi trẻ trường THPT Quang Trung - Đông Giang.\n\n*(Bài viết và hình ảnh được đồng bộ từ Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang)*`,
+                    thumbnail: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop&q=80',
+                    tags: '#Facebook, #KetNapDoanVien, #TuoiTreQuangTrung'
+                  },
+                  {
+                    name: 'Giải Thể Thao / Bóng Đá',
+                    title: 'Chùm Ảnh Hoạt Động: Giải Thể Thao Thanh Niên Tranh Cúp Đoàn Trường',
+                    excerpt: 'Sôi nổi các trận thi đấu thể thao học sinh chào mừng năm học mới.',
+                    content: `[SÔI NỔI PHONG TRÀO THỂ THAO] GIẢI THỂ THAO THANH NIÊN TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG.\n\nCác vận động viên đã cống hiến những màn so tài đẹp mắt, tinh thần fair-play cao thượng.\n\n*(Bài viết và hình ảnh được đồng bộ từ Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang)*`,
+                    thumbnail: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=80',
+                    tags: '#Facebook, #HoiThao, #TuoiTreQuangTrung'
+                  },
+                  {
+                    name: 'Chiến Dịch Tình Nguyện',
+                    title: 'Ra Quân Chiến Dịch "Chủ Nhật Xanh" – Tuổi Trẻ Quang Trung Hành Động Vì Môi Trường',
+                    excerpt: 'Đoàn viên thanh niên 18 chi đoàn tham gia chỉnh trang cảnh quan nhà trường.',
+                    content: `[CHỦ NHẬT XANH] ĐOÀN VIÊN THANH NIÊN TÍCH CỰC THAM GIA HOẠT ĐỘNG VÌ CỘNG ĐỒNG.\n\nChăm sóc vườn hoa thanh niên, dọn vệ sinh khuôn viên trường lớp xanh - sạch - đẹp.\n\n*(Bài viết và hình ảnh được đồng bộ từ Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang)*`,
+                    thumbnail: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop&q=80',
+                    tags: '#Facebook, #ChuNhatXanh, #TinhNguyen'
+                  }
+                ].map(preset => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => {
+                      setFacebookImportForm(prev => ({
+                        ...prev,
+                        title: preset.title,
+                        excerpt: preset.excerpt,
+                        content: preset.content,
+                        thumbnail: preset.thumbnail,
+                        tags: preset.tags,
+                        imagesText: preset.thumbnail
+                      }));
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-blue-900/60 hover:bg-blue-800 text-[10px] text-blue-200 border border-blue-700 font-bold transition-colors cursor-pointer"
+                  >
+                    + {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveFacebookImport} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Link bài viết hoặc liên kết Fanpage Facebook *:</label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    required
+                    value={facebookImportForm.postUrl}
+                    onChange={(e) => setFacebookImportForm({ ...facebookImportForm, postUrl: e.target.value })}
+                    placeholder="https://www.facebook.com/profile.php?id=100065567376763 hoặc link bài post..."
+                    className="w-full p-2.5 pl-9 rounded-xl bg-slate-950 border border-slate-700 text-blue-400 font-mono text-xs focus:border-blue-500"
+                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔗</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Tiêu đề bài viết hiển thị trên cổng thông tin *:</label>
+                <input
+                  type="text"
+                  required
+                  value={facebookImportForm.title}
+                  onChange={(e) => setFacebookImportForm({ ...facebookImportForm, title: e.target.value })}
+                  placeholder="VD: [TỪ FACEBOOK] Lễ Khai Mạc Giải Thể Thao Thanh Niên..."
+                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold text-sm focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Đoạn trích tóm tắt ngắn (Excerpt):</label>
+                <input
+                  type="text"
+                  value={facebookImportForm.excerpt}
+                  onChange={(e) => setFacebookImportForm({ ...facebookImportForm, excerpt: e.target.value })}
+                  placeholder="Tóm tắt 1-2 câu giới thiệu..."
+                  className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white"
+                />
+              </div>
+
+              <RichTextEditor
+                value={facebookImportForm.content}
+                onChange={(content) => setFacebookImportForm({ ...facebookImportForm, content })}
+                label="Nội dung bài viết Facebook (văn bản & ghi chú)"
+                placeholder="Sao chép nội dung bài đăng trên Facebook dán vào đây..."
+                category="news_events"
+                toolbarPreset="standard"
+                minHeight="180px"
+              />
+
+              {/* Thumbnail & Multi-image Gallery Input */}
+              <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+                <label className="block font-bold text-slate-300">🖼️ Ảnh đại diện bài viết (Thumbnail URL):</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={facebookImportForm.thumbnail}
+                    onChange={(e) => setFacebookImportForm({ ...facebookImportForm, thumbnail: e.target.value })}
+                    placeholder="https://..."
+                    className="flex-1 p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-[11px]"
+                  />
+                  <MediaPickerButton
+                    category="news_events"
+                    value={facebookImportForm.thumbnail}
+                    onSelect={(url) => setFacebookImportForm(prev => ({ ...prev, thumbnail: Array.isArray(url) ? url[0] : url }))}
+                    label="Kho Media"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">
+                    📸 Chùm ảnh hoạt động (Gallery - Dán mỗi link ảnh 1 dòng):
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={facebookImportForm.imagesText}
+                    onChange={(e) => setFacebookImportForm({ ...facebookImportForm, imagesText: e.target.value })}
+                    placeholder="https://image-url-1.jpg&#10;https://image-url-2.jpg&#10;https://image-url-3.jpg"
+                    className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 font-mono text-xs"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Hệ thống sẽ tạo thư viện ảnh (Photo Gallery) tương tác cho bài viết này trên trang chủ.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Thẻ phân loại (Tags):</label>
+                <input
+                  type="text"
+                  value={facebookImportForm.tags}
+                  onChange={(e) => setFacebookImportForm({ ...facebookImportForm, tags: e.target.value })}
+                  placeholder="#Facebook, #TuoiTreQuangTrung, #DoanTruong"
+                  className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-blue-400 font-bold"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                <label className="flex items-center gap-2 cursor-pointer text-slate-300 font-bold">
+                  <input
+                    type="checkbox"
+                    checked={facebookImportForm.isPinned}
+                    onChange={(e) => setFacebookImportForm({ ...facebookImportForm, isPinned: e.target.checked })}
+                    className="rounded bg-slate-800 border-slate-700 text-blue-600"
+                  />
+                  <span>Ghim bài viết Facebook lên đầu trang</span>
+                </label>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsFacebookImportModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold shadow-glow flex items-center gap-1.5"
+                  >
+                    <span>🚀 Đăng Bài Lên Cổng Thông Tin</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>

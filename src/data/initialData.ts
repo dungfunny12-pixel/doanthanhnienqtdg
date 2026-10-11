@@ -1967,17 +1967,88 @@ Nhằm chấn chỉnh kỷ cương học đường, nâng cao ý thức tự gi�
 
 Đại hội đã tổng kết công tác Đoàn và phong trào thanh niên nhiệm kỳ 2025 - 2026, đồng thời đề ra phương hướng, mục tiêu và nhiệm vụ công tác Đoàn nhiệm kỳ mới 2026 - 2027.
 
-Khẩu hiệu hành động: Tuổi trẻ THPT Quang Trung - Đông Giang Tiên phong - Bản lĩnh - Đoàn kết - Sáng tạo!`,
+Khẩu hiệu hành động: Tuổi trẻ THPT Quang Trung - Đông Giang Tiên phong - Bản lĩnh - Đoàn kết - Sáng tạo!
+
+*(Bài viết và hình ảnh được đồng bộ từ Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang)*`,
     thumbnail: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&auto=format&fit=crop&q=80',
-    author: 'BCH Đoàn Trường',
-    authorRole: 'Ban Thường Vụ',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Fanpage Chính Thức',
     publishDate: '2026-09-03 08:00',
     isPinned: true,
     isHidden: false,
     category: 'news',
     urgency: 'critical',
-    tags: ['#DaiHoiDoan', '#TuoiTreQuangTrung', '#NhiemKy2026_2027'],
-    views: 1850
+    tags: ['#Facebook', '#DaiHoiDoan', '#TuoiTreQuangTrung', '#NhiemKy2026_2027'],
+    views: 1850,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook',
+    images: [
+      'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop&q=80'
+    ]
+  },
+  {
+    id: 'news-fb-01',
+    title: 'Lễ Kết Nạp Đoàn Viên Mới – Lớp Đoàn Viên 95 Năm Thành Lập Đoàn TNCS Hồ Chí Minh',
+    excerpt: 'Đoàn trường THPT Quang Trung - Đông Giang long trọng tổ chức Lễ kết nạp đoàn viên mới cho 68 thanh niên ưu tú tại phòng truyền thống.',
+    content: `[KẾT NẠP ĐOÀN VIÊN MỚI] ĐOÀN TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG TỔ CHỨC LỄ KẾT NẠP ĐOÀN VIÊN ĐỢT I NĂM HỌC 2026 - 2027.
+
+Hôm nay, trong không khí trang nghiêm tại phòng Truyền thống nhà trường, Ban Thường vụ Đoàn trường THPT Quang Trung - Đông Giang đã tổ chức Lễ Kết Nạp Đoàn Viên Mới cho 68 thanh niên ưu tú tiêu biểu đến từ các chi đoàn Khối 10 và Khối 11.
+
+Được đứng vào hàng ngũ của Đoàn TNCS Hồ Chí Minh là niềm vinh dự, tự hào to lớn của mỗi thanh niên, đồng thời nhắc nhở các bạn luôn nỗ lực rèn đức, luyện tài, xứng đáng là cánh tay đắc lực của Đảng.
+
+Chúc mừng các tân đoàn viên! Hãy luôn giữ vững tinh thần "Đâu cần thanh niên có, việc gì khó có thanh niên"! 🇻🇳
+
+*(Bài viết và hình ảnh được đồng bộ từ Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang)*`,
+    thumbnail: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop&q=80',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Fanpage Chính Thức',
+    publishDate: '2026-09-02 16:30',
+    isPinned: false,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['#Facebook', '#KetNapDoanVien', '#TuoiTreQuangTrung'],
+    views: 1120,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook',
+    images: [
+      'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=800&auto=format&fit=crop&q=80'
+    ]
+  },
+  {
+    id: 'news-fb-02',
+    title: 'Chùm Ảnh Hoạt Động: Giải Bóng Đá Nữ Thanh Niên Tranh Cúp Đoàn Trường 2026',
+    excerpt: 'Những pha bóng đẹp mắt, tinh thần thể thao nhiệt huyết và sự cổ vũ cuồng nhiệt của các nữ đoàn viên thanh niên 18 chi đoàn.',
+    content: `[SÔI NỔI PHONG TRÀO THỂ THAO] GIẢI BÓNG ĐÁ NỮ HỌC SINH THPT QUANG TRUNG - ĐÔNG GIANG NĂM HỌC 2026 - 2027.
+
+Giải đấu đã mang đến những trận cầu kịch tính, mãn nhãn với những pha tranh chấp quyết liệt và tinh thần fair-play cao thượng.
+
+Xin chúc mừng Chi đoàn 12/2 đã xuất sắc giành chức Vô địch sau loạt sút luân lưu căng thẳng!
+
+Cảm ơn các cầu thủ nữ và đông đảo cổ động viên đã cháy hết mình vì màu cờ sắc áo chi đoàn! 🔥⚽
+
+*(Bài viết và hình ảnh được đồng bộ từ Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang)*`,
+    thumbnail: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=80',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Fanpage Chính Thức',
+    publishDate: '2026-08-30 17:00',
+    isPinned: false,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['#Facebook', '#BongDaNu', '#HoiThaoThanhNien'],
+    views: 940,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook',
+    images: [
+      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&auto=format&fit=crop&q=80'
+    ]
   },
 
   // 2. BẢN TIN & HOẠT ĐỘNG PHONG TRÀO ĐOÀN

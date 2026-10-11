@@ -225,6 +225,9 @@ export interface NewsPost {
     size?: string;
     type?: string;
   }>;
+  sourceUrl?: string; // Link bài viết gốc trên Facebook hoặc nền tảng khác
+  sourcePlatform?: 'facebook' | 'internal' | 'web'; // Nguồn cấp bài viết ('facebook' | 'internal' | 'web')
+  images?: string[]; // Thư viện nhiều hình ảnh đính kèm bài viết
 }
 
 export interface TaskNotice {
