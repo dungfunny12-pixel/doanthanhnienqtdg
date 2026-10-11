@@ -11655,389 +11655,427 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
       {/* ================= MODAL: CLASS ADD / EDIT ================= */}
       {isClassModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="glass-modal max-w-md w-full rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-red-600 text-white font-bold">🏫</span>
-                <h3 className="text-base font-black text-white">
-                  {editingClass ? 'Chỉnh Sửa Thông Tin Lớp Học' : 'Thêm Lớp Học Mới'}
-                </h3>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-hidden animate-fadeIn">
+          <div className="glass-modal max-w-2xl w-full max-h-[90vh] flex flex-col rounded-3xl border border-slate-700/80 bg-slate-950/95 shadow-2xl overflow-hidden my-auto">
+            {/* Header cố định - Không bao giờ bị cuộn mất hay che khuất */}
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-800 bg-slate-900/90 shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="p-2 rounded-xl bg-red-600 text-white font-bold shadow-md">🏫</span>
+                <div>
+                  <h3 className="text-base font-black text-white">
+                    {editingClass ? 'Chỉnh Sửa Thông Tin Lớp Học' : 'Thêm Lớp Học Mới'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {classForm.id ? `Cập nhật thông tin Lớp ${classForm.id} & Ban Cán Sự` : 'Nhập thông tin cơ bản và ban cán sự'}
+                  </p>
+                </div>
               </div>
-              <button onClick={() => { setIsClassModalOpen(false); setEditingClass(null); }} className="text-slate-400 hover:text-white">
+              <button 
+                type="button"
+                onClick={() => { setIsClassModalOpen(false); setEditingClass(null); }} 
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title="Đóng"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveClass} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2">
+            {/* Form nội dung cuộn mượt bên trong */}
+            <form onSubmit={handleSaveClass} className="flex flex-col flex-1 min-h-0">
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar text-xs">
+                {/* 1. Mã Lớp & Khối */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Mã Lớp (ID):</label>
+                    <input
+                      type="text"
+                      required
+                      disabled={!!editingClass}
+                      value={classForm.id}
+                      onChange={(e) => setClassForm({ ...classForm, id: e.target.value, name: `Lớp ${e.target.value}` })}
+                      placeholder="10/1"
+                      className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-amber-400 font-mono font-bold disabled:opacity-60 focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Khối:</label>
+                    <select
+                      value={classForm.grade}
+                      onChange={(e) => setClassForm({ ...classForm, grade: Number(e.target.value) as any })}
+                      className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold focus:border-red-500"
+                    >
+                      <option value={10}>Khối 10</option>
+                      <option value={11}>Khối 11</option>
+                      <option value={12}>Khối 12</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 2. Tên Hiển Thị Của Lớp */}
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">Mã Lớp (ID):</label>
+                  <label className="block font-bold text-slate-300 mb-1">Tên Hiển Thị Của Lớp:</label>
                   <input
                     type="text"
                     required
-                    disabled={!!editingClass}
-                    value={classForm.id}
-                    onChange={(e) => setClassForm({ ...classForm, id: e.target.value, name: `Lớp ${e.target.value}` })}
-                    placeholder="10/7"
-                    className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-400 font-mono font-bold disabled:opacity-60"
+                    value={classForm.name}
+                    onChange={(e) => setClassForm({ ...classForm, name: e.target.value })}
+                    placeholder="VD: Lớp 10/1"
+                    className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold focus:border-red-500"
                   />
                 </div>
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Khối:</label>
+
+                {/* 3. Sĩ số & Số đoàn viên */}
+                <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Tổng Sĩ Số (Học Sinh):</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="60"
+                        required
+                        value={classForm.totalStudents}
+                        onChange={(e) => setClassForm({ ...classForm, totalStudents: Number(e.target.value) })}
+                        className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold focus:border-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Số Đoàn Viên:</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="60"
+                        required
+                        value={classForm.unionMembers}
+                        onChange={(e) => setClassForm({ ...classForm, unionMembers: Number(e.target.value) })}
+                        className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-amber-400 font-bold focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Nút tự động đồng bộ sĩ số từ CSDL học sinh */}
+                  {(() => {
+                    const classSts = students.filter(s => s.classId === classForm.id && s.status !== 'inactive');
+                    const cTotal = classSts.length;
+                    const cUnion = classSts.filter(s => s.isUnionMember).length;
+                    if (cTotal > 0 && (classForm.totalStudents !== cTotal || classForm.unionMembers !== cUnion)) {
+                      return (
+                        <div className="pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setClassForm(prev => ({ ...prev, totalStudents: cTotal, unionMembers: cUnion }))}
+                            className="w-full py-2 px-3 rounded-xl bg-emerald-950/70 border border-emerald-700/60 text-emerald-400 hover:bg-emerald-900/60 text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>CSDL thực tế: {cTotal} học sinh / {cUnion} đoàn viên ➔ Bấm để áp dụng ngay</span>
+                          </button>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+
+                {/* 4. GVCN */}
+                <div className="space-y-1.5 p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <label className="block font-bold text-slate-300">Họ Tên Giáo Viên Chủ Nhiệm (GVCN):</label>
+                    <span className="text-[11px] text-amber-400 font-medium">Chọn từ CSDL hoặc nhập tay</span>
+                  </div>
                   <select
-                    value={classForm.grade}
-                    onChange={(e) => setClassForm({ ...classForm, grade: Number(e.target.value) as any })}
-                    className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
+                    value=""
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) return;
+                      const u = users.find(usr => usr.id === val);
+                      if (u) {
+                        setClassForm(prev => ({ ...prev, gvcnName: u.name, gvcnId: u.id }));
+                      }
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-amber-300 font-medium focus:border-amber-500"
                   >
-                    <option value={10}>Khối 10</option>
-                    <option value={11}>Khối 11</option>
-                    <option value={12}>Khối 12</option>
+                    <option value="">-- Chọn nhanh từ danh sách Giáo viên / Tài khoản --</option>
+                    {users
+                      .filter(u => u.role === 'manager' || u.role === 'admin' || u.roleTitle?.toLowerCase().includes('gvcn') || u.roleTitle?.toLowerCase().includes('giáo viên'))
+                      .map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.roleTitle || 'GVCN'}{u.phone ? ` - ${u.phone}` : ''})
+                        </option>
+                      ))}
                   </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Tên Hiển Thị Của Lớp:</label>
-                <input
-                  type="text"
-                  required
-                  value={classForm.name}
-                  onChange={(e) => setClassForm({ ...classForm, name: e.target.value })}
-                  placeholder="VD: Lớp 10/7"
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
-                />
-              </div>
-
-              {/* Sĩ số & Số đoàn viên */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Tổng Sĩ Số (Học Sinh):</label>
                   <input
-                    type="number"
-                    min="1"
-                    max="60"
-                    required
-                    value={classForm.totalStudents}
-                    onChange={(e) => setClassForm({ ...classForm, totalStudents: Number(e.target.value) })}
-                    className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
+                    type="text"
+                    value={classForm.gvcnName}
+                    onChange={(e) => setClassForm({ ...classForm, gvcnName: e.target.value })}
+                    placeholder="VD: Thầy Nguyễn Văn Thành / Cô Rapát Thị Mận"
+                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold placeholder-slate-500 focus:border-red-500"
                   />
                 </div>
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Số Đoàn Viên:</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="60"
-                    required
-                    value={classForm.unionMembers}
-                    onChange={(e) => setClassForm({ ...classForm, unionMembers: Number(e.target.value) })}
-                    className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-400 font-bold"
-                  />
-                </div>
-                {/* Nút tự động đồng bộ sĩ số từ CSDL học sinh */}
+
+                {/* 5. Ban Cán Sự Lớp & BCH Chi Đoàn (4 Vị Trí) */}
                 {(() => {
-                  const classSts = students.filter(s => s.classId === classForm.id && s.status !== 'inactive');
-                  const cTotal = classSts.length;
-                  const cUnion = classSts.filter(s => s.isUnionMember).length;
-                  if (cTotal > 0 && (classForm.totalStudents !== cTotal || classForm.unionMembers !== cUnion)) {
-                    return (
-                      <div className="col-span-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setClassForm(prev => ({ ...prev, totalStudents: cTotal, unionMembers: cUnion }))}
-                          className="w-full py-1.5 px-3 rounded-xl bg-emerald-950/70 border border-emerald-700/60 text-emerald-400 hover:bg-emerald-900/60 text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>CSDL thực tế: {cTotal} học sinh / {cUnion} đoàn viên ➔ Bấm để áp dụng ngay</span>
-                        </button>
+                  const currentClassStudents = students
+                    .filter(s => s.classId === classForm.id && s.status !== 'inactive')
+                    .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+
+                  return (
+                    <div className="p-3.5 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-black text-amber-400 border-b border-slate-800 pb-2">
+                        <span>🎖️ BAN CÁN SỰ & BCH CHI ĐOÀN LỚP</span>
+                        {INITIAL_CLASSES.some(ic => ic.id === classForm.id) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const initC = INITIAL_CLASSES.find(ic => ic.id === classForm.id);
+                              if (initC) {
+                                setClassForm(prev => ({
+                                  ...prev,
+                                  classPresidentName: initC.classPresidentName || prev.classPresidentName,
+                                  classPresidentPhone: initC.classPresidentPhone || prev.classPresidentPhone,
+                                  academicVicePresidentName: initC.academicVicePresidentName || prev.academicVicePresidentName,
+                                  academicVicePresidentPhone: initC.academicVicePresidentPhone || prev.academicVicePresidentPhone,
+                                  bithuName: initC.bithuName || prev.bithuName,
+                                  bithuPhone: initC.bithuPhone || prev.bithuPhone,
+                                  deputySecretaryName: initC.deputySecretaryName || prev.deputySecretaryName,
+                                  deputySecretaryPhone: initC.deputySecretaryPhone || prev.deputySecretaryPhone,
+                                  gvcnName: (prev.gvcnName && prev.gvcnName !== 'Chưa phân công') ? prev.gvcnName : (initC.gvcnName || prev.gvcnName)
+                                }));
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-bold flex items-center gap-1 transition-all shadow-sm"
+                          >
+                            <Sparkles className="w-3 h-3 text-amber-400" />
+                            <span>⚡ Tự động điền theo CSDL mặc định</span>
+                          </button>
+                        )}
                       </div>
-                    );
-                  }
-                  return null;
+
+                      {/* Lưới 2 Cột Gọn Gàng cho 4 chức danh */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* 1. Lớp Trưởng */}
+                        <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block font-bold text-slate-300 text-xs">⭐ Lớp Trưởng:</label>
+                              <span className="text-[10px] text-amber-400 font-medium">CSDL ({currentClassStudents.length} HS)</span>
+                            </div>
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const stId = e.target.value;
+                                if (!stId) return;
+                                const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
+                                if (s) {
+                                  setClassForm(prev => ({
+                                    ...prev,
+                                    classPresidentName: s.name,
+                                    classPresidentPhone: s.phone || prev.classPresidentPhone
+                                  }));
+                                }
+                              }}
+                              className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-sky-300 font-medium focus:border-sky-500 mb-2"
+                            >
+                              <option value="">-- Chọn học sinh từ CSDL --</option>
+                              {currentClassStudents.map(s => (
+                                <option key={s.studentId || s.id} value={s.studentId || s.id}>
+                                  {s.name} {s.phone ? `(SĐT: ${s.phone})` : ''} {s.isUnionMember ? '⭐' : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <input
+                              type="text"
+                              value={classForm.classPresidentName}
+                              onChange={(e) => setClassForm({ ...classForm, classPresidentName: e.target.value })}
+                              placeholder="Họ tên Lớp trưởng (VD: Lâm Xuân Tín)"
+                              className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
+                            />
+                            <input
+                              type="text"
+                              value={classForm.classPresidentPhone}
+                              onChange={(e) => setClassForm({ ...classForm, classPresidentPhone: e.target.value })}
+                              placeholder="SĐT Lớp trưởng (VD: 0372076304)"
+                              className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        {/* 2. Lớp Phó Học Tập */}
+                        <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block font-bold text-slate-300 text-xs">📘 Lớp Phó Học Tập:</label>
+                              <span className="text-[10px] text-amber-400 font-medium">CSDL ({currentClassStudents.length} HS)</span>
+                            </div>
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const stId = e.target.value;
+                                if (!stId) return;
+                                const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
+                                if (s) {
+                                  setClassForm(prev => ({
+                                    ...prev,
+                                    academicVicePresidentName: s.name,
+                                    academicVicePresidentPhone: s.phone || prev.academicVicePresidentPhone
+                                  }));
+                                }
+                              }}
+                              className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-sky-300 font-medium focus:border-sky-500 mb-2"
+                            >
+                              <option value="">-- Chọn học sinh từ CSDL --</option>
+                              {currentClassStudents.map(s => (
+                                <option key={s.studentId || s.id} value={s.studentId || s.id}>
+                                  {s.name} {s.phone ? `(SĐT: ${s.phone})` : ''} {s.isUnionMember ? '⭐' : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <input
+                              type="text"
+                              value={classForm.academicVicePresidentName}
+                              onChange={(e) => setClassForm({ ...classForm, academicVicePresidentName: e.target.value })}
+                              placeholder="Họ tên Lớp phó HT (VD: Phạm Nguyễn Bảo Vi)"
+                              className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
+                            />
+                            <input
+                              type="text"
+                              value={classForm.academicVicePresidentPhone}
+                              onChange={(e) => setClassForm({ ...classForm, academicVicePresidentPhone: e.target.value })}
+                              placeholder="SĐT Lớp phó HT (VD: 0343226894)"
+                              className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        {/* 3. Bí Thư Chi Đoàn */}
+                        <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-emerald-900/60 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block font-bold text-emerald-400 text-xs">🚩 Bí Thư Chi Đoàn:</label>
+                              <span className="text-[10px] text-emerald-300 font-medium">Ưu tiên Đoàn viên ⭐</span>
+                            </div>
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const stId = e.target.value;
+                                if (!stId) return;
+                                const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
+                                if (s) {
+                                  setClassForm(prev => ({
+                                    ...prev,
+                                    bithuName: s.name,
+                                    bithuPhone: s.phone || prev.bithuPhone,
+                                    bithuId: s.studentId || s.id
+                                  }));
+                                }
+                              }}
+                              className="w-full p-2 rounded-lg bg-slate-900 border border-emerald-700/60 text-xs text-emerald-300 font-medium focus:border-emerald-500 mb-2"
+                            >
+                              <option value="">-- Chọn Đoàn viên / Học sinh từ CSDL --</option>
+                              {currentClassStudents.map(s => (
+                                <option key={s.studentId || s.id} value={s.studentId || s.id}>
+                                  {s.isUnionMember ? '⭐ Đoàn viên: ' : 'Học sinh: '}{s.name} {s.phone ? `(SĐT: ${s.phone})` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <input
+                              type="text"
+                              value={classForm.bithuName}
+                              onChange={(e) => setClassForm({ ...classForm, bithuName: e.target.value })}
+                              placeholder="Họ tên Bí thư Chi đoàn"
+                              className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-emerald-400 font-bold text-xs"
+                            />
+                            <input
+                              type="text"
+                              value={classForm.bithuPhone}
+                              onChange={(e) => setClassForm({ ...classForm, bithuPhone: e.target.value })}
+                              placeholder="SĐT Bí thư (VD: 0978819242)"
+                              className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-emerald-300 font-mono text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        {/* 4. Phó Bí Thư */}
+                        <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block font-bold text-slate-300 text-xs">🎗️ Phó Bí Thư Chi Đoàn:</label>
+                              <span className="text-[10px] text-amber-400 font-medium">CSDL ({currentClassStudents.length} HS)</span>
+                            </div>
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const stId = e.target.value;
+                                if (!stId) return;
+                                const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
+                                if (s) {
+                                  setClassForm(prev => ({
+                                    ...prev,
+                                    deputySecretaryName: s.name,
+                                    deputySecretaryPhone: s.phone || prev.deputySecretaryPhone
+                                  }));
+                                }
+                              }}
+                              className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-sky-300 font-medium focus:border-sky-500 mb-2"
+                            >
+                              <option value="">-- Chọn Đoàn viên / Học sinh từ CSDL --</option>
+                              {currentClassStudents.map(s => (
+                                <option key={s.studentId || s.id} value={s.studentId || s.id}>
+                                  {s.isUnionMember ? '⭐ Đoàn viên: ' : 'Học sinh: '}{s.name} {s.phone ? `(SĐT: ${s.phone})` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <input
+                              type="text"
+                              value={classForm.deputySecretaryName}
+                              onChange={(e) => setClassForm({ ...classForm, deputySecretaryName: e.target.value })}
+                              placeholder="Họ tên Phó Bí thư (VD: Võ Viết Tới)"
+                              className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
+                            />
+                            <input
+                              type="text"
+                              value={classForm.deputySecretaryPhone}
+                              onChange={(e) => setClassForm({ ...classForm, deputySecretaryPhone: e.target.value })}
+                              placeholder="SĐT Phó Bí thư (VD: 0923150635)"
+                              className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
                 })()}
               </div>
 
-              {/* GVCN */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block font-bold text-slate-300">Họ Tên Giáo Viên Chủ Nhiệm (GVCN):</label>
-                  <span className="text-[11px] text-amber-400 font-medium">Chọn từ CSDL hoặc nhập tay</span>
+              {/* Footer cố định - Luôn nhìn thấy và thao tác ngay */}
+              <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-t border-slate-800 bg-slate-900/90 shrink-0">
+                <span className="text-[11px] text-slate-400 hidden sm:inline">
+                  {students.filter(s => s.classId === classForm.id && s.status !== 'inactive').length > 0 && (
+                    <span>💡 Lớp {classForm.id}: Có {students.filter(s => s.classId === classForm.id && s.status !== 'inactive').length} HS trong CSDL</span>
+                  )}
+                </span>
+                <div className="flex items-center gap-2.5 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => { setIsClassModalOpen(false); setEditingClass(null); }}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold shadow-glow transition-all flex items-center gap-1.5"
+                  >
+                    <span>{editingClass ? 'Cập Nhật Lớp & Ban Cán Sự' : 'Thêm Lớp Mới'}</span>
+                  </button>
                 </div>
-                <select
-                  value=""
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (!val) return;
-                    const u = users.find(usr => usr.id === val);
-                    if (u) {
-                      setClassForm(prev => ({ ...prev, gvcnName: u.name, gvcnId: u.id }));
-                    }
-                  }}
-                  className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-amber-300 font-medium focus:border-amber-500"
-                >
-                  <option value="">-- Chọn nhanh từ danh sách Giáo viên / Tài khoản --</option>
-                  {users
-                    .filter(u => u.role === 'manager' || u.role === 'admin' || u.roleTitle?.toLowerCase().includes('gvcn') || u.roleTitle?.toLowerCase().includes('giáo viên'))
-                    .map(u => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} ({u.roleTitle || 'GVCN'}{u.phone ? ` - ${u.phone}` : ''})
-                      </option>
-                    ))}
-                </select>
-                <input
-                  type="text"
-                  value={classForm.gvcnName}
-                  onChange={(e) => setClassForm({ ...classForm, gvcnName: e.target.value })}
-                  placeholder="VD: Thầy Nguyễn Văn Thành / Cô Rapát Thị Mận"
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold placeholder-slate-500 focus:border-red-500"
-                />
-              </div>
-
-              {/* Ban Cán Sự Lớp & BCH Chi Đoàn (4 Vị Trí) */}
-              {(() => {
-                const currentClassStudents = students
-                  .filter(s => s.classId === classForm.id && s.status !== 'inactive')
-                  .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-
-                return (
-                  <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-black text-amber-400 border-b border-slate-800 pb-2">
-                      <span>🎖️ BAN CÁN SỰ & BCH CHI ĐOÀN LỚP</span>
-                      {INITIAL_CLASSES.some(ic => ic.id === classForm.id) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const initC = INITIAL_CLASSES.find(ic => ic.id === classForm.id);
-                            if (initC) {
-                              setClassForm(prev => ({
-                                ...prev,
-                                classPresidentName: initC.classPresidentName || prev.classPresidentName,
-                                classPresidentPhone: initC.classPresidentPhone || prev.classPresidentPhone,
-                                academicVicePresidentName: initC.academicVicePresidentName || prev.academicVicePresidentName,
-                                academicVicePresidentPhone: initC.academicVicePresidentPhone || prev.academicVicePresidentPhone,
-                                bithuName: initC.bithuName || prev.bithuName,
-                                bithuPhone: initC.bithuPhone || prev.bithuPhone,
-                                deputySecretaryName: initC.deputySecretaryName || prev.deputySecretaryName,
-                                deputySecretaryPhone: initC.deputySecretaryPhone || prev.deputySecretaryPhone,
-                                gvcnName: (prev.gvcnName && prev.gvcnName !== 'Chưa phân công') ? prev.gvcnName : (initC.gvcnName || prev.gvcnName)
-                              }));
-                            }
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-bold flex items-center gap-1 transition-all shadow-sm"
-                        >
-                          <Sparkles className="w-3 h-3 text-amber-400" />
-                          <span>⚡ Tự động điền theo CSDL mặc định</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* 1. Lớp Trưởng */}
-                    <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800">
-                      <div className="flex items-center justify-between">
-                        <label className="block font-bold text-slate-300 text-xs">⭐ Họ Tên & SĐT Lớp Trưởng:</label>
-                        <span className="text-[10px] text-amber-400 font-medium">Chọn từ CSDL lớp {classForm.id}</span>
-                      </div>
-                      <select
-                        value=""
-                        onChange={(e) => {
-                          const stId = e.target.value;
-                          if (!stId) return;
-                          const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
-                          if (s) {
-                            setClassForm(prev => ({
-                              ...prev,
-                              classPresidentName: s.name,
-                              classPresidentPhone: s.phone || prev.classPresidentPhone
-                            }));
-                          }
-                        }}
-                        className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-sky-300 font-medium focus:border-sky-500"
-                      >
-                        <option value="">-- Chọn học sinh từ CSDL lớp {classForm.id} ({currentClassStudents.length} HS) --</option>
-                        {currentClassStudents.map(s => (
-                          <option key={s.studentId || s.id} value={s.studentId || s.id}>
-                            {s.name} {s.phone ? `(SĐT: ${s.phone})` : ''} {s.isUnionMember ? '⭐' : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          value={classForm.classPresidentName}
-                          onChange={(e) => setClassForm({ ...classForm, classPresidentName: e.target.value })}
-                          placeholder="Họ tên Lớp trưởng (VD: Lâm Xuân Tín)"
-                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
-                        />
-                        <input
-                          type="text"
-                          value={classForm.classPresidentPhone}
-                          onChange={(e) => setClassForm({ ...classForm, classPresidentPhone: e.target.value })}
-                          placeholder="SĐT Lớp trưởng (VD: 0372076304)"
-                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs"
-                        />
-                      </div>
-                    </div>
-
-                    {/* 2. Lớp Phó Học Tập */}
-                    <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800">
-                      <div className="flex items-center justify-between">
-                        <label className="block font-bold text-slate-300 text-xs">📘 Họ Tên & SĐT Lớp Phó Học Tập:</label>
-                        <span className="text-[10px] text-amber-400 font-medium">Chọn từ CSDL lớp {classForm.id}</span>
-                      </div>
-                      <select
-                        value=""
-                        onChange={(e) => {
-                          const stId = e.target.value;
-                          if (!stId) return;
-                          const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
-                          if (s) {
-                            setClassForm(prev => ({
-                              ...prev,
-                              academicVicePresidentName: s.name,
-                              academicVicePresidentPhone: s.phone || prev.academicVicePresidentPhone
-                            }));
-                          }
-                        }}
-                        className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-sky-300 font-medium focus:border-sky-500"
-                      >
-                        <option value="">-- Chọn học sinh từ CSDL lớp {classForm.id} ({currentClassStudents.length} HS) --</option>
-                        {currentClassStudents.map(s => (
-                          <option key={s.studentId || s.id} value={s.studentId || s.id}>
-                            {s.name} {s.phone ? `(SĐT: ${s.phone})` : ''} {s.isUnionMember ? '⭐' : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          value={classForm.academicVicePresidentName}
-                          onChange={(e) => setClassForm({ ...classForm, academicVicePresidentName: e.target.value })}
-                          placeholder="Họ tên Lớp phó HT (VD: Phạm Nguyễn Bảo Vi)"
-                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
-                        />
-                        <input
-                          type="text"
-                          value={classForm.academicVicePresidentPhone}
-                          onChange={(e) => setClassForm({ ...classForm, academicVicePresidentPhone: e.target.value })}
-                          placeholder="SĐT Lớp phó HT (VD: 0343226894)"
-                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs"
-                        />
-                      </div>
-                    </div>
-
-                    {/* 3. Bí Thư Chi Đoàn */}
-                    <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-emerald-900/60">
-                      <div className="flex items-center justify-between">
-                        <label className="block font-bold text-emerald-400 text-xs">🚩 Họ Tên & SĐT Bí Thư Chi Đoàn:</label>
-                        <span className="text-[10px] text-emerald-300 font-medium">Ưu tiên Đoàn viên ⭐</span>
-                      </div>
-                      <select
-                        value=""
-                        onChange={(e) => {
-                          const stId = e.target.value;
-                          if (!stId) return;
-                          const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
-                          if (s) {
-                            setClassForm(prev => ({
-                              ...prev,
-                              bithuName: s.name,
-                              bithuPhone: s.phone || prev.bithuPhone,
-                              bithuId: s.studentId || s.id
-                            }));
-                          }
-                        }}
-                        className="w-full p-2 rounded-lg bg-slate-900 border border-emerald-700/60 text-xs text-emerald-300 font-medium focus:border-emerald-500"
-                      >
-                        <option value="">-- Chọn Đoàn viên / Học sinh từ CSDL lớp {classForm.id} --</option>
-                        {currentClassStudents.map(s => (
-                          <option key={s.studentId || s.id} value={s.studentId || s.id}>
-                            {s.isUnionMember ? '⭐ Đoàn viên: ' : 'Học sinh: '}{s.name} {s.phone ? `(SĐT: ${s.phone})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          value={classForm.bithuName}
-                          onChange={(e) => setClassForm({ ...classForm, bithuName: e.target.value })}
-                          placeholder="Họ tên Bí thư Chi đoàn"
-                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-emerald-400 font-bold text-xs"
-                        />
-                        <input
-                          type="text"
-                          value={classForm.bithuPhone}
-                          onChange={(e) => setClassForm({ ...classForm, bithuPhone: e.target.value })}
-                          placeholder="SĐT Bí thư (VD: 0978819242)"
-                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-emerald-300 font-mono text-xs"
-                        />
-                      </div>
-                    </div>
-
-                    {/* 4. Phó Bí Thư */}
-                    <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800">
-                      <div className="flex items-center justify-between">
-                        <label className="block font-bold text-slate-300 text-xs">🎗️ Họ Tên & SĐT Phó Bí Thư Chi Đoàn:</label>
-                        <span className="text-[10px] text-amber-400 font-medium">Chọn từ CSDL lớp {classForm.id}</span>
-                      </div>
-                      <select
-                        value=""
-                        onChange={(e) => {
-                          const stId = e.target.value;
-                          if (!stId) return;
-                          const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
-                          if (s) {
-                            setClassForm(prev => ({
-                              ...prev,
-                              deputySecretaryName: s.name,
-                              deputySecretaryPhone: s.phone || prev.deputySecretaryPhone
-                            }));
-                          }
-                        }}
-                        className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-sky-300 font-medium focus:border-sky-500"
-                      >
-                        <option value="">-- Chọn Đoàn viên / Học sinh từ CSDL lớp {classForm.id} --</option>
-                        {currentClassStudents.map(s => (
-                          <option key={s.studentId || s.id} value={s.studentId || s.id}>
-                            {s.isUnionMember ? '⭐ Đoàn viên: ' : 'Học sinh: '}{s.name} {s.phone ? `(SĐT: ${s.phone})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          value={classForm.deputySecretaryName}
-                          onChange={(e) => setClassForm({ ...classForm, deputySecretaryName: e.target.value })}
-                          placeholder="Họ tên Phó Bí thư (VD: Võ Viết Tới)"
-                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
-                        />
-                        <input
-                          type="text"
-                          value={classForm.deputySecretaryPhone}
-                          onChange={(e) => setClassForm({ ...classForm, deputySecretaryPhone: e.target.value })}
-                          placeholder="SĐT Phó Bí thư (VD: 0923150635)"
-                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => { setIsClassModalOpen(false); setEditingClass(null); }}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold shadow-glow"
-                >
-                  {editingClass ? 'Cập Nhật Lớp & Ban Cán Sự' : 'Thêm Lớp Mới'}
-                </button>
               </div>
             </form>
           </div>
