@@ -2071,6 +2071,114 @@ Ban Thi đua - Khen thưởng Đoàn trường THPT Quang Trung - Đông Giang n
     urgency: 'normal',
     tags: ['#ChuNhatXanh', '#TinhNguyen', '#BaoVeMoiTruong'],
     views: 520
+  },
+  // --- BẢN TIN CHÍNH THỨC TỪ FANPAGE TUỔI TRẺ THPT QUANG TRUNG - ĐÔNG GIANG ---
+  {
+    id: 'fb-100065567376763-chunhatxanh-2026',
+    title: 'Đoàn trường THPT Quang Trung - Đông Giang ra quân hưởng ứng "Ngày Chủ nhật xanh" năm 2026',
+    excerpt: 'Sáng ngày 20/09/2026, Đoàn trường THPT Quang Trung - Đông Giang phối hợp Đoàn xã Đông Giang tổ chức ra quân Ngày Chủ nhật xanh...',
+    content: `🌿💚 ĐOÀN TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG RA QUÂN HƯỞNG ỨNG “NGÀY CHỦ NHẬT XANH” NĂM 2026 🌱🌍
+
+Thực hiện chương trình công tác Đoàn và phong trào thanh niên trường học năm học 2026 - 2027, phát huy tinh thần xung kích, tình nguyện của tuổi trẻ vì môi trường sáng - xanh - sạch - đẹp.
+
+Sáng ngày 20/09/2026, Đoàn trường THPT Quang Trung - Đông Giang phối hợp cùng Đoàn xã Đông Giang tổ chức lễ ra quân "Ngày Chủ nhật xanh" với sự tham gia nhiệt tình của đông đảo đoàn viên, thanh niên các chi đoàn.
+
+Các hoạt động trọng tâm:
+✅ Tổng vệ sinh, phát quang bụi rậm, chỉnh trang đường hoa thanh niên tại khuôn viên nhà trường.
+✅ Trồng mới cây xanh, chăm sóc các bồn hoa, cây cảnh.
+✅ Tuyên truyền nâng cao ý thức phân loại rác thải, bảo vệ cảnh quan sư phạm học đường.
+
+Đây là hoạt động ý nghĩa nhằm lan tỏa thông điệp sống xanh, nâng cao trách nhiệm của mỗi đoàn viên, học sinh đối với môi trường học đường và cộng đồng! 🌳✨`,
+    thumbnail: '/images/fb/chunhatxanh_2026.jpg',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Trang Facebook Đoàn Trường',
+    publishDate: '2026-09-20 10:45',
+    isPinned: false,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['Facebook', 'Đoàn Trường', 'Ngày Chủ Nhật Xanh', 'Thanh Niên Tình Nguyện'],
+    views: 382,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook'
+  },
+  {
+    id: 'fb-100065567376763-thientai-2026',
+    title: 'Trường THPT Quang Trung - Đông Giang tăng cường công tác phòng, chống thiên tai và ứng phó thời tiết bất thường',
+    excerpt: 'Cảnh báo thời tiết và hướng dẫn ứng phó khẩn cấp dành cho giáo viên, nhân viên, bảo vệ và học sinh trường THPT Quang Trung - Đông Giang.',
+    content: `📢🌧️ TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG TĂNG CƯỜNG CÔNG TÁC PHÒNG, CHỐNG THIÊN TAI VÀ ỨNG PHÓ THỜI TIẾT BẤT THƯỜNG 🌧️📢
+
+Trước diễn biến bất thường của thời tiết mùa mưa bão tại vùng cao Đông Giang, Ban Giám hiệu và Ban Chấp hành Đoàn trường THPT Quang Trung ban hành hướng dẫn ứng phó khẩn cấp:
+
+1. Đối với học sinh:
+- Tuyệt đối không băng qua các ngầm tràn, khe suối khi nước dâng cao, dòng chảy xiết.
+- Chủ động liên lạc với GVCN và theo dõi cập nhật các bản tin thời tiết của nhà trường.
+- Học sinh bán trú, nội trú nghiêm túc chấp hành hướng dẫn của thầy cô quản nhiệm.
+
+2. Đối với cán bộ, giáo viên, nhân viên & tổ bảo vệ:
+- Kiểm tra an toàn hệ thống cây xanh, mái che, hệ thống điện và phòng học.
+- Sẵn sàng phương án di chuyển tài liệu, thiết bị dạy học lên khu vực cao ráo, an toàn.
+- Đảm bảo trực ban 24/24 và phối hợp chặt chẽ với lực lượng cứu hộ địa phương.`,
+    thumbnail: '/images/fb/thientai_2026.png',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Trang Facebook Đoàn Trường',
+    publishDate: '2026-09-09 08:15',
+    isPinned: true,
+    isHidden: false,
+    category: 'news',
+    urgency: 'urgent',
+    tags: ['Facebook', 'Đoàn Trường', 'Thông Báo Khẩn', 'An Toàn Học Đường'],
+    views: 520,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook'
+  },
+  {
+    id: 'fb-100065567376763-daihoi-2026',
+    title: 'Đại hội Đại biểu Đoàn TNCS Hồ Chí Minh Trường THPT Quang Trung – Đông Giang Lần thứ II, Nhiệm kỳ 2026–2027',
+    excerpt: 'Đại hội điểm của khối các trường THPT huyện Đông Giang, bầu ra Ban Chấp hành Đoàn trường khóa mới đoàn kết, sáng tạo và xung kích.',
+    content: `🚩 ĐẠI HỘI ĐẠI BIỂU ĐOÀN TNCS HỒ CHÍ MINH TRƯỜNG THPT QUANG TRUNG – ĐÔNG GIANG LẦN THỨ II, NHIỆM KỲ 2026–2027 THÀNH CÔNG TỐT ĐẸP!
+
+Đại hội đã nghiêm túc đánh giá kết quả triển khai Nghị quyết Đại hội khóa I; kiểm điểm sự lãnh đạo của Ban Chấp hành khóa cũ và xác định mục tiêu, phương hướng, nhiệm vụ công tác Đoàn và phong trào thanh niên trường học nhiệm kỳ 2026 - 2027.
+
+Với khẩu hiệu hành động: "Tuổi trẻ THPT Quang Trung: Đoàn kết - Bản lĩnh - Tiên phong - Sáng tạo - Phát triển", Đại hội đã sáng suốt bầu ra 15 đồng chí ưu tú vào Ban Chấp hành Đoàn trường khóa mới.
+
+Xin chúc mừng Ban Chấp hành khóa mới hoàn thành xuất sắc mọi nhiệm vụ được giao! 💐✨`,
+    thumbnail: '/images/fb/daihoi_doan_2026.jpg',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Trang Facebook Đoàn Trường',
+    publishDate: '2026-09-03 09:00',
+    isPinned: false,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['Facebook', 'Đoàn Trường', 'Đại Hội Đoàn', 'Tuổi Trẻ Quang Trung'],
+    views: 615,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook'
+  },
+  {
+    id: 'fb-100065567376763-khaigiang-2026',
+    title: 'Rộn ràng Lễ Khai giảng Năm học mới 2026 - 2027 tại Trường THPT Quang Trung - Đông Giang',
+    excerpt: 'Chào đón các em học sinh Khối 10 gia nhập mái trường THPT Quang Trung thân yêu trong niềm hân hoan, quyết tâm thi đua dạy tốt - học tốt.',
+    content: `🎉 HÒA CHUNG KHÔNG KHÍ HÂN HOAN TOÀN QUỐC: TRƯỜNG THPT QUANG TRUNG - ĐÔNG GIANG LONG TRỌNG TỔ CHỨC LỄ KHAI GIẢNG NĂM HỌC 2026 - 2027 🌸🔔
+
+Sáng ngày 05/09/2026, tiếng trống trường rộn rã đã chính thức vang lên, đánh dấu một năm học mới với nhiều niềm tin và kỳ vọng của thầy và trò nhà trường.
+
+Đoàn trường vinh dự đón nhận sự quan tâm chỉ đạo của Lãnh đạo huyện Đông Giang, Ban Giám hiệu nhà trường và đại diện Hội Cha mẹ học sinh. Tại buổi lễ, Đoàn trường đã trao tặng các suất học bổng "Tiếp sức đến trường" cho các bạn học sinh có hoàn cảnh khó khăn vươn lên trong học tập.
+
+Chúc toàn thể thầy cô giáo và các em học sinh có một năm học mới tràn đầy niềm vui, gặt hái nhiều thành tích rực rỡ! 🎈📚`,
+    thumbnail: '/images/fb/daihoi_doan_2026.jpg',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Trang Facebook Đoàn Trường',
+    publishDate: '2026-09-05 08:00',
+    isPinned: false,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['Facebook', 'Đoàn Trường', 'Khai Giảng 2026', 'Năm Học Mới'],
+    views: 489,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook'
   }
 ];
 
