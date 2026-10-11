@@ -16,12 +16,27 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Extract parameters from body (POST - JSON or Form-urlencoded) or query (GET)
-    const data = req.method === 'GET' ? req.query : req.body || {};
-    
+    // Robustly extract parameters from query or body (supports GET, POST JSON, form-encoded)
+    let data = { ...(req.query || {}) };
+    if (req.body) {
+      if (typeof req.body === 'string') {
+        try {
+          const json = JSON.parse(req.body);
+          data = { ...data, ...json };
+        } catch {
+          try {
+            const params = Object.fromEntries(new URLSearchParams(req.body));
+            data = { ...data, ...params };
+          } catch {}
+        }
+      } else if (typeof req.body === 'object') {
+        data = { ...data, ...req.body };
+      }
+    }
+
     const rawId = data.id || data.post_id || data.news_id || Date.now().toString();
-    const rawMessage = data.message || data.content || data.title || 'Bản tin hoạt động từ Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang';
-    const rawPicture = data.picture || data.image_url || data.full_picture || '/images/fb/chunhatxanh_2026.jpg';
+    const rawMessage = data.message || data.content || data.title || data.story || 'Bản tin hoạt động từ Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang';
+    const rawPicture = data.picture || data.image_url || data.full_picture || data.image || '/images/fb/chunhatxanh_2026.jpg';
 
     // Format news_id
     const newsId = rawId.startsWith('fb-') ? rawId : `fb-${rawId}`;
