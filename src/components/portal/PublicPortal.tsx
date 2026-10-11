@@ -1202,8 +1202,19 @@ export const PublicPortal: React.FC = () => {
             })}
 
             {filteredNewsList.length === 0 && (
-              <div className="col-span-full text-center py-12 glass-panel rounded-2xl border border-slate-800">
-                <p className="text-slate-400 text-sm">Chưa có bài viết hoặc thông báo nào trong mục này.</p>
+              <div className="col-span-full text-center py-12 px-4 rounded-2xl border border-dashed border-blue-500/30 bg-blue-950/20">
+                <p className="text-base font-bold text-white">Đang chờ đồng bộ bài viết từ Fanpage Facebook...</p>
+                <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                  Các bài viết sẽ tự động xuất hiện tại đây ngay khi kịch bản Make.com được kết nối với Trang Fanpage chính thức.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setFacebookViewMode('feed')}
+                  className="mt-3 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-md shadow-blue-600/30"
+                >
+                  <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                  <span>Xem trực tiếp Live Feed Facebook</span>
+                </button>
               </div>
             )}
           </div>
