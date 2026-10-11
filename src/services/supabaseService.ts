@@ -2,7 +2,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { compressImage, dataURLtoFile, compressImageToDataURL } from '../utils/imageCompressor';
 import { saveIndexedDBItem, deleteIndexedDBItem, STORES } from '../utils/indexedDBStorage';
 import { generateUUID } from '../utils/uuid';
-import { INITIAL_USERS } from '../data/initialData';
+import { INITIAL_USERS, INITIAL_CLASSES } from '../data/initialData';
 import { 
   ClassInfo, 
   Student, 
@@ -301,20 +301,34 @@ export const SupabaseService = {
         return null;
       }
 
-      const classes: ClassInfo[] = (rawClasses || []).map(c => ({
-        id: c.class_id,
-        name: c.class_name,
-        grade: Number(c.grade) as 10 | 11 | 12,
-        gvcnName: c.gvcn_name || 'Chưa phân công',
-        gvcnId: c.gvcn_id || '',
-        bithuName: c.bithu_name || 'Chưa phân công',
-        bithuId: c.bithu_id || '',
-        totalStudents: c.total_students || 40,
-        unionMembers: c.union_members_count || 0,
-        standardScore: Number(c.standard_score) || 1440,
-        isArchived: c.is_archived || false,
-        academicYearId: c.academic_year || '2026_2027'
-      })).sort((a, b) => {
+      const classes: ClassInfo[] = (rawClasses || []).map(c => {
+        const initC = INITIAL_CLASSES.find(ic => ic.id === c.class_id);
+        const classSts = (rawStudents || []).filter((s: any) => s.class_id === c.class_id && !s.is_deleted);
+        const calcTotal = classSts.length > 0 ? classSts.length : (c.total_students || initC?.totalStudents || 40);
+        const calcUnion = classSts.length > 0 ? classSts.filter((s: any) => s.is_union_member).length : (c.union_members_count || initC?.unionMembers || 0);
+
+        return {
+          id: c.class_id,
+          name: c.class_name,
+          grade: Number(c.grade) as 10 | 11 | 12,
+          gvcnName: (c.gvcn_name && c.gvcn_name !== 'Chưa phân công') ? c.gvcn_name : (initC?.gvcnName || 'Chưa phân công'),
+          gvcnId: c.gvcn_id || initC?.gvcnId || '',
+          classPresidentName: c.class_president_name || initC?.classPresidentName || '',
+          classPresidentPhone: c.class_president_phone || initC?.classPresidentPhone || '',
+          academicVicePresidentName: c.academic_vice_president_name || initC?.academicVicePresidentName || '',
+          academicVicePresidentPhone: c.academic_vice_president_phone || initC?.academicVicePresidentPhone || '',
+          bithuName: (c.bithu_name && c.bithu_name !== 'Chưa phân công' && c.bithu_name !== 'Đang cập nhật') ? c.bithu_name : (initC?.bithuName || 'Đang cập nhật'),
+          bithuId: c.bithu_id || initC?.bithuId || '',
+          bithuPhone: c.bithu_phone || initC?.bithuPhone || '',
+          deputySecretaryName: c.deputy_secretary_name || initC?.deputySecretaryName || '',
+          deputySecretaryPhone: c.deputy_secretary_phone || initC?.deputySecretaryPhone || '',
+          totalStudents: calcTotal,
+          unionMembers: calcUnion,
+          standardScore: Number(c.standard_score) || 1440,
+          isArchived: c.is_archived || false,
+          academicYearId: c.academic_year || '2026_2027'
+        };
+      }).sort((a, b) => {
         if (a.grade !== b.grade) return a.grade - b.grade;
         const numA = parseInt(a.id.split('/')[1] || '0', 10);
         const numB = parseInt(b.id.split('/')[1] || '0', 10);

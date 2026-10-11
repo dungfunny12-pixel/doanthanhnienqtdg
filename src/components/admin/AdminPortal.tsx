@@ -106,6 +106,7 @@ import { DocumentManagerModal } from '../common/DocumentManagerModal';
 import { DocumentViewerModal } from '../common/DocumentViewerModal';
 import { DocumentPickerButton } from '../common/DocumentPickerButton';
 import { compressImageToDataURL } from '../../utils/imageCompressor';
+import { INITIAL_CLASSES } from '../../data/initialData';
 
 export const AdminPortal: React.FC = () => {
   const {
@@ -1309,6 +1310,34 @@ export const AdminPortal: React.FC = () => {
     totalStudents: 40,
     unionMembers: 30
   });
+
+  const handleOpenEditClass = (c: ClassInfo) => {
+    setEditingClass(c);
+    const initC = INITIAL_CLASSES.find(ic => ic.id === c.id);
+    const classSts = students.filter(s => s.classId === c.id && s.status !== 'inactive');
+    const realTotal = classSts.length > 0 ? classSts.length : (c.totalStudents || initC?.totalStudents || 40);
+    const realUnion = classSts.length > 0 ? classSts.filter(s => s.isUnionMember).length : (c.unionMembers || initC?.unionMembers || 0);
+
+    setClassForm({
+      id: c.id,
+      name: c.name,
+      grade: c.grade,
+      gvcnName: (c.gvcnName && c.gvcnName !== 'Chưa phân công') ? c.gvcnName : (initC?.gvcnName || 'Chưa phân công'),
+      gvcnId: c.gvcnId || initC?.gvcnId || '',
+      classPresidentName: c.classPresidentName || initC?.classPresidentName || '',
+      classPresidentPhone: c.classPresidentPhone || initC?.classPresidentPhone || '',
+      academicVicePresidentName: c.academicVicePresidentName || initC?.academicVicePresidentName || '',
+      academicVicePresidentPhone: c.academicVicePresidentPhone || initC?.academicVicePresidentPhone || '',
+      bithuName: (c.bithuName && c.bithuName !== 'Chưa phân công' && c.bithuName !== 'Đang cập nhật') ? c.bithuName : (initC?.bithuName || 'Đang cập nhật'),
+      bithuId: c.bithuId || initC?.bithuId || `bithu_${c.id.replace('/', '_')}`,
+      bithuPhone: c.bithuPhone || initC?.bithuPhone || '',
+      deputySecretaryName: c.deputySecretaryName || initC?.deputySecretaryName || '',
+      deputySecretaryPhone: c.deputySecretaryPhone || initC?.deputySecretaryPhone || '',
+      totalStudents: realTotal,
+      unionMembers: realUnion
+    });
+    setIsClassModalOpen(true);
+  };
   const [classViewMode, setClassViewMode] = useState<'table' | 'cards'>('table');
   const [classSearchQuery, setClassSearchQuery] = useState<string>('');
 
@@ -4784,28 +4813,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                               <td className="p-3 text-right whitespace-nowrap">
                                 <div className="flex items-center justify-end gap-1">
                                   <button
-                                    onClick={() => {
-                                      setEditingClass(c);
-                                      setClassForm({
-                                        id: c.id,
-                                        name: c.name,
-                                        grade: c.grade,
-                                        gvcnName: c.gvcnName,
-                                        gvcnId: c.gvcnId,
-                                        classPresidentName: c.classPresidentName || '',
-                                        classPresidentPhone: c.classPresidentPhone || '',
-                                        academicVicePresidentName: c.academicVicePresidentName || '',
-                                        academicVicePresidentPhone: c.academicVicePresidentPhone || '',
-                                        bithuName: c.bithuName || '',
-                                        bithuId: c.bithuId || `bithu_${c.id.replace('/', '_')}`,
-                                        bithuPhone: c.bithuPhone || '',
-                                        deputySecretaryName: c.deputySecretaryName || '',
-                                        deputySecretaryPhone: c.deputySecretaryPhone || '',
-                                        totalStudents: c.totalStudents,
-                                        unionMembers: c.unionMembers
-                                      });
-                                      setIsClassModalOpen(true);
-                                    }}
+                                    onClick={() => handleOpenEditClass(c)}
                                     title="Sửa thông tin lớp & Ban Cán sự"
                                     className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-700 hover:border-amber-600 flex items-center gap-1 text-[11px] font-bold"
                                   >
@@ -4947,28 +4955,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
                                 <div className="pt-2 flex justify-end gap-1.5 border-t border-slate-900">
                                   <button
-                                    onClick={() => {
-                                      setEditingClass(c);
-                                      setClassForm({
-                                        id: c.id,
-                                        name: c.name,
-                                        grade: c.grade,
-                                        gvcnName: c.gvcnName,
-                                        gvcnId: c.gvcnId,
-                                        classPresidentName: c.classPresidentName || '',
-                                        classPresidentPhone: c.classPresidentPhone || '',
-                                        academicVicePresidentName: c.academicVicePresidentName || '',
-                                        academicVicePresidentPhone: c.academicVicePresidentPhone || '',
-                                        bithuName: c.bithuName || '',
-                                        bithuId: c.bithuId || `bithu_${c.id.replace('/', '_')}`,
-                                        bithuPhone: c.bithuPhone || '',
-                                        deputySecretaryName: c.deputySecretaryName || '',
-                                        deputySecretaryPhone: c.deputySecretaryPhone || '',
-                                        totalStudents: c.totalStudents,
-                                        unionMembers: c.unionMembers
-                                      });
-                                      setIsClassModalOpen(true);
-                                    }}
+                                    onClick={() => handleOpenEditClass(c)}
                                     className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 flex items-center gap-1 text-[11px]"
                                   >
                                     <Edit3 className="w-3 h-3" />
@@ -11722,6 +11709,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                 />
               </div>
 
+              {/* Sĩ số & Số đoàn viên */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block font-bold text-slate-300 mb-1">Tổng Sĩ Số (Học Sinh):</label>
@@ -11747,11 +11735,56 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-400 font-bold"
                   />
                 </div>
+                {/* Nút tự động đồng bộ sĩ số từ CSDL học sinh */}
+                {(() => {
+                  const classSts = students.filter(s => s.classId === classForm.id && s.status !== 'inactive');
+                  const cTotal = classSts.length;
+                  const cUnion = classSts.filter(s => s.isUnionMember).length;
+                  if (cTotal > 0 && (classForm.totalStudents !== cTotal || classForm.unionMembers !== cUnion)) {
+                    return (
+                      <div className="col-span-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setClassForm(prev => ({ ...prev, totalStudents: cTotal, unionMembers: cUnion }))}
+                          className="w-full py-1.5 px-3 rounded-xl bg-emerald-950/70 border border-emerald-700/60 text-emerald-400 hover:bg-emerald-900/60 text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>CSDL thực tế: {cTotal} học sinh / {cUnion} đoàn viên ➔ Bấm để áp dụng ngay</span>
+                        </button>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* GVCN */}
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Họ Tên Giáo Viên Chủ Nhiệm (GVCN):</label>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold text-slate-300">Họ Tên Giáo Viên Chủ Nhiệm (GVCN):</label>
+                  <span className="text-[11px] text-amber-400 font-medium">Chọn từ CSDL hoặc nhập tay</span>
+                </div>
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val) return;
+                    const u = users.find(usr => usr.id === val);
+                    if (u) {
+                      setClassForm(prev => ({ ...prev, gvcnName: u.name, gvcnId: u.id }));
+                    }
+                  }}
+                  className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-amber-300 font-medium focus:border-amber-500"
+                >
+                  <option value="">-- Chọn nhanh từ danh sách Giáo viên / Tài khoản --</option>
+                  {users
+                    .filter(u => u.role === 'manager' || u.role === 'admin' || u.roleTitle?.toLowerCase().includes('gvcn') || u.roleTitle?.toLowerCase().includes('giáo viên'))
+                    .map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.roleTitle || 'GVCN'}{u.phone ? ` - ${u.phone}` : ''})
+                      </option>
+                    ))}
+                </select>
                 <input
                   type="text"
                   value={classForm.gvcnName}
@@ -11762,107 +11795,234 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
               </div>
 
               {/* Ban Cán Sự Lớp & BCH Chi Đoàn (4 Vị Trí) */}
-              <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-3">
-                <div className="flex items-center gap-1.5 text-xs font-black text-amber-400 border-b border-slate-800 pb-1.5">
-                  <span>🎖️ BAN CÁN SỰ & BCH CHI ĐOÀN LỚP</span>
-                </div>
+              {(() => {
+                const currentClassStudents = students
+                  .filter(s => s.classId === classForm.id && s.status !== 'inactive')
+                  .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
 
-                {/* 1. Lớp Trưởng */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Họ Tên Lớp Trưởng:</label>
-                    <input
-                      type="text"
-                      value={classForm.classPresidentName}
-                      onChange={(e) => setClassForm({ ...classForm, classPresidentName: e.target.value })}
-                      placeholder="VD: Lâm Xuân Tín"
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Số ĐT Lớp Trưởng:</label>
-                    <input
-                      type="text"
-                      value={classForm.classPresidentPhone}
-                      onChange={(e) => setClassForm({ ...classForm, classPresidentPhone: e.target.value })}
-                      placeholder="VD: 0372076304"
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-mono text-xs"
-                    />
-                  </div>
-                </div>
+                return (
+                  <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-black text-amber-400 border-b border-slate-800 pb-2">
+                      <span>🎖️ BAN CÁN SỰ & BCH CHI ĐOÀN LỚP</span>
+                      {INITIAL_CLASSES.some(ic => ic.id === classForm.id) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const initC = INITIAL_CLASSES.find(ic => ic.id === classForm.id);
+                            if (initC) {
+                              setClassForm(prev => ({
+                                ...prev,
+                                classPresidentName: initC.classPresidentName || prev.classPresidentName,
+                                classPresidentPhone: initC.classPresidentPhone || prev.classPresidentPhone,
+                                academicVicePresidentName: initC.academicVicePresidentName || prev.academicVicePresidentName,
+                                academicVicePresidentPhone: initC.academicVicePresidentPhone || prev.academicVicePresidentPhone,
+                                bithuName: initC.bithuName || prev.bithuName,
+                                bithuPhone: initC.bithuPhone || prev.bithuPhone,
+                                deputySecretaryName: initC.deputySecretaryName || prev.deputySecretaryName,
+                                deputySecretaryPhone: initC.deputySecretaryPhone || prev.deputySecretaryPhone,
+                                gvcnName: (prev.gvcnName && prev.gvcnName !== 'Chưa phân công') ? prev.gvcnName : (initC.gvcnName || prev.gvcnName)
+                              }));
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-bold flex items-center gap-1 transition-all shadow-sm"
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          <span>⚡ Tự động điền theo CSDL mặc định</span>
+                        </button>
+                      )}
+                    </div>
 
-                {/* 2. Lớp Phó Học Tập */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Lớp Phó Học Tập:</label>
-                    <input
-                      type="text"
-                      value={classForm.academicVicePresidentName}
-                      onChange={(e) => setClassForm({ ...classForm, academicVicePresidentName: e.target.value })}
-                      placeholder="VD: Phạm Nguyễn Bảo Vi"
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Số ĐT Lớp Phó HT:</label>
-                    <input
-                      type="text"
-                      value={classForm.academicVicePresidentPhone}
-                      onChange={(e) => setClassForm({ ...classForm, academicVicePresidentPhone: e.target.value })}
-                      placeholder="VD: 0343226894"
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-mono text-xs"
-                    />
-                  </div>
-                </div>
+                    {/* 1. Lớp Trưởng */}
+                    <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <label className="block font-bold text-slate-300 text-xs">⭐ Họ Tên & SĐT Lớp Trưởng:</label>
+                        <span className="text-[10px] text-amber-400 font-medium">Chọn từ CSDL lớp {classForm.id}</span>
+                      </div>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const stId = e.target.value;
+                          if (!stId) return;
+                          const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
+                          if (s) {
+                            setClassForm(prev => ({
+                              ...prev,
+                              classPresidentName: s.name,
+                              classPresidentPhone: s.phone || prev.classPresidentPhone
+                            }));
+                          }
+                        }}
+                        className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-sky-300 font-medium focus:border-sky-500"
+                      >
+                        <option value="">-- Chọn học sinh từ CSDL lớp {classForm.id} ({currentClassStudents.length} HS) --</option>
+                        {currentClassStudents.map(s => (
+                          <option key={s.studentId || s.id} value={s.studentId || s.id}>
+                            {s.name} {s.phone ? `(SĐT: ${s.phone})` : ''} {s.isUnionMember ? '⭐' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={classForm.classPresidentName}
+                          onChange={(e) => setClassForm({ ...classForm, classPresidentName: e.target.value })}
+                          placeholder="Họ tên Lớp trưởng (VD: Lâm Xuân Tín)"
+                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
+                        />
+                        <input
+                          type="text"
+                          value={classForm.classPresidentPhone}
+                          onChange={(e) => setClassForm({ ...classForm, classPresidentPhone: e.target.value })}
+                          placeholder="SĐT Lớp trưởng (VD: 0372076304)"
+                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
 
-                {/* 3. Bí Thư Chi Đoàn */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Bí Thư Chi Đoàn:</label>
-                    <input
-                      type="text"
-                      value={classForm.bithuName}
-                      onChange={(e) => setClassForm({ ...classForm, bithuName: e.target.value })}
-                      placeholder="VD: Nguyễn Thị Bảo Yến"
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-emerald-400 font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Số ĐT Bí Thư:</label>
-                    <input
-                      type="text"
-                      value={classForm.bithuPhone}
-                      onChange={(e) => setClassForm({ ...classForm, bithuPhone: e.target.value })}
-                      placeholder="VD: 0978819242"
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-emerald-300 font-mono text-xs"
-                    />
-                  </div>
-                </div>
+                    {/* 2. Lớp Phó Học Tập */}
+                    <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <label className="block font-bold text-slate-300 text-xs">📘 Họ Tên & SĐT Lớp Phó Học Tập:</label>
+                        <span className="text-[10px] text-amber-400 font-medium">Chọn từ CSDL lớp {classForm.id}</span>
+                      </div>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const stId = e.target.value;
+                          if (!stId) return;
+                          const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
+                          if (s) {
+                            setClassForm(prev => ({
+                              ...prev,
+                              academicVicePresidentName: s.name,
+                              academicVicePresidentPhone: s.phone || prev.academicVicePresidentPhone
+                            }));
+                          }
+                        }}
+                        className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-sky-300 font-medium focus:border-sky-500"
+                      >
+                        <option value="">-- Chọn học sinh từ CSDL lớp {classForm.id} ({currentClassStudents.length} HS) --</option>
+                        {currentClassStudents.map(s => (
+                          <option key={s.studentId || s.id} value={s.studentId || s.id}>
+                            {s.name} {s.phone ? `(SĐT: ${s.phone})` : ''} {s.isUnionMember ? '⭐' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={classForm.academicVicePresidentName}
+                          onChange={(e) => setClassForm({ ...classForm, academicVicePresidentName: e.target.value })}
+                          placeholder="Họ tên Lớp phó HT (VD: Phạm Nguyễn Bảo Vi)"
+                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
+                        />
+                        <input
+                          type="text"
+                          value={classForm.academicVicePresidentPhone}
+                          onChange={(e) => setClassForm({ ...classForm, academicVicePresidentPhone: e.target.value })}
+                          placeholder="SĐT Lớp phó HT (VD: 0343226894)"
+                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
 
-                {/* 4. Phó Bí Thư */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Phó Bí Thư Chi Đoàn:</label>
-                    <input
-                      type="text"
-                      value={classForm.deputySecretaryName}
-                      onChange={(e) => setClassForm({ ...classForm, deputySecretaryName: e.target.value })}
-                      placeholder="VD: Võ Viết Tới"
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold"
-                    />
+                    {/* 3. Bí Thư Chi Đoàn */}
+                    <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-emerald-900/60">
+                      <div className="flex items-center justify-between">
+                        <label className="block font-bold text-emerald-400 text-xs">🚩 Họ Tên & SĐT Bí Thư Chi Đoàn:</label>
+                        <span className="text-[10px] text-emerald-300 font-medium">Ưu tiên Đoàn viên ⭐</span>
+                      </div>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const stId = e.target.value;
+                          if (!stId) return;
+                          const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
+                          if (s) {
+                            setClassForm(prev => ({
+                              ...prev,
+                              bithuName: s.name,
+                              bithuPhone: s.phone || prev.bithuPhone,
+                              bithuId: s.studentId || s.id
+                            }));
+                          }
+                        }}
+                        className="w-full p-2 rounded-lg bg-slate-900 border border-emerald-700/60 text-xs text-emerald-300 font-medium focus:border-emerald-500"
+                      >
+                        <option value="">-- Chọn Đoàn viên / Học sinh từ CSDL lớp {classForm.id} --</option>
+                        {currentClassStudents.map(s => (
+                          <option key={s.studentId || s.id} value={s.studentId || s.id}>
+                            {s.isUnionMember ? '⭐ Đoàn viên: ' : 'Học sinh: '}{s.name} {s.phone ? `(SĐT: ${s.phone})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={classForm.bithuName}
+                          onChange={(e) => setClassForm({ ...classForm, bithuName: e.target.value })}
+                          placeholder="Họ tên Bí thư Chi đoàn"
+                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-emerald-400 font-bold text-xs"
+                        />
+                        <input
+                          type="text"
+                          value={classForm.bithuPhone}
+                          onChange={(e) => setClassForm({ ...classForm, bithuPhone: e.target.value })}
+                          placeholder="SĐT Bí thư (VD: 0978819242)"
+                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-emerald-300 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 4. Phó Bí Thư */}
+                    <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <label className="block font-bold text-slate-300 text-xs">🎗️ Họ Tên & SĐT Phó Bí Thư Chi Đoàn:</label>
+                        <span className="text-[10px] text-amber-400 font-medium">Chọn từ CSDL lớp {classForm.id}</span>
+                      </div>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const stId = e.target.value;
+                          if (!stId) return;
+                          const s = currentClassStudents.find(st => (st.studentId || st.id) === stId);
+                          if (s) {
+                            setClassForm(prev => ({
+                              ...prev,
+                              deputySecretaryName: s.name,
+                              deputySecretaryPhone: s.phone || prev.deputySecretaryPhone
+                            }));
+                          }
+                        }}
+                        className="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-sky-300 font-medium focus:border-sky-500"
+                      >
+                        <option value="">-- Chọn Đoàn viên / Học sinh từ CSDL lớp {classForm.id} --</option>
+                        {currentClassStudents.map(s => (
+                          <option key={s.studentId || s.id} value={s.studentId || s.id}>
+                            {s.isUnionMember ? '⭐ Đoàn viên: ' : 'Học sinh: '}{s.name} {s.phone ? `(SĐT: ${s.phone})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={classForm.deputySecretaryName}
+                          onChange={(e) => setClassForm({ ...classForm, deputySecretaryName: e.target.value })}
+                          placeholder="Họ tên Phó Bí thư (VD: Võ Viết Tới)"
+                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
+                        />
+                        <input
+                          type="text"
+                          value={classForm.deputySecretaryPhone}
+                          onChange={(e) => setClassForm({ ...classForm, deputySecretaryPhone: e.target.value })}
+                          placeholder="SĐT Phó Bí thư (VD: 0923150635)"
+                          className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block font-bold text-slate-300 mb-1">Số ĐT Phó Bí Thư:</label>
-                    <input
-                      type="text"
-                      value={classForm.deputySecretaryPhone}
-                      onChange={(e) => setClassForm({ ...classForm, deputySecretaryPhone: e.target.value })}
-                      placeholder="VD: 0923150635"
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-mono text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
                 <button
