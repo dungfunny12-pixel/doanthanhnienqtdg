@@ -2069,6 +2069,89 @@ Trước diễn biến phức tạp của thời tiết vùng cao Đông Giang t
     ]
   },
   {
+    id: 'fb-100065567376763_tinhbandep_2026',
+    title: 'DIỄN ĐÀN "XÂY DỰNG TÌNH BẠN ĐẸP – NÓI KHÔNG VỚI BẠO LỰC HỌC ĐƯỜNG" NĂM HỌC 2026 – 2027',
+    excerpt: 'Chuyên đề giáo dục đạo đức, kỹ năng sống và văn hóa ứng xử học đường; phát huy tình đoàn kết, giúp đỡ nhau cùng tiến bộ trong học tập và rèn luyện.',
+    content: `🤝❤️ DIỄN ĐÀN "XÂY DỰNG TÌNH BẠN ĐẸP – NÓI KHÔNG VỚI BẠO LỰC HỌC ĐƯỜNG" NĂM HỌC 2026 – 2027 ❤️🤝
+
+Nhằm xây dựng môi trường học đường văn minh, thân thiện và lành mạnh, Đoàn trường THPT Quang Trung - Đông Giang phối hợp với Ban Tư vấn tâm lý học đường tổ chức Diễn đàn "Xây dựng tình bạn đẹp - Nói không với bạo lực học đường".
+
+Tại diễn đàn, các bạn học sinh 18 chi đoàn đã cùng nhau thảo luận, xem các tiểu phẩm tình huống thực tế và chia sẻ các giải pháp:
+1. Nhận diện các hình thức bạo lực học đường (thể xác, tinh thần, không gian mạng).
+2. Kỹ năng kiểm soát cảm xúc và giải quyết mâu thuẫn văn minh.
+3. Xây dựng tình bạn trong sáng, đoàn kết giúp nhau cùng tiến bộ.
+
+*(Bài viết và hình ảnh được cập nhật từ Fanpage Tuổi trẻ THPT Quang Trung - Đông Giang)*`,
+    thumbnail: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop&q=80',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Fanpage Chính Thức',
+    publishDate: '2026-09-15',
+    isPinned: false,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['#Facebook', '#KyNangSong', '#TuoiTreQuangTrung'],
+    views: 520,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook',
+    images: [
+      'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop&q=80'
+    ]
+  },
+  {
+    id: 'fb-100065567376763_khaigiang_2026',
+    title: 'LỄ KHAI GIẢNG NĂM HỌC MỚI 2026 – 2027 & PHÁT ĐỘNG PHONG TRÀO THI ĐUA ĐOÀN VIÊN THANH NIÊN',
+    excerpt: 'Rộn ràng tiếng trống trường khai giảng năm học mới 2026 - 2027 tại mái trường THPT Quang Trung - Đông Giang với khí thế thi đua sôi nổi.',
+    content: `🎉🔔 RỘN RÀNG TIẾNG TRỐNG KHAI TRƯỜNG NĂM HỌC 2026 – 2027 🔔🎉
+
+Hòa chung không khí rực rỡ của ngày hội "Toàn dân đưa trẻ đến trường", sáng ngày 05/09, thầy và trò trường THPT Quang Trung - Đông Giang long trọng tổ chức Lễ Khai giảng năm học 2026 - 2027.
+
+Đoàn trường đã long trọng phát động đợt thi đua đầu năm:
+- "Hoa điểm 10 dâng thầy cô" và giữ vững nề nếp kỷ cương trường lớp.
+- Đẩy mạnh phong trào học sinh 3 tốt và câu lạc bộ học thuật, văn thể mỹ.
+- Chào đón hơn 250 tân học sinh Khối 10 gia nhập đại gia đình Quang Trung - Đông Giang!`,
+    thumbnail: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Fanpage Chính Thức',
+    publishDate: '2026-09-05',
+    isPinned: false,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['#Facebook', '#KhaiGiang', '#TuoiTreQuangTrung'],
+    views: 780,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook',
+    images: [
+      'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80'
+    ]
+  },
+  {
+    id: 'fb-100065567376763_daihoidoan_2026',
+    title: 'ĐẠI HỘI ĐẠI BIỂU ĐOÀN TNCS HỒ CHÍ MINH TRƯỜNG THPT QUANG TRUNG – ĐÔNG GIANG LẦN THỨ II, NHIỆM KỲ 2026 – 2027',
+    excerpt: 'Đại hội đại biểu Đoàn trường thành công tốt đẹp, bầu ra Ban Chấp hành khóa mới nhiệm kỳ 2026 - 2027 với khẩu hiệu: "Khát vọng, Tiên phong, Bản lĩnh, Sáng tạo".',
+    content: `🌟🚩 ĐẠI HỘI ĐẠI BIỂU ĐOÀN TNCS HỒ CHÍ MINH TRƯỜNG THPT QUANG TRUNG – ĐÔNG GIANG LẦN THỨ II, NHIỆM KỲ 2026 – 2027 🚩🌟
+
+Đại hội đã tổng kết đánh giá kết quả thực hiện Nghị quyết công tác Đoàn và phong trào thanh niên nhiệm kỳ vừa qua; đồng thời xác định mục tiêu, phương hướng, nhiệm vụ trọng tâm nhiệm kỳ 2026 - 2027.
+
+Đại hội đã sáng suốt bầu ra 15 đồng chí ưu tú vào Ban Chấp hành Đoàn trường nhiệm kỳ 2026 - 2027. Tuổi trẻ nhà trường quyết tâm phát huy tinh thần đoàn kết, xung kích hoàn thành thắng lợi mọi mục tiêu thi đua đề ra!`,
+    thumbnail: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&auto=format&fit=crop&q=80',
+    author: 'Tuổi trẻ THPT Quang Trung - Đông Giang',
+    authorRole: 'Fanpage Chính Thức',
+    publishDate: '2026-09-03',
+    isPinned: false,
+    isHidden: false,
+    category: 'news',
+    urgency: 'normal',
+    tags: ['#Facebook', '#DaiHoiDoan', '#TuoiTreQuangTrung'],
+    views: 960,
+    sourceUrl: 'https://www.facebook.com/profile.php?id=100065567376763',
+    sourcePlatform: 'facebook',
+    images: [
+      'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&auto=format&fit=crop&q=80'
+    ]
+  },
+  {
     id: 'news-fb-01',
     title: 'Lễ Kết Nạp Đoàn Viên Mới – Lớp Đoàn Viên 95 Năm Thành Lập Đoàn TNCS Hồ Chí Minh',
     excerpt: 'Đoàn trường THPT Quang Trung - Đông Giang long trọng tổ chức Lễ kết nạp đoàn viên mới cho 68 thanh niên ưu tú tại phòng truyền thống.',
