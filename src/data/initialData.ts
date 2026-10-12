@@ -769,7 +769,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'admin',
     username: 'admin',
-    name: 'Zdrăm Thị Thành Thương',
+    name: 'Zơ râm Thị Thành Thương',
     role: 'admin',
     roleTitle: 'Bí thư Đoàn Trường / Quản trị viên',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',

@@ -1776,36 +1776,40 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
+      const isUuid = (str?: string) => Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str));
+
       const payload: any = {
         username: u.username,
         full_name: u.name,
-        name: u.name,
         role: u.role === 'youth_secretary' ? 'youth_secretary' : u.role,
         role_title: u.roleTitle || '',
         avatar_url: u.avatar || null,
         email: u.email || null,
         phone_number: u.phone || null,
-        class_id: u.classId || null,
-        student_id: u.studentId || null,
-        gender: u.gender || null,
-        dob: u.dob || null,
-        assigned_zone: u.assignedZone || null,
-        custom_id: u.id,
+        assigned_zone: u.assignedZone || u.classId || null,
         is_active: u.isActive ?? true,
         is_deleted: false,
         updated_at: new Date().toISOString()
       };
-      if (u.password) {
-        payload.password_plain = u.password;
+
+      if (isUuid(u.id)) {
+        payload.user_id = u.id;
       }
+      if (u.password) {
+        payload.password_hash = u.password;
+      }
+
       const { error } = await client.from('users').upsert(payload, { onConflict: 'username' });
       if (error) {
         console.warn('Lỗi lưu user lên Supabase:', error.message);
+        this._lastErrorMessage = error.message;
         return false;
       }
+      this._lastErrorMessage = '';
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Lỗi ngoại lệ khi lưu user:', err);
+      this._lastErrorMessage = err?.message || String(err);
       return false;
     }
   },
@@ -1817,26 +1821,29 @@ export const SupabaseService = {
     const client = getSupabaseClient();
     if (!client || usersList.length === 0) return false;
     try {
-      const mapped = usersList.map(u => ({
-        username: u.username,
-        full_name: u.name,
-        name: u.name,
-        role: u.role,
-        role_title: u.roleTitle || '',
-        avatar_url: u.avatar || null,
-        email: u.email || null,
-        phone_number: u.phone || null,
-        class_id: u.classId || null,
-        student_id: u.studentId || null,
-        gender: u.gender || null,
-        dob: u.dob || null,
-        assigned_zone: u.assignedZone || null,
-        custom_id: u.id,
-        password_plain: u.password || null,
-        is_active: u.isActive ?? true,
-        is_deleted: false,
-        updated_at: new Date().toISOString()
-      }));
+      const isUuid = (str?: string) => Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str));
+      const mapped = usersList.map(u => {
+        const row: any = {
+          username: u.username,
+          full_name: u.name,
+          role: u.role === 'youth_secretary' ? 'youth_secretary' : u.role,
+          role_title: u.roleTitle || '',
+          avatar_url: u.avatar || null,
+          email: u.email || null,
+          phone_number: u.phone || null,
+          assigned_zone: u.assignedZone || u.classId || null,
+          is_active: u.isActive ?? true,
+          is_deleted: false,
+          updated_at: new Date().toISOString()
+        };
+        if (isUuid(u.id)) {
+          row.user_id = u.id;
+        }
+        if (u.password) {
+          row.password_hash = u.password;
+        }
+        return row;
+      });
       const { error } = await client.from('users').upsert(mapped, { onConflict: 'username' });
       if (error) {
         console.warn('Lỗi lưu users batch:', error.message);
@@ -1859,7 +1866,12 @@ export const SupabaseService = {
       if (username) {
         await client.from('users').update({ is_deleted: true, updated_at: new Date().toISOString() }).eq('username', username);
       } else {
-        await client.from('users').update({ is_deleted: true, updated_at: new Date().toISOString() }).or(`custom_id.eq.${userId},username.eq.${userId}`);
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
+        if (isUuid) {
+          await client.from('users').update({ is_deleted: true, updated_at: new Date().toISOString() }).or(`user_id.eq.${userId},username.eq.${userId}`);
+        } else {
+          await client.from('users').update({ is_deleted: true, updated_at: new Date().toISOString() }).eq('username', userId);
+        }
       }
       return true;
     } catch (err) {

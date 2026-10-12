@@ -2174,72 +2174,118 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...userData,
       id: generateUUID()
     };
-    setUsers(prev => [...prev, newUser]);
+    setUsers(prev => {
+      const next = [...prev, newUser];
+      safeSaveLocalStorage('users', next);
+      setIndexedDBKV('app_users', next);
+      return next;
+    });
     if (isSupabaseConfigured()) {
-      SupabaseService.saveUser(newUser);
+      SupabaseService.saveUser(newUser).then(ok => {
+        if (ok) broadcastGlobalSync('users');
+      });
     }
     addLog('Thêm người dùng', `Tạo tài khoản mới: ${userData.username} (${userData.name})`);
   };
 
   const updateUser = (id: string, updates: Partial<User>) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === id) {
-        const updated = { ...u, ...updates };
-        if (isSupabaseConfigured()) {
-          SupabaseService.saveUser(updated);
+    let targetUser: User | null = null;
+    setUsers(prev => {
+      const next = prev.map(u => {
+        const isMatch = u.id === id || 
+          (Boolean(updates.username) && u.username.toLowerCase() === updates.username!.toLowerCase()) ||
+          (u.username.toLowerCase() === id.toLowerCase());
+        if (isMatch) {
+          const updated = { ...u, ...updates };
+          targetUser = updated;
+          return updated;
         }
-        return updated;
-      }
-      return u;
-    }));
-    if (currentUser && currentUser.id === id) {
+        return u;
+      });
+      safeSaveLocalStorage('users', next);
+      setIndexedDBKV('app_users', next);
+      return next;
+    });
+
+    if (targetUser && isSupabaseConfigured()) {
+      SupabaseService.saveUser(targetUser).then(ok => {
+        if (ok) broadcastGlobalSync('users');
+      });
+    }
+
+    if (currentUser && (currentUser.id === id || (updates.username && currentUser.username.toLowerCase() === updates.username.toLowerCase()) || currentUser.username.toLowerCase() === id.toLowerCase())) {
       setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
     }
-    addLog('Cập nhật người dùng', `Cập nhật thông tin tài khoản ID: ${id}`);
+    addLog('Cập nhật người dùng', `Cập nhật thông tin tài khoản: ${updates.username || id}`);
   };
 
   const deleteUser = (id: string) => {
-    const target = users.find(u => u.id === id);
-    setUsers(prev => prev.filter(u => u.id !== id));
+    const target = users.find(u => u.id === id || u.username.toLowerCase() === id.toLowerCase());
+    setUsers(prev => {
+      const next = prev.filter(u => u.id !== id && u.username.toLowerCase() !== id.toLowerCase());
+      safeSaveLocalStorage('users', next);
+      setIndexedDBKV('app_users', next);
+      return next;
+    });
     if (isSupabaseConfigured() && target) {
-      SupabaseService.deleteUser(id, target.username);
+      SupabaseService.deleteUser(target.id, target.username).then(ok => {
+        if (ok) broadcastGlobalSync('users');
+      });
     }
-    addLog('Xóa tài khoản', `Admin xóa người dùng ID: ${id}`);
+    addLog('Xóa tài khoản', `Admin xóa người dùng: ${target?.username || id}`);
   };
 
   const toggleUserActive = (id: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === id) {
-        const nextState = !u.isActive;
-        const updated = { ...u, isActive: nextState };
-        if (isSupabaseConfigured()) {
-          SupabaseService.saveUser(updated);
+    let targetUser: User | null = null;
+    setUsers(prev => {
+      const next = prev.map(u => {
+        if (u.id === id || u.username.toLowerCase() === id.toLowerCase()) {
+          const nextState = !u.isActive;
+          const updated = { ...u, isActive: nextState };
+          targetUser = updated;
+          return updated;
         }
-        addLog('Đổi trạng thái tài khoản', `${nextState ? 'Kích hoạt' : 'Khóa'} tài khoản ${u.username}`);
-        return updated;
-      }
-      return u;
-    }));
+        return u;
+      });
+      safeSaveLocalStorage('users', next);
+      setIndexedDBKV('app_users', next);
+      return next;
+    });
+    if (targetUser && isSupabaseConfigured()) {
+      SupabaseService.saveUser(targetUser).then(ok => {
+        if (ok) broadcastGlobalSync('users');
+      });
+      addLog('Đổi trạng thái tài khoản', `${(targetUser as User).isActive ? 'Kích hoạt' : 'Khóa'} tài khoản ${(targetUser as User).username}`);
+    }
   };
 
   const resetPassword = (userId: string): string => {
     const defPass = '123456@Password';
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        const updated = { ...u, password: defPass };
-        if (isSupabaseConfigured()) {
-          SupabaseService.saveUser(updated);
+    let targetUser: User | null = null;
+    setUsers(prev => {
+      const next = prev.map(u => {
+        if (u.id === userId || u.username.toLowerCase() === userId.toLowerCase()) {
+          const updated = { ...u, password: defPass };
+          targetUser = updated;
+          return updated;
         }
-        return updated;
-      }
-      return u;
-    }));
+        return u;
+      });
+      safeSaveLocalStorage('users', next);
+      setIndexedDBKV('app_users', next);
+      return next;
+    });
+    if (targetUser && isSupabaseConfigured()) {
+      SupabaseService.saveUser(targetUser).then(ok => {
+        if (ok) broadcastGlobalSync('users');
+      });
+    }
     addLog('Reset mật khẩu', `Khôi phục mật khẩu mặc định (${defPass}) cho tài khoản ID: ${userId}`);
     return defPass;
   };
 
   const changePassword = (userId: string, newPassword: string, oldPassword?: string): { success: boolean; message: string } => {
-    const user = users.find(u => u.id === userId);
+    const user = users.find(u => u.id === userId || u.username.toLowerCase() === userId.toLowerCase());
     if (!user) {
       return { success: false, message: 'Không tìm thấy tài khoản người dùng!' };
     }
@@ -2251,18 +2297,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Mật khẩu mới phải có tối thiểu 6 ký tự!' };
     }
 
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        const updated = { ...u, password: newPassword };
-        if (isSupabaseConfigured()) {
-          SupabaseService.saveUser(updated);
+    let targetUser: User | null = null;
+    setUsers(prev => {
+      const next = prev.map(u => {
+        if (u.id === userId || u.username.toLowerCase() === userId.toLowerCase()) {
+          const updated = { ...u, password: newPassword };
+          targetUser = updated;
+          return updated;
         }
-        return updated;
-      }
-      return u;
-    }));
+        return u;
+      });
+      safeSaveLocalStorage('users', next);
+      setIndexedDBKV('app_users', next);
+      return next;
+    });
 
-    if (currentUser && currentUser.id === userId) {
+    if (targetUser && isSupabaseConfigured()) {
+      SupabaseService.saveUser(targetUser).then(ok => {
+        if (ok) broadcastGlobalSync('users');
+      });
+    }
+
+    if (currentUser && (currentUser.id === userId || currentUser.username.toLowerCase() === user.username.toLowerCase())) {
       setCurrentUser(prev => prev ? { ...prev, password: newPassword } : null);
     }
 
