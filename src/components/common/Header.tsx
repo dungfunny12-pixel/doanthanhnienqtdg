@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   Database,
   ChevronDown,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
@@ -215,6 +216,19 @@ export const Header: React.FC = () => {
                 <span>{workspace.label}</span>
               </button>
             )}
+
+            {/* Youth Union AI Assistant Trigger */}
+            <button
+              onClick={() => {
+                const btn = document.getElementById('open-youth-assistant-btn');
+                if (btn) btn.click();
+              }}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold text-blue-300 hover:text-white bg-blue-950/70 hover:bg-blue-900 border border-blue-700/50 flex items-center gap-1.5 transition-all shadow-sm"
+              title="Trợ lý Ảo Đoàn Thanh Niên (Áo Xanh AI)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Trợ lý Đoàn</span>
+            </button>
           </nav>
 
           {/* Right Action Area */}
@@ -562,6 +576,18 @@ export const Header: React.FC = () => {
                 <span>Không Gian Làm Việc ({workspace.label})</span>
               </button>
             )}
+
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                const btn = document.getElementById('open-youth-assistant-btn');
+                if (btn) btn.click();
+              }}
+              className="w-full text-left p-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all bg-gradient-to-r from-blue-950/80 to-indigo-950/80 text-blue-300 hover:text-white border border-blue-700/50 shadow-sm"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>Trợ lý Ảo Đoàn Thanh Niên (AI)</span>
+            </button>
           </div>
 
           {/* Supabase status in mobile drawer footer */}

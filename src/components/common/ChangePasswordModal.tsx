@@ -29,7 +29,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   if (!isOpen || !activeTarget) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -45,20 +45,24 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     }
 
     setIsSubmitting(true);
-    const res = changePassword(activeTarget.id, newPassword, oldPassword);
-    setIsSubmitting(false);
-
-    if (res.success) {
-      setSuccessMsg('✓ Đã cập nhật mật khẩu mới thành công!');
-      setTimeout(() => {
-        setOldPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setSuccessMsg(null);
-        onClose();
-      }, 1800);
-    } else {
-      setErrorMsg(res.message);
+    try {
+      const res = await changePassword(activeTarget.id, newPassword, oldPassword);
+      if (res.success) {
+        setSuccessMsg('✓ Đã cập nhật mật khẩu mới thành công!');
+        setTimeout(() => {
+          setOldPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setSuccessMsg(null);
+          onClose();
+        }, 1800);
+      } else {
+        setErrorMsg(res.message);
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Có lỗi xảy ra khi đổi mật khẩu.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

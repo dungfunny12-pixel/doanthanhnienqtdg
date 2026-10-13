@@ -8,6 +8,7 @@ import { ManagerPortal } from './components/manager/ManagerPortal';
 import { AdminPortal } from './components/admin/AdminPortal';
 import { YouthSecretaryPortal } from './components/youth_secretary/YouthSecretaryPortal';
 import { StudentHub } from './components/student/StudentHub';
+import { YouthAssistantWidget } from './components/assistant/YouthAssistantWidget';
 
 const MainContent: React.FC = () => {
   const { activeView } = useApp();
@@ -33,6 +34,7 @@ export const App: React.FC = () => {
           <MainContent />
         </div>
         <Footer />
+        <YouthAssistantWidget />
       </div>
     </AppProvider>
   );

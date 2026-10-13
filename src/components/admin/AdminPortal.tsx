@@ -12887,7 +12887,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
               {/* Form Body Cuộn Mượt */}
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
                   if (editingUser) {
                     // Kiểm tra nếu tên đăng nhập thay đổi và trùng với tài khoản khác
@@ -12899,22 +12899,24 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                     if (!updates.password || updates.password.trim() === '') {
                       delete updates.password; // Giữ nguyên mật khẩu cũ nếu không nhập mật khẩu mới
                     }
-                    updateUser(editingUser.id, updates);
-                    alert(`✅ Đã cập nhật tài khoản ${userForm.username} thành công!`);
+                    setIsUserModalOpen(false);
+                    setEditingUser(null);
+                    await updateUser(editingUser.id, updates);
+                    alert(`✅ Đã lưu thay đổi tài khoản ${userForm.username} vào hệ thống thành công!`);
                   } else {
                     if (users.some(u => u.username.toLowerCase() === userForm.username.toLowerCase())) {
                       alert(`⚠️ Tên đăng nhập "${userForm.username}" đã tồn tại! Vui lòng chọn tên đăng nhập khác.`);
                       return;
                     }
-                    addUser({
+                    setIsUserModalOpen(false);
+                    setEditingUser(null);
+                    await addUser({
                       ...userForm,
                       password: userForm.password || '123456@Password',
                       isActive: true
                     });
                     alert(`✅ Đã thêm mới tài khoản ${userForm.username} (Mật khẩu: ${userForm.password || '123456@Password'})!`);
                   }
-                  setIsUserModalOpen(false);
-                  setEditingUser(null);
                 }}
                 className="flex flex-col flex-1 min-h-0"
               >

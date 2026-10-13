@@ -185,12 +185,12 @@ interface AppContextType {
   verifyActivityReport: (id: string, feedback?: string) => void;
 
   // User Management
-  addUser: (userData: Omit<User, 'id'>) => void;
-  updateUser: (id: string, updates: Partial<User>) => void;
-  deleteUser: (id: string) => void;
-  toggleUserActive: (id: string) => void;
-  resetPassword: (userId: string) => string;
-  changePassword: (userId: string, newPassword: string, oldPassword?: string) => { success: boolean; message: string };
+  addUser: (userData: Omit<User, 'id'>) => Promise<User> | void;
+  updateUser: (id: string, updates: Partial<User>) => Promise<boolean> | void;
+  deleteUser: (id: string) => Promise<boolean> | void;
+  toggleUserActive: (id: string) => Promise<boolean> | void;
+  resetPassword: (userId: string) => Promise<string> | string;
+  changePassword: (userId: string, newPassword: string, oldPassword?: string) => Promise<{ success: boolean; message: string }> | { success: boolean; message: string };
 
   // Duty Schedule
   addDutyAssignment: (duty: Omit<DutyAssignment, 'id'>) => void;
@@ -503,6 +503,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isFetchingCloudRef = useRef<boolean>(false);
   const realtimeChannelRef = useRef<any>(null);
   const localBroadcastRef = useRef<BroadcastChannel | null>(null);
+  const lastLocalWriteTimeRef = useRef<number>(0);
 
   const broadcastGlobalSync = (tableType?: string) => {
     try {
@@ -928,9 +929,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       if (cloudData.users && cloudData.users.length > 0) {
-        setUsers(prev => (JSON.stringify(prev) === JSON.stringify(cloudData.users) ? prev : cloudData.users!));
-        setIndexedDBKV('app_users', cloudData.users);
-        safeSaveLocalStorage('users', cloudData.users);
+        setUsers(prev => {
+          if (Date.now() - lastLocalWriteTimeRef.current < 15000) {
+            const merged = cloudData.users!.map(cu => {
+              const localMatch = prev.find(lu => lu.username.toLowerCase() === cu.username.toLowerCase() || lu.id === cu.id);
+              return localMatch ? { ...cu, ...localMatch } : cu;
+            });
+            prev.forEach(lu => {
+              if (!merged.some(m => m.username.toLowerCase() === lu.username.toLowerCase() || m.id === lu.id)) {
+                merged.push(lu);
+              }
+            });
+            setIndexedDBKV('app_users', merged);
+            safeSaveLocalStorage('users', merged);
+            return merged;
+          }
+          if (JSON.stringify(prev) === JSON.stringify(cloudData.users)) return prev;
+          setIndexedDBKV('app_users', cloudData.users);
+          safeSaveLocalStorage('users', cloudData.users);
+          return cloudData.users!;
+        });
         // Cập nhật tài khoản hiện tại với thông tin mới nhất từ Cloud
         setCurrentUser(prevUser => {
           if (!prevUser) return null;
@@ -1835,7 +1853,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const nonDayBonuses = classVios.filter(v => !days.includes(v.day)).reduce((sum, v) => sum + (v.bonusPoints || 0), 0);
       totalBonus += nonDayBonuses;
 
-      const finalScore = Math.max(0, 1440 - totalDeduction + totalBonus);
+      // Chặn trần điểm trừ theo điểm chuẩn của từng tiêu chí (Quy chế thi đua Đoàn trường)
+      const CRITERION_STANDARDS: Record<string, number> = {
+        '1.1': 30, '1.2': 30, '1.3': 60, '1.4': 30, '1.5': 30, '1.6': 60,
+        '2.1': 30, '2.2': 60, '2.3': 30, '2.4': 60,
+        '3.1': 60, '3.2': 60, '3.3': 60, '3.4': 30, '3.5': 30, '3.6': 60, '3.7': 60, '3.8': 30,
+        '4.1': 120, '4.2': 30, '4.3': 90, '4.4': 60, '4.5': 120, '4.6': 120,
+        '5.1': 30, '5.2': 30, '5.3': 30
+      };
+
+      const criterionDeductMap: Record<string, number> = {};
+      classVios.forEach(v => {
+        const code = v.criterionId || (v as any).criteriaCode || '';
+        const pts = v.pointsDeducted || 0;
+        if (code && pts > 0) {
+          criterionDeductMap[code] = (criterionDeductMap[code] || 0) + pts;
+        }
+      });
+
+      let cappedTotalDeduction = 0;
+      if (Object.keys(criterionDeductMap).length > 0) {
+        for (const [code, pts] of Object.entries(criterionDeductMap)) {
+          const std = CRITERION_STANDARDS[code] ?? 1440;
+          cappedTotalDeduction += Math.min(pts, std);
+        }
+      } else {
+        cappedTotalDeduction = totalDeduction;
+      }
+
+      const finalScore = Math.max(0, 1440 - cappedTotalDeduction + totalBonus);
 
       const gradeOffset = c.grade === 10 ? 3 : c.grade === 11 ? 1 : -2;
       const parsedNum = parseInt(c.id.split('/')[1] || '1');
@@ -1849,7 +1895,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         weekNumber: weekNum,
         standardScore: 1440,
         dailyScores,
-        totalDeduction,
+        totalDeduction: cappedTotalDeduction,
         totalBonus,
         finalScore,
         rank: 0,
@@ -1883,17 +1929,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return countB - countA;
     });
 
-    scores.forEach((s, idx) => {
-      s.rank = idx + 1;
-      if (weekNum === 1) {
-        // Week 1 has no previous benchmark
-        s.trend = 'same';
-      } else {
-        if (s.rank < s.previousRank) s.trend = 'up';
-        else if (s.rank > s.previousRank) s.trend = 'down';
-        else s.trend = 'same';
+    // Xếp hạng vị thứ chuẩn Olympic (đồng điểm thì cùng thứ hạng) khớp 100% biên bản PDF
+    let currentRank = 1;
+    for (let i = 0; i < scores.length; i++) {
+      if (i > 0 && scores[i].finalScore < scores[i - 1].finalScore) {
+        currentRank = i + 1;
       }
-    });
+      scores[i].rank = currentRank;
+      if (weekNum === 1) {
+        scores[i].trend = 'same';
+      } else {
+        if (scores[i].rank < scores[i].previousRank) scores[i].trend = 'up';
+        else if (scores[i].rank > scores[i].previousRank) scores[i].trend = 'down';
+        else scores[i].trend = 'same';
+      }
+    }
 
     return scores;
   };
@@ -2169,11 +2219,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // User CRUD
-  const addUser = (userData: Omit<User, 'id'>) => {
+  const addUser = async (userData: Omit<User, 'id'>): Promise<User> => {
     const newUser: User = {
       ...userData,
       id: generateUUID()
     };
+    lastLocalWriteTimeRef.current = Date.now();
     setUsers(prev => {
       const next = [...prev, newUser];
       safeSaveLocalStorage('users', next);
@@ -2181,111 +2232,148 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return next;
     });
     if (isSupabaseConfigured()) {
-      SupabaseService.saveUser(newUser).then(ok => {
+      try {
+        const ok = await SupabaseService.saveUser(newUser);
         if (ok) broadcastGlobalSync('users');
-      });
+      } catch (err) {
+        console.error('Lỗi khi lưu user mới lên Supabase:', err);
+      }
     }
     addLog('Thêm người dùng', `Tạo tài khoản mới: ${userData.username} (${userData.name})`);
+    return newUser;
   };
 
-  const updateUser = (id: string, updates: Partial<User>) => {
-    let targetUser: User | null = null;
+  const updateUser = async (id: string, updates: Partial<User>): Promise<boolean> => {
+    lastLocalWriteTimeRef.current = Date.now();
+    const currentUsers = users.length > 0 ? users : (loadStored<User[]>('users', INITIAL_USERS) || []);
+    const existing = currentUsers.find(u => 
+      u.id === id || 
+      (updates.username && u.username.toLowerCase() === updates.username.toLowerCase()) ||
+      u.username.toLowerCase() === id.toLowerCase()
+    );
+
+    const updatedUser: User = existing 
+      ? { ...existing, ...updates }
+      : ({ id, username: updates.username || id, name: updates.name || '', role: updates.role || 'user', roleTitle: updates.roleTitle || '', ...updates } as User);
+
     setUsers(prev => {
-      const next = prev.map(u => {
-        const isMatch = u.id === id || 
-          (Boolean(updates.username) && u.username.toLowerCase() === updates.username!.toLowerCase()) ||
-          (u.username.toLowerCase() === id.toLowerCase());
-        if (isMatch) {
-          const updated = { ...u, ...updates };
-          targetUser = updated;
-          return updated;
-        }
-        return u;
-      });
+      const exists = prev.some(u => 
+        u.id === id || 
+        (updates.username && u.username.toLowerCase() === updates.username.toLowerCase()) ||
+        u.username.toLowerCase() === id.toLowerCase()
+      );
+      const next = exists
+        ? prev.map(u => (u.id === id || (updates.username && u.username.toLowerCase() === updates.username.toLowerCase()) || u.username.toLowerCase() === id.toLowerCase()) ? updatedUser : u)
+        : [...prev, updatedUser];
       safeSaveLocalStorage('users', next);
       setIndexedDBKV('app_users', next);
       return next;
     });
 
-    if (targetUser && isSupabaseConfigured()) {
-      SupabaseService.saveUser(targetUser).then(ok => {
-        if (ok) broadcastGlobalSync('users');
-      });
-    }
-
     if (currentUser && (currentUser.id === id || (updates.username && currentUser.username.toLowerCase() === updates.username.toLowerCase()) || currentUser.username.toLowerCase() === id.toLowerCase())) {
-      setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+      const updatedCurrent = { ...currentUser, ...updates };
+      setCurrentUser(updatedCurrent);
+      safeSaveLocalStorage('currentUser', updatedCurrent);
     }
     addLog('Cập nhật người dùng', `Cập nhật thông tin tài khoản: ${updates.username || id}`);
+
+    let isSavedToCloud = false;
+    if (isSupabaseConfigured()) {
+      try {
+        isSavedToCloud = await SupabaseService.saveUser(updatedUser);
+        if (isSavedToCloud) {
+          broadcastGlobalSync('users');
+        }
+      } catch (err) {
+        console.error('Lỗi khi lưu user lên Supabase Cloud:', err);
+      }
+    }
+    return isSavedToCloud;
   };
 
-  const deleteUser = (id: string) => {
-    const target = users.find(u => u.id === id || u.username.toLowerCase() === id.toLowerCase());
+  const deleteUser = async (id: string): Promise<boolean> => {
+    lastLocalWriteTimeRef.current = Date.now();
+    const currentUsers = users.length > 0 ? users : (loadStored<User[]>('users', INITIAL_USERS) || []);
+    const target = currentUsers.find(u => u.id === id || u.username.toLowerCase() === id.toLowerCase());
+    
     setUsers(prev => {
       const next = prev.filter(u => u.id !== id && u.username.toLowerCase() !== id.toLowerCase());
       safeSaveLocalStorage('users', next);
       setIndexedDBKV('app_users', next);
       return next;
     });
+
+    let ok = false;
     if (isSupabaseConfigured() && target) {
-      SupabaseService.deleteUser(target.id, target.username).then(ok => {
+      try {
+        ok = await SupabaseService.deleteUser(target.id, target.username);
         if (ok) broadcastGlobalSync('users');
-      });
+      } catch (err) {
+        console.error('Lỗi khi xóa user trên Supabase Cloud:', err);
+      }
     }
     addLog('Xóa tài khoản', `Admin xóa người dùng: ${target?.username || id}`);
+    return ok;
   };
 
-  const toggleUserActive = (id: string) => {
-    let targetUser: User | null = null;
+  const toggleUserActive = async (id: string): Promise<boolean> => {
+    lastLocalWriteTimeRef.current = Date.now();
+    const currentUsers = users.length > 0 ? users : (loadStored<User[]>('users', INITIAL_USERS) || []);
+    const target = currentUsers.find(u => u.id === id || u.username.toLowerCase() === id.toLowerCase());
+    if (!target) return false;
+
+    const nextState = !target.isActive;
+    const updatedUser: User = { ...target, isActive: nextState };
+
     setUsers(prev => {
-      const next = prev.map(u => {
-        if (u.id === id || u.username.toLowerCase() === id.toLowerCase()) {
-          const nextState = !u.isActive;
-          const updated = { ...u, isActive: nextState };
-          targetUser = updated;
-          return updated;
-        }
-        return u;
-      });
+      const next = prev.map(u => (u.id === id || u.username.toLowerCase() === id.toLowerCase()) ? updatedUser : u);
       safeSaveLocalStorage('users', next);
       setIndexedDBKV('app_users', next);
       return next;
     });
-    if (targetUser && isSupabaseConfigured()) {
-      SupabaseService.saveUser(targetUser).then(ok => {
+
+    let ok = false;
+    if (isSupabaseConfigured()) {
+      try {
+        ok = await SupabaseService.saveUser(updatedUser);
         if (ok) broadcastGlobalSync('users');
-      });
-      addLog('Đổi trạng thái tài khoản', `${(targetUser as User).isActive ? 'Kích hoạt' : 'Khóa'} tài khoản ${(targetUser as User).username}`);
+      } catch (err) {
+        console.error('Lỗi khi đổi trạng thái user trên Supabase Cloud:', err);
+      }
     }
+    addLog('Đổi trạng thái tài khoản', `${nextState ? 'Kích hoạt' : 'Khóa'} tài khoản ${target.username}`);
+    return ok;
   };
 
-  const resetPassword = (userId: string): string => {
+  const resetPassword = async (userId: string): Promise<string> => {
     const defPass = '123456@Password';
-    let targetUser: User | null = null;
-    setUsers(prev => {
-      const next = prev.map(u => {
-        if (u.id === userId || u.username.toLowerCase() === userId.toLowerCase()) {
-          const updated = { ...u, password: defPass };
-          targetUser = updated;
-          return updated;
+    lastLocalWriteTimeRef.current = Date.now();
+    const currentUsers = users.length > 0 ? users : (loadStored<User[]>('users', INITIAL_USERS) || []);
+    const target = currentUsers.find(u => u.id === userId || u.username.toLowerCase() === userId.toLowerCase());
+    if (target) {
+      const updatedUser: User = { ...target, password: defPass };
+      setUsers(prev => {
+        const next = prev.map(u => (u.id === userId || u.username.toLowerCase() === userId.toLowerCase()) ? updatedUser : u);
+        safeSaveLocalStorage('users', next);
+        setIndexedDBKV('app_users', next);
+        return next;
+      });
+      if (isSupabaseConfigured()) {
+        try {
+          const ok = await SupabaseService.saveUser(updatedUser);
+          if (ok) broadcastGlobalSync('users');
+        } catch (err) {
+          console.error('Lỗi khi reset mật khẩu trên Supabase Cloud:', err);
         }
-        return u;
-      });
-      safeSaveLocalStorage('users', next);
-      setIndexedDBKV('app_users', next);
-      return next;
-    });
-    if (targetUser && isSupabaseConfigured()) {
-      SupabaseService.saveUser(targetUser).then(ok => {
-        if (ok) broadcastGlobalSync('users');
-      });
+      }
     }
     addLog('Reset mật khẩu', `Khôi phục mật khẩu mặc định (${defPass}) cho tài khoản ID: ${userId}`);
     return defPass;
   };
 
-  const changePassword = (userId: string, newPassword: string, oldPassword?: string): { success: boolean; message: string } => {
-    const user = users.find(u => u.id === userId || u.username.toLowerCase() === userId.toLowerCase());
+  const changePassword = async (userId: string, newPassword: string, oldPassword?: string): Promise<{ success: boolean; message: string }> => {
+    const currentUsers = users.length > 0 ? users : (loadStored<User[]>('users', INITIAL_USERS) || []);
+    const user = currentUsers.find(u => u.id === userId || u.username.toLowerCase() === userId.toLowerCase());
     if (!user) {
       return { success: false, message: 'Không tìm thấy tài khoản người dùng!' };
     }
@@ -2297,29 +2385,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Mật khẩu mới phải có tối thiểu 6 ký tự!' };
     }
 
-    let targetUser: User | null = null;
+    lastLocalWriteTimeRef.current = Date.now();
+    const updatedUser: User = { ...user, password: newPassword };
     setUsers(prev => {
-      const next = prev.map(u => {
-        if (u.id === userId || u.username.toLowerCase() === userId.toLowerCase()) {
-          const updated = { ...u, password: newPassword };
-          targetUser = updated;
-          return updated;
-        }
-        return u;
-      });
+      const next = prev.map(u => (u.id === userId || u.username.toLowerCase() === userId.toLowerCase()) ? updatedUser : u);
       safeSaveLocalStorage('users', next);
       setIndexedDBKV('app_users', next);
       return next;
     });
 
-    if (targetUser && isSupabaseConfigured()) {
-      SupabaseService.saveUser(targetUser).then(ok => {
+    if (isSupabaseConfigured()) {
+      try {
+        const ok = await SupabaseService.saveUser(updatedUser);
         if (ok) broadcastGlobalSync('users');
-      });
+      } catch (err) {
+        console.error('Lỗi khi cập nhật mật khẩu trên Supabase Cloud:', err);
+      }
     }
 
     if (currentUser && (currentUser.id === userId || currentUser.username.toLowerCase() === user.username.toLowerCase())) {
-      setCurrentUser(prev => prev ? { ...prev, password: newPassword } : null);
+      const updatedCurrent = { ...currentUser, password: newPassword };
+      setCurrentUser(updatedCurrent);
+      safeSaveLocalStorage('currentUser', updatedCurrent);
     }
 
     addLog('Đổi mật khẩu', `Tài khoản ${user.username} (${user.name}) đã đổi mật khẩu thành công`);

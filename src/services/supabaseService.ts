@@ -1794,6 +1794,11 @@ export const SupabaseService = {
 
       if (isUuid(u.id)) {
         payload.user_id = u.id;
+      } else {
+        const { data: existing } = await client.from('users').select('user_id').eq('username', u.username).maybeSingle();
+        if (existing?.user_id) {
+          payload.user_id = existing.user_id;
+        }
       }
       if (u.password) {
         payload.password_hash = u.password;

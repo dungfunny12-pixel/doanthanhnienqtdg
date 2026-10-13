@@ -35,3 +35,5 @@ Thumbs.db
 # Redundant nested clone directories if any
 /doanthanhnien
 scratch/
+__pycache__/
+*.pyc
