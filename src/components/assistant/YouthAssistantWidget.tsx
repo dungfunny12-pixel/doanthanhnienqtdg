@@ -71,6 +71,7 @@ export const YouthAssistantWidget: React.FC = () => {
     }
   ]);
 
+  const chatBodyRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -80,45 +81,57 @@ export const YouthAssistantWidget: React.FC = () => {
     setWebSearchEnabled(YouthAssistantService.getWebSearchEnabled());
   }, []);
 
+  // Cuộn nội bộ an toàn bên trong container tin nhắn, KHÔNG dùng scrollIntoView làm trôi khung nhìn
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        inputRef.current?.focus();
-      }, 100);
+      if (chatBodyRef.current) {
+        chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+      }
+      const timer = setTimeout(() => {
+        if (chatBodyRef.current) {
+          chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+        }
+        inputRef.current?.focus({ preventScroll: true });
+      }, 60);
+      return () => clearTimeout(timer);
     }
   }, [isOpen, messages]);
 
   const hasApiKey = Boolean(apiKeyInput.trim() || YouthAssistantService.getApiKey());
 
-  // Chuẩn bị context dữ liệu trực tiếp của trường
+  // Chuẩn bị context dữ liệu trực tiếp của trường một cách an toàn
   const getLiveContext = (): AssistantContextData => {
     let weeklyScoresData: any[] = [];
     try {
-      weeklyScoresData = getWeeklyScores(activeWeek).map(s => ({
-        classId: s.classId,
-        className: s.className,
-        finalScore: s.finalScore,
-        rank: s.rank,
-        totalDeduction: s.totalDeduction
-      }));
+      if (typeof getWeeklyScores === 'function') {
+        const scores = getWeeklyScores(activeWeek);
+        if (Array.isArray(scores)) {
+          weeklyScoresData = scores.map(s => ({
+            classId: s.classId,
+            className: s.className,
+            finalScore: s.finalScore,
+            rank: s.rank,
+            totalDeduction: s.totalDeduction
+          }));
+        }
+      }
     } catch {}
 
     return {
       activeWeek,
-      classes: classes.map(c => ({
+      classes: Array.isArray(classes) ? classes.map(c => ({
         id: c.id,
         name: c.name,
         gvcnName: c.gvcnName,
         totalStudents: c.totalStudents,
         unionMembers: c.unionMembers
-      })),
-      criteria: criteria.map(cr => ({
+      })) : [],
+      criteria: Array.isArray(criteria) ? criteria.map(cr => ({
         code: cr.code,
         name: cr.name,
         points: cr.points,
         type: cr.type
-      })),
+      })) : [],
       weeklyScores: weeklyScoresData
     };
   };
@@ -317,9 +330,13 @@ export const YouthAssistantWidget: React.FC = () => {
           id="youth-assistant-modal"
           className={`fixed z-[60] transition-all duration-300 ease-out flex flex-col shadow-2xl border border-blue-500/30 backdrop-blur-2xl bg-slate-950/98 overflow-hidden ${
             isExpanded
-              ? 'inset-3 md:inset-8 rounded-3xl'
-              : 'bottom-4 right-4 md:bottom-6 md:right-6 w-[calc(100vw-2rem)] md:w-[480px] h-[670px] max-h-[calc(100vh-2.5rem)] rounded-3xl'
+              ? 'inset-2 sm:inset-4 md:inset-8 rounded-2xl md:rounded-3xl'
+              : 'bottom-2 sm:bottom-4 right-2 sm:right-4 md:bottom-6 md:right-6 w-[calc(100vw-1rem)] sm:w-[440px] md:w-[480px] h-[calc(100dvh-5rem)] max-h-[620px] rounded-2xl md:rounded-3xl'
           }`}
+          style={{
+            top: isExpanded ? undefined : 'auto',
+            maxHeight: isExpanded ? undefined : 'calc(100dvh - 5rem)'
+          }}
         >
           {/* Header Nhận Diện Thương Hiệu Chuyên Trách Công Tác Đoàn */}
           <div className="relative px-3.5 py-3 bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border-b border-blue-500/30 flex items-center justify-between gap-2 shrink-0 select-none">
@@ -557,7 +574,10 @@ export const YouthAssistantWidget: React.FC = () => {
           </div>
 
           {/* Chat Messages Body */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-4 text-sm leading-relaxed">
+          <div 
+            ref={chatBodyRef}
+            className="flex-1 min-h-0 p-4 overflow-y-auto space-y-4 text-sm leading-relaxed"
+          >
             {messages.map(msg => (
               <div
                 key={msg.id}
