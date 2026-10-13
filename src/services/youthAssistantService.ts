@@ -3,12 +3,27 @@
  * Kết hợp: Google Gemini API (đàm thoại tự nhiên, thông minh) + Bộ tri thức nghiệp vụ Đoàn tích hợp sẵn
  */
 
+export interface AssistantSourceChunk {
+  title: string;
+  uri: string;
+}
+
+export interface AssistantResult {
+  text: string;
+  sources?: AssistantSourceChunk[];
+  searchQueries?: string[];
+  isWebGrounded?: boolean;
+}
+
 export interface AssistantMessage {
   id: string;
   sender: 'assistant' | 'user';
   text: string;
   timestamp: string;
   isStreaming?: boolean;
+  searchQueries?: string[];
+  sources?: AssistantSourceChunk[];
+  isWebGrounded?: boolean;
 }
 
 export interface AssistantContextData {
@@ -20,6 +35,7 @@ export interface AssistantContextData {
 
 const STORAGE_KEY_GEMINI = 'YOUTH_ASSISTANT_GEMINI_KEY';
 const STORAGE_KEY_MODEL = 'YOUTH_ASSISTANT_GEMINI_MODEL';
+const STORAGE_KEY_WEB_SEARCH = 'YOUTH_ASSISTANT_WEB_SEARCH';
 const DEFAULT_MODEL = 'gemini-1.5-flash';
 
 export const YouthAssistantService = {
@@ -45,6 +61,26 @@ export const YouthAssistantService = {
       } else {
         localStorage.removeItem(STORAGE_KEY_GEMINI);
       }
+    }
+  },
+
+  /**
+   * Lấy trạng thái kích hoạt tìm kiếm Internet trực tiếp
+   */
+  getWebSearchEnabled(): boolean {
+    if (typeof window !== 'undefined') {
+      const val = localStorage.getItem(STORAGE_KEY_WEB_SEARCH);
+      if (val !== null) return val === 'true';
+    }
+    return true; // Mặc định BẬT tìm kiếm Internet
+  },
+
+  /**
+   * Lưu trạng thái kích hoạt tìm kiếm Internet trực tiếp
+   */
+  saveWebSearchEnabled(enabled: boolean): void {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_WEB_SEARCH, String(enabled));
     }
   },
 
@@ -94,7 +130,7 @@ export const YouthAssistantService = {
   },
 
   /**
-   * Tạo System Instruction chi tiết về công tác Đoàn THPT Quang Trung
+   * Tạo System Instruction chi tiết về công tác Đoàn THPT Quang Trung & Quy tắc xác thực
    */
   buildSystemInstruction(ctx?: AssistantContextData): string {
     let contextAddition = '';
@@ -118,12 +154,21 @@ Bạn đại diện cho Ban Chấp hành Đoàn trường THPT Quang Trung hỗ 
 
 ### TÁC PHONG VÀ VĂN PHONG:
 - Lịch sự, nhiệt huyết, chuẩn mực, xung kích của thanh niên ("Đâu cần thanh niên có, đâu khó có thanh niên").
-- Sử dụng cách xưng hô thân mật: "Tôi là Áo Xanh AI - Trợ lý Đoàn trường", xưng "tôi" hoặc "mình" và gọi người dùng là "đồng chí", "bạn", hoặc "thầy/cô" tùy ngữ cảnh.
-- Trả lời rõ ràng, có cấu trúc markdown (in đậm, gạch đầu dòng, bảng biểu khi cần).
+- Xưng "tôi" hoặc "mình" và gọi người dùng là "đồng chí", "bạn", hoặc "thầy/cô" tùy ngữ cảnh.
+- Trả lời rõ ràng, có cấu trúc markdown chuẩn đẹp (in đậm, danh sách gạch đầu dòng, bảng biểu khi cần).
+
+### TÍNH NĂNG TÌM KIẾM INTERNET TRỰC TIẾP:
+- Khi người dùng hỏi về các sự kiện thanh niên toàn quốc, ngày truyền thống, tin tức thời sự, các văn bản quy phạm pháp luật mới của Nhà nước hoặc Trung ương Đoàn, bạn có khả năng tra cứu Google Search theo thời gian thực để mang lại thông tin mới nhất và chính xác nhất.
+- Nêu rõ nguồn tin và thời điểm nếu có liên quan đến tin tức Internet mới.
+
+### QUY TẮC BẮT BUỘC VỀ TÍNH XÁC THỰC (AI DISCLAIMER):
+- Mọi thông tin do AI tổng hợp phải có tinh thần khách quan, xây dựng.
+- Với điểm số, thứ hạng và nề nếp của trường THPT Quang Trung: chỉ dựa vào dữ liệu hệ thống được cung cấp. Không tự bịa đặt hay suy diễn sai lệch.
+- Cuối mỗi phản hồi, luôn nhắc nhở người dùng: Thông tin có tính chất tham khảo, hãy đối chiếu với văn bản chính thức của Đoàn trường và BGH khi cần thực hiện các quyết định kỷ luật hoặc công nhận thành tích.
 
 ### TRI THỨC NGHIỆP VỤ ĐOÀN & NHÀ TRƯỜNG:
 1. **Quy chế nề nếp thi đua (27 tiêu chí - Định mức chuẩn 1440 điểm/tuần)**:
-   - Nhóm 1 (Chuyên cần): Đi muộn sinh hoạt đầu giờ (1.1: trừ 1đ), Vắng có phép (1.2: trừ 1đ), Vắng không phép (1.3: trừ 2đ/lượt, chặn trần trừ tối đa 60đ của tiêu chuẩn tiêu chí), Bỏ tiết (1.4: trừ 2đ).
+   - Nhóm 1 (Chuyên cần): Đi muộn sinh hoạt đầu giờ (1.1: trừ 1đ), Vắng có phép (1.2: trừ 1đ), Vắng không phép (1.3: trừ 2đ/lượt, trần tối đa trừ 60đ của tiêu chuẩn tiêu chí), Bỏ tiết (1.4: trừ 2đ).
    - Nhóm 2 (Vệ sinh - Môi trường): Không trực nhật (2.1: trừ 5đ), Trực nhật trễ/bẩn (2.2: trừ 2đ), Thiếu khăn bàn/hoa (2.4: trừ 1đ).
    - Nhóm 3 (Trật tự - Kỷ luật): Ồn ào đầu giờ/hành lang (3.1: trừ 5đ), Mất trật tự chào cờ (3.2: trừ 2đ), Dùng điện thoại không phép (3.7: trừ 5đ).
    - Nhóm 4 (Tác phong - Đồng phục): Sai đồng phục (4.1: trừ 2đ), Đầu tóc sai quy định (4.2: trừ 2đ), Sơn móng/son môi/khuyên tai (4.3: trừ 5đ), Hút thuốc lá (4.4: trừ 5đ), Đánh nhau (4.6: trừ 10đ).
@@ -145,21 +190,26 @@ Bạn đại diện cho Ban Chấp hành Đoàn trường THPT Quang Trung hỗ 
 
 4. **Dữ liệu thực tế tại trường THPT Quang Trung**:${contextAddition}
 
-Nếu nhận được câu hỏi về số liệu tuần cụ thể, hãy dựa vào dữ liệu thực tế được cung cấp. Nếu không có dữ liệu cho câu hỏi ngoài phạm vi, hãy hướng dẫn tận tình theo Điều lệ Đoàn và quy chế nhà trường.`;
+Nếu không có dữ liệu số liệu trong hệ thống, hãy hướng dẫn người dùng theo Điều lệ Đoàn và quy chế nhà trường.`;
   },
 
   /**
-   * Gửi tin nhắn đến Google Gemini API
+   * Gửi tin nhắn đến Google Gemini API (có hỗ trợ Google Search Grounding)
    */
   async sendMessageToGemini(
     userText: string,
     history: AssistantMessage[],
-    ctx?: AssistantContextData
-  ): Promise<string> {
+    ctx?: AssistantContextData,
+    enableWebSearch: boolean = true
+  ): Promise<AssistantResult> {
     const apiKey = this.getApiKey();
     if (!apiKey) {
       // Fallback về bộ tri thức nghiệp vụ nội bộ nếu chưa có API Key
-      return this.getLocalKnowledgeResponse(userText, ctx);
+      const fallbackText = this.getLocalKnowledgeResponse(userText, ctx);
+      return {
+        text: fallbackText,
+        isWebGrounded: false
+      };
     }
 
     const model = this.getModel();
@@ -168,7 +218,7 @@ Nếu nhận được câu hỏi về số liệu tuần cụ thể, hãy dựa 
     // Chuyển đổi lịch sử chat cho Gemini format
     const contents: any[] = [];
 
-    // Chỉ lấy 6 tin nhắn gần nhất để tối ưu token
+    // Lấy 6 tin nhắn gần nhất để tối ưu token
     const recentHistory = history.slice(-6);
     recentHistory.forEach(msg => {
       contents.push({
@@ -185,42 +235,102 @@ Nếu nhận được câu hỏi về số liệu tuần cụ thể, hãy dựa 
 
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
+    // Payload cơ bản
+    const basePayload: any = {
+      contents,
+      systemInstruction: {
+        parts: [{ text: systemInstruction }]
+      },
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 2048
+      }
+    };
+
+    // Nếu bật tìm kiếm web, kích hoạt Google Search Grounding tool
+    if (enableWebSearch) {
+      basePayload.tools = [{ google_search: {} }];
+    }
+
     try {
-      const response = await fetch(endpoint, {
+      let response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: {
-            parts: [{ text: systemInstruction }]
-          },
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048
-          }
-        })
+        body: JSON.stringify(basePayload)
       });
 
-      const data = await response.json();
+      let data = await response.json();
+
+      // Nếu lỗi do model không hỗ trợ tool google_search, tự động retry không dùng tool
+      if (!response.ok && enableWebSearch && data.error?.message?.toLowerCase().includes('tool')) {
+        console.warn('Model không hỗ trợ tool google_search, tự động thử lại không dùng tool:', data.error.message);
+        delete basePayload.tools;
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(basePayload)
+        });
+        data = await response.json();
+      }
 
       if (!response.ok) {
         console.warn('Lỗi gọi Gemini API:', data);
-        // Fallback về bộ tri thức nội bộ kèm thông báo
         const fallbackText = this.getLocalKnowledgeResponse(userText, ctx);
-        return `*(Hệ thống tạm chuyển sang chế độ Tri thức nội bộ do API Gemini phản hồi: ${data.error?.message || 'Lỗi kết nối'})*\n\n${fallbackText}`;
+        return {
+          text: `*(Hệ thống tạm chuyển sang chế độ Tri thức nội bộ do API Gemini phản hồi: ${data.error?.message || 'Lỗi kết nối'})*\n\n${fallbackText}`,
+          isWebGrounded: false
+        };
       }
 
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!reply) {
-        return this.getLocalKnowledgeResponse(userText, ctx);
+      const candidate = data.candidates?.[0];
+      const replyText = candidate?.content?.parts?.[0]?.text;
+
+      if (!replyText) {
+        const fallbackText = this.getLocalKnowledgeResponse(userText, ctx);
+        return {
+          text: fallbackText,
+          isWebGrounded: false
+        };
       }
 
-      return reply;
+      // Trích xuất grounding metadata từ Internet (nếu có)
+      const groundingMeta = candidate?.groundingMetadata;
+      let sources: AssistantSourceChunk[] = [];
+      let searchQueries: string[] = [];
+      let isWebGrounded = false;
+
+      if (groundingMeta) {
+        isWebGrounded = true;
+        if (Array.isArray(groundingMeta.webSearchQueries)) {
+          searchQueries = groundingMeta.webSearchQueries;
+        }
+        if (Array.isArray(groundingMeta.groundingChunks)) {
+          groundingMeta.groundingChunks.forEach((chunk: any) => {
+            if (chunk.web?.uri) {
+              sources.push({
+                title: chunk.web.title || chunk.web.uri,
+                uri: chunk.web.uri
+              });
+            }
+          });
+        }
+      }
+
+      return {
+        text: replyText,
+        sources: sources.length > 0 ? sources : undefined,
+        searchQueries: searchQueries.length > 0 ? searchQueries : undefined,
+        isWebGrounded
+      };
     } catch (err: any) {
       console.warn('Ngoại lệ khi gọi Gemini:', err);
-      return this.getLocalKnowledgeResponse(userText, ctx);
+      const fallbackText = this.getLocalKnowledgeResponse(userText, ctx);
+      return {
+        text: fallbackText,
+        isWebGrounded: false
+      };
     }
   },
 

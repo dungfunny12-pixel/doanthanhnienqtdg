@@ -216,73 +216,77 @@ export const Header: React.FC = () => {
                 <span>{workspace.label}</span>
               </button>
             )}
-
-            {/* Youth Union AI Assistant Trigger */}
-            <button
-              onClick={() => {
-                const btn = document.getElementById('open-youth-assistant-btn');
-                if (btn) btn.click();
-              }}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold text-blue-300 hover:text-white bg-blue-950/70 hover:bg-blue-900 border border-blue-700/50 flex items-center gap-1.5 transition-all shadow-sm"
-              title="Trợ lý Ảo Đoàn Thanh Niên (Áo Xanh AI)"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Trợ lý Đoàn</span>
-            </button>
           </nav>
 
           {/* Right Action Area */}
           <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
             
-            {/* Academic Year Selector (Desktop only, Admin only) */}
-            {currentUser?.role === 'admin' && (
-              <div className="hidden xl:flex items-center bg-slate-800/90 border border-slate-700 rounded-xl px-2 py-1 text-xs shadow-inner shrink-0">
-                <Calendar className="w-3.5 h-3.5 text-amber-400 mr-1 shrink-0" />
+            {/* Sleek Compact Context Toolbar (Trợ lý Đoàn, Năm học, Tuần, Đồng bộ gom gọn gàng) */}
+            <div className="hidden md:flex items-center gap-1.5 bg-slate-950/70 border border-slate-800 p-1 rounded-xl shrink-0">
+              
+              {/* Nút Trợ lý AI tinh gọn */}
+              <button
+                onClick={() => {
+                  const btn = document.getElementById('open-youth-assistant-btn');
+                  if (btn) btn.click();
+                }}
+                className="px-2.5 py-1 rounded-lg text-xs font-bold text-blue-300 hover:text-white bg-blue-950/80 hover:bg-blue-900 border border-blue-700/50 flex items-center gap-1.5 transition-all shadow-sm shrink-0"
+                title="Trợ lý Ảo Đoàn Thanh Niên (Áo Xanh AI)"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Trợ lý AI</span>
+              </button>
+
+              {/* Bộ chọn Năm học tinh gọn (Admin only) */}
+              {currentUser?.role === 'admin' && (
+                <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs shadow-inner shrink-0">
+                  <Calendar className="w-3.5 h-3.5 text-amber-400 mr-1 shrink-0" />
+                  <select
+                    value={selectedAcademicYearId}
+                    onChange={(e) => setSelectedAcademicYearId(e.target.value)}
+                    className={`bg-transparent font-bold outline-none cursor-pointer text-[11px] ${
+                      isHistoricalYear ? 'text-amber-400' : 'text-emerald-400'
+                    }`}
+                    title="Chọn Năm học để xem dữ liệu thi đua"
+                  >
+                    {academicYears.map(y => (
+                      <option key={y.id} value={y.id} className="bg-slate-900 text-white">
+                        {y.name} {y.isCurrent ? '• Hiện tại' : '🔒'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Bộ chọn Tuần tinh gọn (Bỏ chữ 'Tuần:' bị lặp, chỉ hiển thị số tuần) */}
+              <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs shadow-inner shrink-0">
                 <select
-                  value={selectedAcademicYearId}
-                  onChange={(e) => setSelectedAcademicYearId(e.target.value)}
-                  className={`bg-transparent font-bold outline-none cursor-pointer text-[11px] ${
-                    isHistoricalYear ? 'text-amber-400' : 'text-emerald-400'
-                  }`}
-                  title="Chọn Năm học để xem dữ liệu thi đua"
+                  value={activeWeek}
+                  onChange={(e) => setActiveWeek(Number(e.target.value))}
+                  className="bg-transparent text-amber-400 font-bold outline-none cursor-pointer text-[11px]"
+                  title="Chọn Tuần thi đua"
                 >
-                  {academicYears.map(y => (
-                    <option key={y.id} value={y.id} className="bg-slate-900 text-white">
-                      {y.name} {y.isCurrent ? '(Hiện tại)' : '🔒'}
-                    </option>
-                  ))}
+                  {weeksConfig
+                    .filter(w => !w.isHidden || w.isCurrent || currentUser?.role === 'admin')
+                    .map(w => (
+                      <option key={w.weekNumber} value={w.weekNumber} className="bg-slate-900 text-white">
+                        {w.title} {w.isLocked ? '🔒' : ''}
+                      </option>
+                    ))}
                 </select>
               </div>
-            )}
 
-            {/* Week Selector (Desktop/Tablet) */}
-            <div className="hidden md:flex items-center bg-slate-800/90 border border-slate-700 rounded-xl px-2 py-1 text-xs shadow-inner shrink-0">
-              <span className="text-slate-400 mr-1 font-bold text-[11px]">Tuần:</span>
-              <select
-                value={activeWeek}
-                onChange={(e) => setActiveWeek(Number(e.target.value))}
-                className="bg-transparent text-amber-400 font-bold outline-none cursor-pointer text-[11px]"
+              {/* Live Cloud Sync tinh gọn */}
+              <button
+                type="button"
+                onClick={() => refreshDataFromCloud()}
+                title="Hệ thống tự động đồng bộ thời gian thực 2 chiều với Supabase Cloud. Bấm để làm mới ngay!"
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-emerald-900/40 text-[11px] font-bold text-emerald-300 transition-colors shadow-sm shrink-0"
               >
-                {weeksConfig
-                  .filter(w => !w.isHidden || w.isCurrent || currentUser?.role === 'admin')
-                  .map(w => (
-                    <option key={w.weekNumber} value={w.weekNumber} className="bg-slate-900 text-white">
-                      {w.title} {w.isCurrent ? '(Hiện tại)' : w.isLocked ? '🔒' : ''} {w.isHidden ? '(Đã ẩn)' : ''}
-                    </option>
-                  ))}
-              </select>
+                <span className={`w-2 h-2 rounded-full ${isSyncingCloud ? 'bg-amber-400 animate-spin' : 'bg-emerald-400 animate-pulse'}`} />
+                <span>{isSyncingCloud ? 'Đang tải...' : 'Đồng bộ'}</span>
+              </button>
             </div>
-
-            {/* Auto Cloud Sync Live Indicator */}
-            <button
-              type="button"
-              onClick={() => refreshDataFromCloud()}
-              title="Hệ thống tự động đồng bộ thời gian thực 2 chiều với Supabase Cloud. Bấm để làm mới ngay!"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-750 border border-emerald-900/40 text-[11px] font-bold text-emerald-300 transition-colors shadow-sm shrink-0"
-            >
-              <span className={`w-2 h-2 rounded-full ${isSyncingCloud ? 'bg-amber-400 animate-spin' : 'bg-emerald-400 animate-pulse'}`} />
-              <span className="hidden md:inline">{isSyncingCloud ? 'Đang Tải...' : 'Đồng Bộ Tự Động'}</span>
-            </button>
 
             {/* Notification Bell (Visible everywhere) */}
             <div className="relative shrink-0">
