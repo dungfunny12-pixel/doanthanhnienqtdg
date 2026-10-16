@@ -36,7 +36,7 @@ export interface AssistantContextData {
 const STORAGE_KEY_GEMINI = 'YOUTH_ASSISTANT_GEMINI_KEY';
 const STORAGE_KEY_MODEL = 'YOUTH_ASSISTANT_GEMINI_MODEL';
 const STORAGE_KEY_WEB_SEARCH = 'YOUTH_ASSISTANT_WEB_SEARCH';
-const DEFAULT_MODEL = 'gemini-1.5-flash';
+const DEFAULT_MODEL = 'gemini-3.8-flash';
 
 export const YouthAssistantService = {
   /**
@@ -676,8 +676,8 @@ Bạn am hiểu sâu sắc, toàn diện và có hệ thống về tất cả c�
       `4. 📝 **Kỹ năng Cán bộ Đoàn & Soạn thảo văn bản:** Soạn thảo thể thức văn bản hành chính Đoàn (Kế hoạch, Báo cáo, Tờ trình, Quyết định, Biên bản), kỹ năng dẫn chương trình (MC), điều hành sinh hoạt chi đoàn, kho trò chơi Teambuilding, bài ca chính thức của Đoàn.\n` +
       `5. 🚀 **Đồng hành với Thanh niên:** Tiêu chuẩn danh hiệu "Học sinh 3 tốt", tư vấn hướng nghiệp, tiếp cận nguồn vốn ưu đãi NHCSXH (Kênh Trung ương Đoàn 120), rèn luyện kỹ năng mềm.\n` +
       `6. 📊 **Thi đua nề nếp THPT Quang Trung:** Tra cứu xếp hạng 15 lớp các tuần 1 - 4 và quy chế 27 tiêu chí nề nếp (1440 điểm chuẩn).\n\n` +
-      (hasKey 
-        ? `🌐 *Hệ thống đang kích hoạt Google Search Grounding & Gemini AI, tự động cập nhật mọi tin tức và văn bản mới nhất từ Internet!*` 
+      (hasKey
+        ? `🌐 *Hệ thống đang kích hoạt Google Search Grounding & Gemini AI, tự động cập nhật mọi tin tức và văn bản mới nhất từ Internet!*`
         : `💡 *Bạn có thể bấm biểu tượng ⚙️ (Cài đặt) ở thanh trên để nhập Google Gemini API Key miễn phí, kích hoạt trí tuệ nhân tạo toàn diện và tìm kiếm trực tuyến theo thời gian thực!*`);
   }
 };

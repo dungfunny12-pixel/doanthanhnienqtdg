@@ -411,9 +411,21 @@ export const SupabaseService = {
         }
 
         const cr = critMap.get(v.criteria_code);
-        const isBonus = cr ? (cr.type === 'bonus') : false;
+        const isBonus = cr 
+          ? (cr.type === 'bonus' || (cr.type as any) === 'Cộng') 
+          : (v.criteria_code === 'bonus_custom' || v.criteria_code?.toLowerCase().includes('bonus') || (Boolean(v.note && v.note.includes('[Khen thưởng:'))));
         const totalPoints = Number(v.points_applied) || (cr ? cr.points * (Number(v.quantity) || 1) : 0);
         const cl = classMap.get(v.class_id);
+
+        let criterionName = cr?.name || (isBonus ? 'Khen thưởng phong trào Đoàn' : 'Vi phạm nề nếp');
+        let note = v.note || '';
+        if (isBonus && v.note) {
+          const match = v.note.match(/^\[Khen thưởng: (.*?)\](?:\s*-\s*(.*))?$/s);
+          if (match) {
+            criterionName = match[1] || criterionName;
+            note = match[2] || '';
+          }
+        }
 
         return {
           id: v.violation_id,
@@ -424,15 +436,15 @@ export const SupabaseService = {
           date: v.date_recorded || (v.created_at ? v.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
           weekNumber: v.week_number,
           criterionId: v.criteria_code,
-          criterionName: cr?.name || 'Vi phạm nề nếp',
-          groupName: cr?.groupName || 'Nề nếp & Tác phong',
+          criterionName,
+          groupName: cr?.groupName || (isBonus ? 'Khen thưởng & Điểm cộng' : 'Nề nếp & Tác phong'),
           quantity: Number(v.quantity) || 1,
           pointsDeducted: isBonus ? 0 : totalPoints,
           bonusPoints: isBonus ? totalPoints : 0,
           type: isBonus ? 'bonus' : 'deduction',
           studentNames,
           studentIds,
-          note: v.note || '',
+          note,
           proofImages: Array.isArray(v.proof_images) ? v.proof_images : [],
           reportedBy: {
             id: v.reported_by_id || 'system',
@@ -1411,7 +1423,28 @@ export const SupabaseService = {
       // Ensure reported_by_id is a valid UUID
       let reporterId = violation.reportedBy?.id;
       if (!reporterId || !uuidRegex.test(reporterId)) {
-        reporterId = '8b901eb8-5a1a-4398-928f-3dd10d1d2cbf';
+        reporterId = '11111111-1111-1111-1111-111111111111';
+      }
+
+      // Ensure date_recorded is a valid YYYY-MM-DD
+      let dateRecorded = new Date().toISOString().split('T')[0];
+      if (violation.date) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(violation.date)) {
+          dateRecorded = violation.date;
+        } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(violation.date)) {
+          const parts = violation.date.split('/');
+          dateRecorded = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+      }
+
+      let noteToSave = violation.note || null;
+      let criteriaCode = violation.criterionId;
+      if (violation.type === 'bonus') {
+        criteriaCode = 'bonus_custom';
+        const critName = violation.criterionName || 'Khen thưởng phong trào';
+        if (!noteToSave || !noteToSave.includes('[Khen thưởng:')) {
+          noteToSave = noteToSave ? `[Khen thưởng: ${critName}] - ${noteToSave}` : `[Khen thưởng: ${critName}]`;
+        }
       }
 
       const { error } = await client.from('violations').upsert({
@@ -1419,9 +1452,9 @@ export const SupabaseService = {
         week_number: violation.weekNumber || 1,
         day: violation.day || 'T2',
         session: violation.session || 'Sáng',
-        date_recorded: violation.date || (violation.reportedAt ? violation.reportedAt.split(' ')[0] : new Date().toISOString().split('T')[0]),
+        date_recorded: dateRecorded,
         class_id: violation.classId,
-        criteria_code: violation.criterionId,
+        criteria_code: criteriaCode,
         quantity: violation.quantity || 1,
         points_applied: violation.type === 'bonus' ? (violation.bonusPoints || violation.pointsDeducted) : violation.pointsDeducted,
         student_names: violation.studentNames || [],
@@ -1429,9 +1462,9 @@ export const SupabaseService = {
         reported_by_id: reporterId,
         reported_by_name: violation.reportedBy?.name || 'Ban Cờ Đỏ',
         reported_by_role: violation.reportedBy?.role || 'auditor',
-        note: violation.note || null,
+        note: noteToSave,
         proof_images: proofImages,
-        status: violation.status || 'pending',
+        status: violation.status || (violation.type === 'bonus' ? 'accepted' : 'pending'),
         appeal_reason: violation.appeal?.reason || null,
         appeal_evidence_url: violation.appeal?.proofImages?.[0] || null,
         appeal_created_at: violation.appeal?.appealedAt || null,
@@ -1441,12 +1474,12 @@ export const SupabaseService = {
       }, { onConflict: 'violation_id' });
 
       if (error) {
-        console.warn('Lỗi ghi vi phạm lên Supabase:', error.message);
+        console.error('Lỗi ghi vi phạm lên Supabase:', error);
         return false;
       }
       return true;
     } catch (err) {
-      console.warn('Lỗi ghi vi phạm lên Supabase:', err);
+      console.error('Lỗi ngoại lệ ghi vi phạm lên Supabase:', err);
       return false;
     }
   },

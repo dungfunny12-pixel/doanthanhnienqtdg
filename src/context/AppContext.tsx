@@ -161,7 +161,7 @@ interface AppContextType {
   upsertStudentsFromExcel: (studentsList: Array<Partial<Student> & { studentId: string; name: string; classId: string }>) => { added: number; updated: number };
 
   // Violations & Scoring
-  addViolation: (violation: Omit<Violation, 'id' | 'reportedAt' | 'status' | 'locked'>) => Violation;
+  addViolation: (violation: Partial<Violation> & Omit<Violation, 'id' | 'reportedAt' | 'status' | 'locked'>) => Violation;
   updateViolation: (id: string, updates: Partial<Violation>) => void;
   updateViolationStatus: (id: string, status: ViolationStatus) => void;
   submitAppeal: (violationId: string, reason: string, proofImages: string[]) => boolean;
@@ -257,7 +257,7 @@ interface AppContextType {
 
   // Cloud Sync Status & Actions
   isSyncingCloud: boolean;
-  refreshDataFromCloud: () => Promise<void>;
+  refreshDataFromCloud: (silent?: boolean) => Promise<void>;
 
   // Academic Year Management & Rollover
   academicYears: AcademicYear[];
@@ -1954,13 +1954,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Violations actions
-  const addViolation = (data: Omit<Violation, 'id' | 'reportedAt' | 'status' | 'locked'>): Violation => {
+  const addViolation = (data: Partial<Violation> & Omit<Violation, 'id' | 'reportedAt' | 'status' | 'locked'>): Violation => {
     const newVio: Violation = {
       ...data,
-      id: generateUUID(),
-      reportedAt: new Date().toLocaleString('vi-VN'),
-      status: 'pending',
-      locked: isWeekLocked
+      id: (data as any).id || generateUUID(),
+      reportedAt: (data as any).reportedAt || new Date().toLocaleString('vi-VN'),
+      status: (data as any).status || (data.type === 'bonus' ? 'accepted' : 'pending'),
+      locked: (data as any).locked !== undefined ? (data as any).locked : isWeekLocked
     };
     setViolations(prev => [newVio, ...prev]);
 

@@ -69,7 +69,8 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { SupabaseService } from '../../services/supabaseService';
-import { isSupabaseConfigured } from '../../lib/supabase';
+import { isSupabaseConfigured, getSupabaseClient } from '../../lib/supabase';
+import { generateUUID } from '../../utils/uuid';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -223,7 +224,8 @@ export const AdminPortal: React.FC = () => {
     getSemesterScores,
     createFullBackupSnapshot,
     restoreFullBackup,
-    cleanOldStorageData
+    cleanOldStorageData,
+    refreshDataFromCloud
   } = useApp();
 
   // Active Admin Hub (5 Main Consolidated Hubs)
@@ -1037,6 +1039,7 @@ export const AdminPortal: React.FC = () => {
   const [bonusReasonInput, setBonusReasonInput] = useState<string>('Khen thưởng phong trào Đoàn');
   const [bonusDayInput, setBonusDayInput] = useState<DayOfWeek>('T2');
   const [bonusNoteInput, setBonusNoteInput] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // ================= DIRECT SCORE OVERRIDE / ENTRY MODAL STATE =================
   const [directScoreModalClass, setDirectScoreModalClass] = useState<{
@@ -14250,7 +14253,13 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
       )}
 
       {/* ================= MODAL: QUẢN LÝ & THÊM/XÓA ĐIỂM THƯỞNG CHO LỚP ================= */}
-      {bonusModalClass && (
+      {bonusModalClass && (() => {
+        const bonusTargetWeek = violationHubWeek || activeWeek;
+        const targetWeekObj = weeksConfig.find(w => w.weekNumber === bonusTargetWeek);
+        const isTargetWeekLocked = Boolean(targetWeekObj ? targetWeekObj.isLocked : (bonusTargetWeek === activeWeek && isWeekLocked));
+        const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'youth_secretary' || currentUser?.role === 'manager' || !currentUser;
+
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className="glass-modal max-w-xl w-full rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
 
@@ -14267,7 +14276,7 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                       {bonusModalClass.className}
                     </span>
                   </h3>
-                  <p className="text-xs text-slate-400">Cộng hoặc xóa điểm thưởng trực tiếp cho lớp • Tuần {activeWeek}</p>
+                  <p className="text-xs text-slate-400">Cộng hoặc xóa điểm thưởng trực tiếp cho lớp • Tuần {bonusTargetWeek}</p>
                 </div>
               </div>
               <button
@@ -14279,38 +14288,153 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
               </button>
             </div>
 
+            {/* Banner trạng thái khóa tuần & Quyền Override của Admin */}
+            {isTargetWeekLocked && (
+              <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-amber-950/70 border border-amber-600/60 text-amber-200 text-xs shadow-md">
+                <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-amber-300">Tuần {bonusTargetWeek} ĐÃ KHÓA SỔ THI ĐUA</span>
+                    <span className="px-2 py-0.2 rounded-full bg-amber-900/80 text-amber-200 text-[10px] font-bold border border-amber-500/40">
+                      Quyền Admin Đặc Cách
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                    Với vai trò Bí thư Đoàn Trường / Quản trị viên, bạn được đặc cách ghi nhận hoặc điều chỉnh điểm thưởng cho lớp kể cả khi tuần đã khóa.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Section 1: Form Thêm Điểm Thưởng Mới */}
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (bonusPointsInput <= 0) {
                   alert('Vui lòng nhập số điểm thưởng lớn hơn 0!');
                   return;
                 }
-                addViolation({
-                  classId: bonusModalClass.classId,
-                  className: bonusModalClass.className,
-                  day: bonusDayInput,
-                  date: new Date().toLocaleDateString('vi-VN'),
-                  weekNumber: activeWeek,
-                  criterionId: 'bonus_custom',
-                  criterionName: bonusReasonInput.trim() || 'Khen thưởng phong trào Đoàn',
-                  groupName: 'Khen thưởng & Điểm cộng',
-                  quantity: 1,
-                  pointsDeducted: 0,
-                  bonusPoints: Number(bonusPointsInput),
-                  type: 'bonus',
-                  note: bonusNoteInput.trim(),
-                  proofImages: [],
-                  reportedBy: {
-                    id: currentUser?.id || 'admin',
-                    name: currentUser?.name || 'Bí thư Đoàn',
-                    role: 'Bí thư Đoàn'
+
+                // Kiểm tra trạng thái khóa tuần đối với tài khoản không phải Admin
+                if (isTargetWeekLocked && !isAdmin) {
+                  alert(`Tuần ${bonusTargetWeek} đã bị khóa, không thể cộng điểm.`);
+                  return;
+                }
+
+                setIsLoading(true);
+                try {
+                  const newVioId = generateUUID();
+                  const todayIso = new Date().toISOString().split('T')[0];
+                  const reason = bonusReasonInput.trim() || 'Khen thưởng phong trào Đoàn';
+                  const noteText = bonusNoteInput.trim();
+                  const packedNote = noteText ? `[Khen thưởng: ${reason}] - ${noteText}` : `[Khen thưởng: ${reason}]`;
+                  const bonusPts = Number(bonusPointsInput);
+
+                  // Cán bộ ghi nhận: đảm bảo là UUID hợp lệ tồn tại trong bảng users
+                  const validUuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+                  const adminUser = users.find(u => u.role === 'admin' && validUuidRegex.test(u.id));
+                  const reporterId = (currentUser?.id && validUuidRegex.test(currentUser.id))
+                    ? currentUser.id
+                    : (adminUser?.id || '11111111-1111-1111-1111-111111111111');
+                  const reporterName = currentUser?.name || adminUser?.name || 'Zơrâm Thị Thành Thương';
+
+                  const bonusViolationPayload: Violation = {
+                    id: newVioId,
+                    classId: bonusModalClass.classId,
+                    className: bonusModalClass.className,
+                    day: bonusDayInput,
+                    date: todayIso,
+                    weekNumber: bonusTargetWeek,
+                    criterionId: 'bonus_custom',
+                    criterionName: reason,
+                    groupName: 'Khen thưởng & Điểm cộng',
+                    quantity: 1,
+                    pointsDeducted: 0,
+                    bonusPoints: bonusPts,
+                    type: 'bonus',
+                    note: noteText,
+                    proofImages: [],
+                    reportedBy: {
+                      id: reporterId,
+                      name: reporterName,
+                      role: 'Bí thư Đoàn'
+                    },
+                    reportedAt: new Date().toLocaleString('vi-VN'),
+                    status: 'accepted',
+                    locked: false
+                  };
+
+                  // 1. Kiểm tra chính xác schema và gửi lệnh insert trực tiếp vào bảng violations trên Supabase
+                  const client = getSupabaseClient();
+                  if (client) {
+                    console.log('Sending bonus points to Supabase:', {
+                      violation_id: newVioId,
+                      week_number: bonusTargetWeek,
+                      day: bonusDayInput,
+                      session: 'Sáng',
+                      date_recorded: todayIso,
+                      class_id: bonusModalClass.classId,
+                      criteria_code: 'bonus_custom',
+                      quantity: 1,
+                      points_applied: bonusPts,
+                      reported_by_id: reporterId,
+                      reported_by_name: reporterName,
+                      reported_by_role: 'admin',
+                      note: packedNote,
+                      status: 'accepted'
+                    });
+
+                    const { data, error } = await client.from('violations').insert({
+                      violation_id: newVioId,
+                      week_number: bonusTargetWeek,
+                      day: bonusDayInput,
+                      session: 'Sáng',
+                      date_recorded: todayIso,
+                      class_id: bonusModalClass.classId,
+                      criteria_code: 'bonus_custom',
+                      quantity: 1,
+                      points_applied: bonusPts,
+                      student_names: [],
+                      student_ids: [],
+                      reported_by_id: reporterId,
+                      reported_by_name: reporterName,
+                      reported_by_role: 'admin',
+                      note: packedNote,
+                      proof_images: [],
+                      status: 'accepted',
+                      is_deleted: false,
+                      updated_at: new Date().toISOString()
+                    }).select();
+
+                    if (error) {
+                      console.error('Supabase error inserting bonus points:', error);
+                      throw new Error(error.message || `Mã lỗi Supabase: ${error.code}`);
+                    }
+                    console.log('Supabase insert điểm thưởng thành công:', data);
                   }
-                });
-                setBonusReasonInput('Khen thưởng phong trào Đoàn');
-                setBonusNoteInput('');
-                alert(`Đã cộng +${bonusPointsInput} điểm thưởng cho ${bonusModalClass.className} thành công!`);
+
+                  // 2. Cập nhật state local ngay lập tức để bảng điểm cập nhật (+50đ) tức thì
+                  addViolation(bonusViolationPayload);
+
+                  // 3. Đóng Modal ngay lập tức và reset form
+                  const targetClassName = bonusModalClass.className;
+                  setBonusModalClass(null);
+                  setBonusReasonInput('Khen thưởng phong trào Đoàn');
+                  setBonusNoteInput('');
+
+                  // 4. Kích hoạt refetch dữ liệu từ Supabase Cloud để đồng bộ hoàn toàn
+                  refreshDataFromCloud(true).catch(refetchErr => {
+                    console.warn('Lỗi refetch dữ liệu cloud:', refetchErr);
+                  });
+
+                  const lockNotice = isTargetWeekLocked ? ' (Đặc cách quyền Admin khi tuần đã khóa)' : '';
+                  alert(`Đã cộng +${bonusPts} điểm thưởng cho ${targetClassName} thành công!${lockNotice}`);
+                } catch (err: any) {
+                  console.error('Lỗi khi thực hiện cộng điểm thưởng:', err);
+                  alert(`Không thể lưu điểm thưởng lên CSDL Supabase:\n${err?.message || err || 'Vui lòng kiểm tra lại kết nối mạng'}`);
+                } finally {
+                  setIsLoading(false);
+                }
               }}
               className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-800/40 space-y-3.5"
             >
@@ -14423,10 +14547,20 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-glow flex items-center justify-center gap-1.5 transition-all"
+                disabled={isLoading}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-xs font-black shadow-glow flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
-                <span>➕</span>
-                <span>CỘNG ĐIỂM THƯỞNG CHO {bonusModalClass.className.toUpperCase()}</span>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>ĐANG LƯU LÊN CSDL SUPABASE...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>➕</span>
+                    <span>CỘNG ĐIỂM THƯỞNG CHO {bonusModalClass.className.toUpperCase()}</span>
+                  </>
+                )}
               </button>
             </form>
 
@@ -14434,12 +14568,12 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-black text-slate-300 uppercase">
-                  Lịch Sử Điểm Thưởng Tuần {activeWeek}:
+                  Lịch Sử Điểm Thưởng Tuần {bonusTargetWeek}:
                 </h4>
                 {(() => {
                   const classBonuses = violations.filter(v =>
                     v.classId === bonusModalClass.classId &&
-                    v.weekNumber === activeWeek &&
+                    v.weekNumber === bonusTargetWeek &&
                     ((v.bonusPoints && v.bonusPoints > 0) || v.type === 'bonus')
                   );
                   const total = classBonuses.reduce((s, v) => s + (v.bonusPoints || 0), 0);
@@ -14454,14 +14588,14 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
               {(() => {
                 const classBonuses = violations.filter(v =>
                   v.classId === bonusModalClass.classId &&
-                  v.weekNumber === activeWeek &&
+                  v.weekNumber === bonusTargetWeek &&
                   ((v.bonusPoints && v.bonusPoints > 0) || v.type === 'bonus')
                 );
 
                 if (classBonuses.length === 0) {
                   return (
                     <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-center text-xs text-slate-500">
-                      Lớp {bonusModalClass.className} chưa có điểm thưởng nào trong Tuần {activeWeek}.
+                      Lớp {bonusModalClass.className} chưa có điểm thưởng nào trong Tuần {bonusTargetWeek}.
                     </div>
                   );
                 }
@@ -14490,9 +14624,27 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
                           </span>
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={async () => {
                               if (confirm(`Bạn có chắc chắn muốn xóa điểm thưởng "${b.criterionName}" (+${b.bonusPoints}đ) của lớp ${bonusModalClass.className}?`)) {
-                                deleteViolation(b.id);
+                                try {
+                                  deleteViolation(b.id);
+                                  const client = getSupabaseClient();
+                                  if (client) {
+                                    const { error } = await client.from('violations').update({ 
+                                      is_deleted: true, 
+                                      updated_at: new Date().toISOString() 
+                                    }).eq('violation_id', b.id);
+                                    if (error) {
+                                      console.error('Lỗi Supabase khi xóa điểm thưởng:', error);
+                                      throw new Error(error.message);
+                                    }
+                                  }
+                                  await refreshDataFromCloud(true);
+                                  alert(`Đã xóa điểm thưởng (+${b.bonusPoints}đ) thành công!`);
+                                } catch (err: any) {
+                                  console.error('Lỗi xóa điểm thưởng:', err);
+                                  alert(`Lỗi khi xóa điểm thưởng trên Supabase: ${err?.message || err}`);
+                                }
                               }
                             }}
                             className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-800 transition-colors"
@@ -14519,7 +14671,8 @@ Thầy/Cô GVCN vui lòng kiểm tra chi tiết lỗi trên Web App Đoàn trư�
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ================= DIRECT SCORE INPUT MODAL (SINGLE CLASS) ================= */}
       {directScoreModalClass && (

@@ -761,6 +761,19 @@ export const INITIAL_CRITERIA: Criterion[] = [
     unit: 'đ / chi đoàn',
     isEnabled: true,
     description: 'Tham gia đầy đủ và tích cực phong trào tình nguyện'
+  },
+  {
+    id: 'bonus_custom',
+    groupId: 'I.1',
+    groupName: 'Khen thưởng & Điểm cộng',
+    groupStandardScore: 0,
+    code: 'bonus_custom',
+    name: 'Khen thưởng phong trào Đoàn',
+    type: 'bonus',
+    points: 1,
+    unit: 'điểm',
+    isEnabled: true,
+    description: 'Điểm thưởng phong trào, hoạt động Đoàn, khen thưởng đột xuất'
   }
 ];
 
