@@ -15,7 +15,7 @@ export const YouthUnionBadge: React.FC<YouthUnionBadgeProps> = ({
     setImgError(false);
   }, [src]);
 
-  const effectiveSrc = src || "https://upload.wikimedia.org/wikipedia/vi/8/87/Huy_hi%E1%BB%87u_%C4%90o%C3%A0n.svg";
+  const effectiveSrc = src || "/brand/huy_hieu_doan.svg";
 
   return (
     <div className={`relative shrink-0 flex items-center justify-center ${className}`}>
@@ -35,26 +35,26 @@ export const YouthUnionBadge: React.FC<YouthUnionBadgeProps> = ({
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            <radialGradient id="badgeGrad" cx="50%" cy="50%" r="50%">
+            <radialGradient id="badgeGradFb" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#ef4444" />
               <stop offset="70%" stopColor="#dc2626" />
               <stop offset="100%" stopColor="#991b1b" />
             </radialGradient>
-            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="goldGradFb" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#fef08a" />
               <stop offset="50%" stopColor="#facc15" />
               <stop offset="100%" stopColor="#ca8a04" />
             </linearGradient>
-            <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="greenGradFb" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#34d399" />
               <stop offset="100%" stopColor="#059669" />
             </linearGradient>
           </defs>
 
           {/* Outer circle with gear cog / golden rim */}
-          <circle cx="100" cy="100" r="96" fill="url(#goldGrad)" stroke="#854d0e" strokeWidth="3" />
-          <circle cx="100" cy="100" r="88" fill="url(#greenGrad)" />
-          <circle cx="100" cy="100" r="76" fill="url(#badgeGrad)" stroke="url(#goldGrad)" strokeWidth="3" />
+          <circle cx="100" cy="100" r="96" fill="url(#goldGradFb)" stroke="#854d0e" strokeWidth="3" />
+          <circle cx="100" cy="100" r="88" fill="url(#greenGradFb)" />
+          <circle cx="100" cy="100" r="76" fill="url(#badgeGradFb)" stroke="url(#goldGradFb)" strokeWidth="3" />
 
           {/* Golden Star at top left of flag */}
           <polygon
@@ -67,7 +67,7 @@ export const YouthUnionBadge: React.FC<YouthUnionBadgeProps> = ({
           {/* Hand holding the flag pole */}
           <path
             d="M50 145 C60 130, 85 110, 115 95 L125 105 C95 125, 75 145, 60 155 Z"
-            fill="url(#goldGrad)"
+            fill="url(#goldGradFb)"
             stroke="#854d0e"
             strokeWidth="1.5"
           />
@@ -78,10 +78,10 @@ export const YouthUnionBadge: React.FC<YouthUnionBadgeProps> = ({
             strokeLinecap="round"
           />
 
-          {/* Banner with SẴN SÀNG */}
+          {/* Banner with THANH NIÊN VIỆT NAM */}
           <path
-            d="M30 150 Q100 175 170 150 L165 170 Q100 195 35 170 Z"
-            fill="url(#goldGrad)"
+            d="M25 150 Q100 178 175 150 L170 170 Q100 198 30 170 Z"
+            fill="url(#goldGradFb)"
             stroke="#854d0e"
             strokeWidth="2"
           />
@@ -91,11 +91,11 @@ export const YouthUnionBadge: React.FC<YouthUnionBadgeProps> = ({
             textAnchor="middle"
             fill="#7f1d1d"
             fontWeight="900"
-            fontSize="14"
-            letterSpacing="2"
+            fontSize="10"
+            letterSpacing="1"
             fontFamily="Arial, sans-serif"
           >
-            SẴN SÀNG
+            THANH NIÊN VIỆT NAM
           </text>
         </svg>
       )}

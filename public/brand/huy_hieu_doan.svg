@@ -1,36 +1,113 @@
-<svg viewBox="0 0 200 200" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 200 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="badgeGrad" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stopColor="#ef4444" />
-      <stop offset="70%" stopColor="#dc2626" />
-      <stop offset="100%" stopColor="#991b1b" />
+    <!-- Outer gold gradient -->
+    <linearGradient id="goldRim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="35%" stop-color="#facc15" />
+      <stop offset="70%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+    
+    <!-- Youth Green Background Gradient -->
+    <radialGradient id="greenBg" cx="45%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="60%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#064e3b" />
     </radialGradient>
-    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stopColor="#fef08a" />
-      <stop offset="50%" stopColor="#facc15" />
-      <stop offset="100%" stopColor="#ca8a04" />
+
+    <!-- Red Flag Gradient -->
+    <linearGradient id="flagRed" x1="0%" y1="0%" x2="100%" y2="80%">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="45%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#991b1b" />
     </linearGradient>
-    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stopColor="#34d399" />
-      <stop offset="100%" stopColor="#059669" />
+
+    <!-- Star Gold Gradient -->
+    <linearGradient id="starGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="40%" stop-color="#fde047" />
+      <stop offset="100%" stop-color="#eab308" />
     </linearGradient>
+
+    <!-- Arm Flesh/Bronze Gradient -->
+    <linearGradient id="armGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fed7aa" />
+      <stop offset="40%" stop-color="#fb923c" />
+      <stop offset="80%" stop-color="#ea580c" />
+      <stop offset="100%" stop-color="#9a3412" />
+    </linearGradient>
+
+    <!-- Flagpole Metallic Gradient -->
+    <linearGradient id="poleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#ca8a04" />
+      <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+
+    <filter id="badgeShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
   </defs>
 
-  <!-- Outer circle with gear cog / golden rim -->
-  <circle cx="100" cy="100" r="96" fill="url(#goldGrad)" stroke="#854d0e" stroke-width="3" />
-  <circle cx="100" cy="100" r="88" fill="url(#greenGrad)" />
-  <circle cx="100" cy="100" r="76" fill="url(#badgeGrad)" stroke="url(#goldGrad)" stroke-width="3" />
+  <!-- Outer Ring (Gold gear cog teeth) -->
+  <circle cx="100" cy="100" r="95" fill="none" stroke="url(#goldRim)" stroke-width="7" stroke-dasharray="8 4.5" filter="url(#badgeShadow)" />
+  <circle cx="100" cy="100" r="90" fill="url(#goldRim)" stroke="#854d0e" stroke-width="1.5" />
+  <circle cx="100" cy="100" r="83" fill="#064e3b" />
+  
+  <!-- Green Center Field -->
+  <circle cx="100" cy="100" r="81" fill="url(#greenBg)" />
 
-  <!-- Golden Star at top left of flag -->
-  <polygon points="70,55 74,67 86,67 76,75 80,87 70,79 60,87 64,75 54,67 66,67" fill="#facc15" stroke="#b45309" stroke-width="1" />
+  <!-- Flagpole (diagonally from lower-left to upper-right) -->
+  <line x1="42" y1="162" x2="158" y2="34" stroke="url(#poleGrad)" stroke-width="5" stroke-linecap="round" />
+  <!-- Flagpole finial ball -->
+  <circle cx="158" cy="34" r="5" fill="url(#goldRim)" stroke="#78350f" stroke-width="1" />
 
-  <!-- Hand holding the flag pole -->
-  <path d="M50 145 C60 130, 85 110, 115 95 L125 105 C95 125, 75 145, 60 155 Z" fill="url(#goldGrad)" stroke="#854d0e" stroke-width="1.5" />
-  <path d="M65 145 C75 135, 90 125, 105 120" stroke="#78350f" stroke-width="2" stroke-linecap="round" />
+  <!-- Red Flag fluttering in the wind -->
+  <path d="M 68 135 C 75 108, 86 80, 153 38 C 136 68, 162 96, 142 120 C 116 110, 95 125, 68 135 Z" 
+        fill="url(#flagRed)" stroke="#7f1d1d" stroke-width="1.5" />
+  
+  <!-- Flag ripples/folds highlight -->
+  <path d="M 85 118 C 100 95, 115 75, 148 44" fill="none" stroke="#fca5a5" stroke-width="2" opacity="0.6" stroke-linecap="round" />
+  <path d="M 98 123 C 114 105, 130 90, 153 73" fill="none" stroke="#7f1d1d" stroke-width="2.5" opacity="0.7" stroke-linecap="round" />
 
-  <!-- Banner with SẴN SÀNG -->
-  <path d="M30 150 Q100 175 170 150 L165 170 Q100 195 35 170 Z" fill="url(#goldGrad)" stroke="#854d0e" stroke-width="2" />
-  <text x="100" y="167" text-anchor="middle" fill="#7f1d1d" font-weight="900" font-size="14" letter-spacing="2" font-family="Arial, sans-serif">
-    SẴN SÀNG
+  <!-- Golden 5-point Star on the Flag -->
+  <polygon points="113,60 116,69 126,69 118,75 121,84 113,78 105,84 108,75 100,69 110,69" 
+           fill="url(#starGold)" stroke="#b45309" stroke-width="1" filter="url(#badgeShadow)" />
+
+  <!-- Muscular Forearm and Hand Gripping the Flagpole -->
+  <!-- Forearm stretching from bottom left -->
+  <path d="M 28 152 C 38 138, 52 133, 78 120 L 84 132 C 62 146, 48 156, 38 168 Z" 
+        fill="url(#armGrad)" stroke="#7c2d12" stroke-width="1.5" />
+  
+  <!-- Gripping Fist / Fingers holding flagpole -->
+  <g fill="url(#armGrad)" stroke="#7c2d12" stroke-width="1.2">
+    <ellipse cx="76" cy="120" rx="6" ry="4.5" transform="rotate(-35 76 120)" />
+    <ellipse cx="80" cy="124" rx="6" ry="4.5" transform="rotate(-35 80 124)" />
+    <ellipse cx="84" cy="128" rx="6" ry="4.5" transform="rotate(-35 84 128)" />
+    <ellipse cx="88" cy="132" rx="5.5" ry="4" transform="rotate(-35 88 132)" />
+    <!-- Thumb wrapping in front of pole -->
+    <path d="M 72 128 C 74 122, 82 118, 84 123 C 85 127, 78 132, 73 132 Z" fill="url(#armGrad)" />
+  </g>
+
+  <!-- Bottom Ribbon with text THANH NIÊN VIỆT NAM -->
+  <!-- Ribbon Fold Shadows (Left and right ends) -->
+  <polygon points="18,158 35,148 35,168 18,172" fill="#ca8a04" stroke="#854d0e" stroke-width="1" />
+  <polygon points="182,158 165,148 165,168 182,172" fill="#ca8a04" stroke="#854d0e" stroke-width="1" />
+  <polygon points="18,172 35,168 27,162" fill="#713f12" />
+  <polygon points="182,172 165,168 173,162" fill="#713f12" />
+
+  <!-- Main Ribbon Banner (Gold gradient with red border) -->
+  <path d="M 28 164 Q 100 188 172 164 L 168 144 Q 100 166 32 144 Z" 
+        fill="url(#goldRim)" stroke="#dc2626" stroke-width="2" />
+  
+  <!-- Inner ribbon line accent -->
+  <path d="M 34 161 Q 100 182 166 161" fill="none" stroke="#ca8a04" stroke-width="1" />
+
+  <!-- Ribbon Text Arc -->
+  <path id="ribbonPath" d="M 33 162 Q 100 184 167 162" fill="none" />
+  <text font-family="'Segoe UI', Roboto, 'Arial Black', sans-serif" font-weight="900" font-size="10.5" fill="#b91c1c" letter-spacing="1.2">
+    <textPath href="#ribbonPath" startOffset="50%" text-anchor="middle">
+      THANH NIÊN VIỆT NAM
+    </textPath>
   </text>
 </svg>

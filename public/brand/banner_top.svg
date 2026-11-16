@@ -2,68 +2,81 @@
   <defs>
     <!-- Sky Gradient -->
     <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#38bdf8" />
-      <stop offset="40%" stopColor="#7dd3fc" />
-      <stop offset="85%" stopColor="#bae6fd" />
-      <stop offset="100%" stopColor="#e0f2fe" />
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="35%" stop-color="#38bdf8" />
+      <stop offset="70%" stop-color="#7dd3fc" />
+      <stop offset="100%" stop-color="#e0f2fe" />
     </linearGradient>
+
     <!-- Mountain Background Gradient -->
-    <linearGradient id="mountainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#0284c7" stop-opacity="0.4" />
-      <stop offset="100%" stopColor="#0369a1" stop-opacity="0.8" />
+    <linearGradient id="mountainGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0369a1" stop-opacity="0.5" />
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0.8" />
     </linearGradient>
-    <!-- Forest Gradient -->
+    <linearGradient id="mountainGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#047857" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#065f46" stop-opacity="0.85" />
+    </linearGradient>
+
+    <!-- Forest Gradients -->
     <linearGradient id="treeGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#4ade80" />
-      <stop offset="50%" stopColor="#22c55e" />
-      <stop offset="100%" stopColor="#15803d" />
+      <stop offset="0%" stop-color="#4ade80" />
+      <stop offset="50%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#15803d" />
     </linearGradient>
     <linearGradient id="treeGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#16a34a" />
-      <stop offset="100%" stopColor="#14532d" />
+      <stop offset="0%" stop-color="#16a34a" />
+      <stop offset="100%" stop-color="#14532d" />
     </linearGradient>
+
     <!-- School Gate Architecture -->
     <linearGradient id="pillarGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stopColor="#334155" />
-      <stop offset="40%" stopColor="#64748b" />
-      <stop offset="70%" stopColor="#94a3b8" />
-      <stop offset="100%" stopColor="#475569" />
+      <stop offset="0%" stop-color="#475569" />
+      <stop offset="35%" stop-color="#94a3b8" />
+      <stop offset="70%" stop-color="#cbd5e1" />
+      <stop offset="100%" stop-color="#64748b" />
     </linearGradient>
     <linearGradient id="roofGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#b91c1c" />
-      <stop offset="100%" stopColor="#7f1d1d" />
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="50%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#991b1b" />
     </linearGradient>
     <linearGradient id="signBoardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#1e3a8a" />
-      <stop offset="50%" stopColor="#1d4ed8" />
-      <stop offset="100%" stopColor="#1e40af" />
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="50%" stop-color="#1d4ed8" />
+      <stop offset="100%" stop-color="#1e40af" />
     </linearGradient>
     <linearGradient id="goldText" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#fef08a" />
-      <stop offset="50%" stopColor="#facc15" />
-      <stop offset="100%" stopColor="#eab308" />
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#eab308" />
     </linearGradient>
-    <!-- Vignette Shadow Filter -->
-    <linearGradient id="vignette" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stopColor="#090d16" stop-opacity="0.85" />
-      <stop offset="45%" stopColor="#090d16" stop-opacity="0.4" />
-      <stop offset="100%" stopColor="#090d16" stop-opacity="0.1" />
+    
+    <!-- Subtle Left Vignette for Header Contrast -->
+    <linearGradient id="subtleVignette" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#020617" stop-opacity="0.35" />
+      <stop offset="45%" stop-color="#020617" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0" />
     </linearGradient>
   </defs>
 
   <!-- Sky Background -->
   <rect width="1400" height="450" fill="url(#skyGrad)" />
 
-  <!-- Sun Glow & Clouds -->
-  <circle cx="1150" cy="90" r="70" fill="#fef08a" opacity="0.6" filter="blur(20px)" />
-  <circle cx="1150" cy="90" r="35" fill="#ffffff" opacity="0.9" />
+  <!-- Glowing Sun -->
+  <circle cx="1180" cy="85" r="75" fill="#fef08a" opacity="0.6" filter="blur(16px)" />
+  <circle cx="1180" cy="85" r="38" fill="#ffffff" opacity="0.95" />
 
-  <!-- Soft Cartoon Clouds -->
-  <path d="M 150 90 Q 180 60 220 75 Q 260 55 300 80 Q 330 70 360 95 Q 370 120 330 125 L 180 125 Z" fill="#ffffff" opacity="0.75" />
-  <path d="M 850 60 Q 880 35 920 50 Q 950 30 980 55 Q 1020 45 1040 70 L 860 70 Z" fill="#ffffff" opacity="0.65" />
+  <!-- Fluffy White Clouds -->
+  <g fill="#ffffff" opacity="0.75">
+    <path d="M 120 80 Q 150 45 190 60 Q 230 40 270 65 Q 310 50 340 80 Q 350 110 310 115 L 140 115 Z" />
+    <path d="M 820 60 Q 860 30 900 48 Q 940 25 980 50 Q 1020 40 1045 70 L 830 70 Z" opacity="0.6" />
+    <path d="M 600 95 Q 630 75 660 85 Q 690 70 720 90 L 610 95 Z" opacity="0.5" />
+  </g>
 
-  <!-- Distant Blue Mountains of Đông Giang -->
-  <path d="M 0 320 Q 250 180 500 280 T 1000 240 Q 1200 190 1400 270 L 1400 450 L 0 450 Z" fill="url(#mountainGrad)" />
+  <!-- Distant Mountains of Đông Giang -->
+  <path d="M 0 310 Q 250 170 520 260 T 1000 230 Q 1200 180 1400 250 L 1400 450 L 0 450 Z" fill="url(#mountainGrad1)" />
+  <path d="M 0 350 Q 320 220 650 300 T 1400 290 L 1400 450 L 0 450 Z" fill="url(#mountainGrad2)" />
 
   <!-- Lush Green Trees / Hills (Left side) -->
   <g fill="url(#treeGrad1)">
@@ -88,40 +101,40 @@
   </g>
 
   <!-- Festive Pennant Bunting Flags -->
-  <g stroke="#94a3b8" stroke-width="1.5">
-    <path d="M 320 150 Q 550 200 780 150" fill="none" />
-    <polygon points="360,165 385,168 372,195" fill="#ef4444" stroke="none" />
-    <polygon points="410,172 435,175 422,202" fill="#eab308" stroke="none" />
-    <polygon points="460,178 485,180 472,208" fill="#3b82f6" stroke="none" />
-    <polygon points="510,181 535,182 522,210" fill="#22c55e" stroke="none" />
-    <polygon points="560,182 585,182 572,210" fill="#ec4899" stroke="none" />
-    <polygon points="610,180 635,178 622,208" fill="#f97316" stroke="none" />
-    <polygon points="660,175 685,172 672,202" fill="#8b5cf6" stroke="none" />
-    <polygon points="710,168 735,165 722,195" fill="#06b6d4" stroke="none" />
+  <g stroke="#cbd5e1" stroke-width="1.5">
+    <path d="M 330 150 Q 560 195 790 150" fill="none" />
+    <polygon points="360,162 385,166 372,192" fill="#ef4444" stroke="none" />
+    <polygon points="410,169 435,172 422,199" fill="#eab308" stroke="none" />
+    <polygon points="460,175 485,177 472,204" fill="#3b82f6" stroke="none" />
+    <polygon points="510,178 535,179 522,206" fill="#22c55e" stroke="none" />
+    <polygon points="560,179 585,178 572,206" fill="#ec4899" stroke="none" />
+    <polygon points="610,177 635,174 622,203" fill="#f97316" stroke="none" />
+    <polygon points="660,172 685,168 672,197" fill="#8b5cf6" stroke="none" />
+    <polygon points="710,165 735,161 722,190" fill="#06b6d4" stroke="none" />
   </g>
 
-  <!-- Main Traditional School Gate Architecture (Center) -->
+  <!-- Main School Gate Architecture (Center) -->
   <g id="SchoolGate" transform="translate(420, 110)">
     <!-- Gate Roof Top (Curved Red Clay Tile Roof) -->
-    <path d="M 30 70 Q 280 20 530 70 L 510 95 Q 280 50 50 95 Z" fill="url(#roofGrad)" stroke="#581c87" stroke-width="2" />
-    <path d="M 10 70 Q 280 0 550 70 L 530 78 Q 280 15 30 78 Z" fill="#991b1b" />
+    <path d="M 30 70 Q 280 20 530 70 L 510 95 Q 280 50 50 95 Z" fill="url(#roofGrad)" stroke="#7f1d1d" stroke-width="2" />
+    <path d="M 10 70 Q 280 0 550 70 L 530 78 Q 280 15 30 78 Z" fill="#b91c1c" />
 
     <!-- Supporting Arch Beam -->
-    <rect x="70" y="90" width="420" height="28" fill="url(#pillarGrad)" rx="4" stroke="#1e293b" stroke-width="2" />
+    <rect x="70" y="90" width="420" height="28" fill="url(#pillarGrad)" rx="4" stroke="#334155" stroke-width="2" />
 
     <!-- Left Main Pillar -->
-    <rect x="80" y="115" width="60" height="235" fill="url(#pillarGrad)" stroke="#1e293b" stroke-width="3" />
-    <rect x="75" y="115" width="70" height="15" fill="#475569" stroke="#0f172a" />
-    <rect x="70" y="330" width="80" height="20" fill="#334155" stroke="#0f172a" />
+    <rect x="80" y="115" width="60" height="235" fill="url(#pillarGrad)" stroke="#334155" stroke-width="3" />
+    <rect x="75" y="115" width="70" height="15" fill="#64748b" stroke="#1e293b" />
+    <rect x="70" y="330" width="80" height="20" fill="#475569" stroke="#1e293b" />
 
     <!-- Right Main Pillar -->
-    <rect x="420" y="115" width="60" height="235" fill="url(#pillarGrad)" stroke="#1e293b" stroke-width="3" />
-    <rect x="415" y="115" width="70" height="15" fill="#475569" stroke="#0f172a" />
-    <rect x="410" y="330" width="80" height="20" fill="#334155" stroke="#0f172a" />
+    <rect x="420" y="115" width="60" height="235" fill="url(#pillarGrad)" stroke="#334155" stroke-width="3" />
+    <rect x="415" y="115" width="70" height="15" fill="#64748b" stroke="#1e293b" />
+    <rect x="410" y="330" width="80" height="20" fill="#475569" stroke="#1e293b" />
 
     <!-- Grand Name Signboard in Center -->
     <rect x="155" y="125" width="250" height="90" fill="url(#signBoardGrad)" rx="8" stroke="url(#goldText)" stroke-width="3.5" />
-    <text x="280" y="145" text-anchor="middle" fill="#93c5fd" font-size="11" font-weight="bold" font-family="'Segoe UI', Roboto, sans-serif" letter-spacing="1">
+    <text x="280" y="146" text-anchor="middle" fill="#bae6fd" font-size="11" font-weight="bold" font-family="'Segoe UI', Roboto, sans-serif" letter-spacing="1">
       SỞ GIÁO DỤC VÀ ĐÀO TẠO TP ĐÀ NẴNG
     </text>
     <text x="280" y="172" text-anchor="middle" fill="url(#goldText)" font-size="16" font-weight="900" font-family="'Segoe UI', Roboto, sans-serif" letter-spacing="1.5">
@@ -132,7 +145,7 @@
     </text>
 
     <!-- Iron Gate Details (Lower) -->
-    <g stroke="#38bdf8" stroke-width="2.5" opacity="0.8">
+    <g stroke="#38bdf8" stroke-width="2.5" opacity="0.85">
       <line x1="150" y1="260" x2="410" y2="260" />
       <line x1="150" y1="310" x2="410" y2="310" />
       <line x1="180" y1="240" x2="180" y2="340" />
@@ -147,6 +160,6 @@
   <!-- Paved Front Ground -->
   <rect x="0" y="420" width="1400" height="30" fill="#475569" opacity="0.9" />
 
-  <!-- Left Vignette overlay for text readability -->
-  <rect width="750" height="450" fill="url(#vignette)" pointer-events="none" />
+  <!-- Subtle Vignette overlay -->
+  <rect width="600" height="450" fill="url(#subtleVignette)" pointer-events="none" />
 </svg>

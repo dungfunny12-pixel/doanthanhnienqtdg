@@ -2,41 +2,41 @@
   <defs>
     <!-- Afternoon Warm Sky Gradient -->
     <linearGradient id="footerSky" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#0284c7" />
-      <stop offset="45%" stopColor="#38bdf8" />
-      <stop offset="75%" stopColor="#fdba74" />
-      <stop offset="100%" stopColor="#fed7aa" />
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="45%" stop-color="#38bdf8" />
+      <stop offset="75%" stop-color="#fdba74" />
+      <stop offset="100%" stop-color="#fed7aa" />
     </linearGradient>
     <!-- School Building Color Gradients -->
     <linearGradient id="wallYellow" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#fef08a" />
-      <stop offset="60%" stopColor="#fde047" />
-      <stop offset="100%" stopColor="#eab308" />
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="60%" stop-color="#fde047" />
+      <stop offset="100%" stop-color="#eab308" />
     </linearGradient>
     <linearGradient id="roofRed" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#ef4444" />
-      <stop offset="100%" stopColor="#991b1b" />
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#991b1b" />
     </linearGradient>
     <!-- Hill Backdrop -->
     <linearGradient id="hillBackdrop" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#15803d" />
-      <stop offset="100%" stopColor="#14532d" />
+      <stop offset="0%" stop-color="#15803d" />
+      <stop offset="100%" stop-color="#14532d" />
     </linearGradient>
     <!-- Tree Gradients -->
     <linearGradient id="lushTree" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#22c55e" />
-      <stop offset="100%" stopColor="#15803d" />
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#15803d" />
     </linearGradient>
     <linearGradient id="goldSlogan" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#fef08a" />
-      <stop offset="60%" stopColor="#facc15" />
-      <stop offset="100%" stopColor="#ca8a04" />
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="60%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#ca8a04" />
     </linearGradient>
     <!-- Dark Vignette Filter for Slogan Overlay -->
     <linearGradient id="footerVignette" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#020617" stop-opacity="0.25" />
-      <stop offset="50%" stopColor="#020617" stop-opacity="0.65" />
-      <stop offset="100%" stopColor="#020617" stop-opacity="0.95" />
+      <stop offset="0%" stop-color="#020617" stop-opacity="0.1" />
+      <stop offset="50%" stop-color="#020617" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0.75" />
     </linearGradient>
   </defs>
 

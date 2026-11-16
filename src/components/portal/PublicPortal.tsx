@@ -250,7 +250,7 @@ export const PublicPortal: React.FC = () => {
             <div className="flex flex-row items-center gap-3.5 sm:gap-6 max-w-3xl">
               {/* Huy hiệu Đoàn Thanh Niên */}
               <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
-                <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl p-1.5 bg-gradient-to-tr from-red-600 via-amber-500 to-emerald-600 shadow-glow border border-amber-400/60 flex items-center justify-center bg-slate-950/85 backdrop-blur-md">
+                <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl p-1.5 bg-gradient-to-tr from-red-600 via-amber-500 to-emerald-600 shadow-glow border border-amber-400/60 flex items-center justify-center backdrop-blur-md">
                   <YouthUnionBadge src={schoolSettings.youthUnionLogoUrl} className="w-full h-full" />
                 </div>
               </div>
